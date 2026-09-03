@@ -135,7 +135,9 @@ class _AnnotterCanvasState extends State<AnnotterCanvas> {
           id: DateTime.now().millisecondsSinceEpoch,
           number: widget.items.length + 1,
           rect: rect,
-          widgetName: info.name != 'CustomElement' ? info.name : 'SelectionArea',
+          widgetName: (info.name != 'CustomElement' && !info.name.contains('Gesture') && !info.name.contains('Detector'))
+            ? info.name
+            : 'SelectionArea',
           hierarchy: info.hierarchy,
           mode: AnnotterMode.rectangle,
           isScrollable: info.isScrollable,

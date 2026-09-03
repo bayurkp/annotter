@@ -206,73 +206,96 @@ class _AnnotterState extends State<Annotter> {
                         // Inline Modal Note Dialog
                         if (_activeDialogItem != null)
                           Positioned.fill(
-                            child: Container(
-                              color: Colors.black.withValues(alpha: 0.65),
-                              alignment: Alignment.center,
-                              child: SingleChildScrollView(
-                                child: AnnotationDialog(
-                                  item: _activeDialogItem!,
-                                  isNew: _isCreatingItem,
-                                  onCancel: () => setState(() => _activeDialogItem = null),
-                                  onDelete: () {
-                                    _saveSnapshot();
-                                    setState(() {
-                                      final deleteId = _activeDialogItem!.id;
-                                      _items.removeWhere((i) => i.id == deleteId);
-                                      _renumberItems();
-                                      _activeDialogItem = null;
-                                    });
-                                  },
-                                  onSave: (note) {
-                                    _saveSnapshot();
-                                    setState(() {
-                                      _activeDialogItem!.note = note;
-                                      if (_isCreatingItem) {
-                                        _items.add(_activeDialogItem!);
-                                      }
-                                      _activeDialogItem = null;
-                                    });
-                                  },
+                            child: GestureDetector(
+                              behavior: HitTestBehavior.opaque,
+                              onTap: () => setState(() => _activeDialogItem = null),
+                              child: Container(
+                                color: Colors.black.withValues(alpha: 0.65),
+                                alignment: Alignment.center,
+                                child: GestureDetector(
+                                  behavior: HitTestBehavior.opaque,
+                                  onTap: () {}, // Prevent backdrop dismiss when tapping dialog itself
+                                  child: SingleChildScrollView(
+                                    child: AnnotationDialog(
+                                      item: _activeDialogItem!,
+                                      isNew: _isCreatingItem,
+                                      onCancel: () => setState(() => _activeDialogItem = null),
+                                      onDelete: () {
+                                        _saveSnapshot();
+                                        setState(() {
+                                          final deleteId = _activeDialogItem!.id;
+                                          _items.removeWhere((i) => i.id == deleteId);
+                                          _renumberItems();
+                                          _activeDialogItem = null;
+                                        });
+                                      },
+                                      onSave: (note) {
+                                        _saveSnapshot();
+                                        setState(() {
+                                          _activeDialogItem!.note = note;
+                                          if (_isCreatingItem) {
+                                            _items.add(_activeDialogItem!);
+                                          }
+                                          _activeDialogItem = null;
+                                        });
+                                      },
+                                    ),
+                                  ),
                                 ),
                               ),
                             ),
                           ),
 
                         // Inline Modal Annotation List Sheet
+                        // Inline Modal Annotation List Sheet
                         if (_showListSheet)
                           Positioned.fill(
-                            child: Container(
-                              color: Colors.black.withValues(alpha: 0.65),
-                              alignment: Alignment.bottomCenter,
-                              child: AnnotationListSheet(
-                                items: _items,
-                                onClose: () => setState(() => _showListSheet = false),
-                                onReorder: (newItems) {
-                                  _saveSnapshot();
-                                  setState(() {
-                                    _items = newItems;
-                                    _renumberItems();
-                                  });
-                                },
-                                onEdit: (item) {
-                                  setState(() {
-                                    _showListSheet = false;
-                                    _activeDialogItem = item;
-                                    _isCreatingItem = false;
-                                  });
-                                },
-                                onDelete: (item) {
-                                  _saveSnapshot();
-                                  setState(() {
-                                    final deleteId = item.id;
-                                    _items.removeWhere((i) => i.id == deleteId);
-                                    _renumberItems();
-                                  });
-                                },
-                                onClearAll: () {
-                                  _saveSnapshot();
-                                  setState(() => _items.clear());
-                                },
+                            child: GestureDetector(
+                              behavior: HitTestBehavior.opaque,
+                              onTap: () => setState(() => _showListSheet = false),
+                              child: Container(
+                                color: Colors.black.withValues(alpha: 0.65),
+                                alignment: Alignment.bottomCenter,
+                                child: SafeArea(
+                                  bottom: true,
+                                  child: Padding(
+                                    padding: const EdgeInsets.fromLTRB(10, 0, 10, 10),
+                                    child: GestureDetector(
+                                      behavior: HitTestBehavior.opaque,
+                                      onTap: () {}, // Prevent backdrop dismiss when tapping sheet itself
+                                      child: AnnotationListSheet(
+                                        items: _items,
+                                        onClose: () => setState(() => _showListSheet = false),
+                                        onReorder: (newItems) {
+                                          _saveSnapshot();
+                                          setState(() {
+                                            _items = newItems;
+                                            _renumberItems();
+                                          });
+                                        },
+                                        onEdit: (item) {
+                                          setState(() {
+                                            _showListSheet = false;
+                                            _activeDialogItem = item;
+                                            _isCreatingItem = false;
+                                          });
+                                        },
+                                        onDelete: (item) {
+                                          _saveSnapshot();
+                                          setState(() {
+                                            final deleteId = item.id;
+                                            _items.removeWhere((i) => i.id == deleteId);
+                                            _renumberItems();
+                                          });
+                                        },
+                                        onClearAll: () {
+                                          _saveSnapshot();
+                                          setState(() => _items.clear());
+                                        },
+                                      ),
+                                    ),
+                                  ),
+                                ),
                               ),
                             ),
                           ),
