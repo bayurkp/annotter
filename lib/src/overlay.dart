@@ -7,6 +7,7 @@ import 'models.dart';
 import 'canvas.dart';
 import 'dialog.dart';
 import 'exporter.dart';
+import 'inspector.dart';
 
 /// The root wrapper for Annotter.
 /// Wraps your application to provide in-app UI inspection and annotation.
@@ -33,10 +34,23 @@ class _AnnotterState extends State<Annotter> {
 
   Offset _fabPosition = const Offset(20, 120);
 
+  final GlobalKey _appChildKey = GlobalKey();
+
   AnnotterItem? _activeDialogItem;
   bool _isCreatingItem = false;
   String? _bannerMessage;
   String _currentScreenName = 'HomeScreen';
+
+  String get _activeScreenName {
+    final appElement = _appChildKey.currentContext as Element?;
+    if (appElement != null) {
+      final detected = WidgetInspectorHelper.detectActiveScreen(appElement);
+      if (detected != null && detected.isNotEmpty) {
+        return detected;
+      }
+    }
+    return _currentScreenName;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -59,7 +73,7 @@ class _AnnotterState extends State<Annotter> {
                 return Stack(
                   fit: StackFit.expand,
                   children: [
-                    widget.child,
+                    KeyedSubtree(key: _appChildKey, child: widget.child),
                     _buildIdleFab(mediaQuery, size),
                   ],
                 );
@@ -106,7 +120,7 @@ class _AnnotterState extends State<Annotter> {
                                           child: Stack(
                                             fit: StackFit.expand,
                                             children: [
-                                              widget.child,
+                                              KeyedSubtree(key: _appChildKey, child: widget.child),
                                               AnnotterCanvas(
                                                 items: _items,
                                                 activeMode: _activeMode,
@@ -213,7 +227,7 @@ class _AnnotterState extends State<Annotter> {
             ),
             const SizedBox(width: 6),
             Text(
-              _bannerMessage ?? '$_currentScreenName • $modeLabel',
+              _bannerMessage ?? '$_activeScreenName • $modeLabel',
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: 10,
@@ -493,7 +507,7 @@ class _AnnotterState extends State<Annotter> {
     // 2. Export structured Markdown grouped by screen
     await AnnotterExporter.copyToClipboard(
       items: _items,
-      routeName: _currentScreenName,
+      routeName: _activeScreenName,
       viewportSize: size,
       screenshotPath: savedScreenshotPath,
     );

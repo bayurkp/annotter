@@ -192,9 +192,43 @@ class WidgetInspectorHelper {
     );
   }
 
+  /// Traverses the mounted element tree to find the currently active/visible Screen or Page.
+  /// Automatically skips inactive Offstage branches (such as tabs in IndexedStack).
+  static String? detectActiveScreen(BuildContext context) {
+    String? activeScreen;
+
+    void visitor(Element element) {
+      final widget = element.widget;
+
+      // Skip inactive/hidden tabs in IndexedStack or Offstage trees
+      if (widget is Offstage && widget.offstage) {
+        return;
+      }
+      if (widget is Visibility && !widget.visible) {
+        return;
+      }
+
+      final type = widget.runtimeType.toString();
+      if ((type.endsWith('Screen') || type.endsWith('Page')) &&
+          type != 'RawView' &&
+          !type.startsWith('_')) {
+        activeScreen = type;
+      }
+
+      element.visitChildren(visitor);
+    }
+
+    try {
+      (context as Element).visitChildren(visitor);
+    } catch (_) {}
+
+    return activeScreen;
+  }
+
   static bool _isNoise(String type) {
     if (type.startsWith('_')) return true;
     if (type.contains('Annotter')) return true;
     return _frameworkNoise.contains(type);
   }
 }
+
