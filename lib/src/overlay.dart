@@ -43,6 +43,7 @@ class _AnnotterState extends State<Annotter> {
 
   AnnotterItem? _activeDialogItem;
   bool _isCreatingItem = false;
+  bool _showListSheet = false;
   String? _bannerMessage;
   String _currentScreenName = 'HomeScreen';
 
@@ -110,10 +111,11 @@ class _AnnotterState extends State<Annotter> {
                 );
               }
 
-              // Active: Bottom Dock Studio with Reactive Scroll & Navigation
+              // Active: Full-width Bottom Bar Studio (Clean top, zero rounded)
               return Container(
                 color: const Color(0xFF0B0F19), // Deep studio backdrop
                 child: SafeArea(
+                  bottom: false,
                   child: Stack(
                     children: [
                       Column(
@@ -122,14 +124,13 @@ class _AnnotterState extends State<Annotter> {
                           Expanded(
                             child: Center(
                               child: Padding(
-                                padding: const EdgeInsets.fromLTRB(10, 6, 10, 4),
+                                padding: const EdgeInsets.fromLTRB(8, 6, 8, 2),
                                 child: FittedBox(
                                   fit: BoxFit.contain,
                                   child: Container(
                                     width: size.width,
                                     height: size.height,
                                     decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(24),
                                       boxShadow: [
                                         BoxShadow(
                                           color: Colors.black.withValues(alpha: 0.7),
@@ -141,54 +142,51 @@ class _AnnotterState extends State<Annotter> {
                                         color: _activeMode == AnnotterMode.navigate
                                             ? const Color(0xFF10B981) // Green in navigate
                                             : const Color(0xFF0284C7), // DevTools Blue in annotate
-                                        width: 3.0,
+                                        width: 2.5,
                                       ),
                                     ),
-                                    child: ClipRRect(
-                                      borderRadius: BorderRadius.circular(21),
-                                      child: RepaintBoundary(
-                                        key: _repaintBoundaryKey,
-                                        child: Stack(
-                                          fit: StackFit.expand,
-                                          children: [
-                                            // Reactive Scroll & Navigation Listener
-                                            NotificationListener<Notification>(
-                                              onNotification: (notification) {
-                                                if (notification is ScrollNotification) {
-                                                  if (notification.metrics.axis == Axis.vertical) {
-                                                    setState(() {
-                                                      _currentScrollOffset = notification.metrics.pixels;
-                                                    });
-                                                  }
-                                                } else if (notification is NavigationNotification) {
-                                                  setState(() {}); // Instant route update
+                                    child: RepaintBoundary(
+                                      key: _repaintBoundaryKey,
+                                      child: Stack(
+                                        fit: StackFit.expand,
+                                        children: [
+                                          // Reactive Scroll & Navigation Listener
+                                          NotificationListener<Notification>(
+                                            onNotification: (notification) {
+                                              if (notification is ScrollNotification) {
+                                                if (notification.metrics.axis == Axis.vertical) {
+                                                  setState(() {
+                                                    _currentScrollOffset = notification.metrics.pixels;
+                                                  });
                                                 }
-                                                return false;
-                                              },
-                                              child: KeyedSubtree(key: _appChildKey, child: widget.child),
-                                            ),
+                                              } else if (notification is NavigationNotification) {
+                                                setState(() {}); // Instant route update
+                                              }
+                                              return false;
+                                            },
+                                            child: KeyedSubtree(key: _appChildKey, child: widget.child),
+                                          ),
 
-                                            AnnotterCanvas(
-                                              items: _items,
-                                              activeMode: _activeMode,
-                                              currentScrollOffset: _currentScrollOffset,
-                                              onRequestCreate: (item, screenName) {
-                                                _saveSnapshot();
-                                                setState(() {
-                                                  if (screenName != null) _currentScreenName = screenName;
-                                                  _activeDialogItem = item;
-                                                  _isCreatingItem = true;
-                                                });
-                                              },
-                                              onRequestEdit: (item) {
-                                                setState(() {
-                                                  _activeDialogItem = item;
-                                                  _isCreatingItem = false;
-                                                });
-                                              },
-                                            ),
-                                          ],
-                                        ),
+                                          AnnotterCanvas(
+                                            items: _items,
+                                            activeMode: _activeMode,
+                                            currentScrollOffset: _currentScrollOffset,
+                                            onRequestCreate: (item, screenName) {
+                                              _saveSnapshot();
+                                              setState(() {
+                                                if (screenName != null) _currentScreenName = screenName;
+                                                _activeDialogItem = item;
+                                                _isCreatingItem = true;
+                                              });
+                                            },
+                                            onRequestEdit: (item) {
+                                              setState(() {
+                                                _activeDialogItem = item;
+                                                _isCreatingItem = false;
+                                              });
+                                            },
+                                          ),
+                                        ],
                                       ),
                                     ),
                                   ),
@@ -197,17 +195,9 @@ class _AnnotterState extends State<Annotter> {
                             ),
                           ),
 
-                          // Horizontal Sliding Bottom Toolbar Dock
-                          _buildBottomDock(),
+                          // Full-Width Thin Bottom Bar Dock (No rounded, sits flush at bottom)
+                          _buildFullWidthBottomBar(size),
                         ],
-                      ),
-
-                      // Top Screen Name Pill (Truncated with Ellipsis)
-                      Positioned(
-                        top: 10,
-                        left: 16,
-                        right: 16,
-                        child: Center(child: _buildTopStudioBar(size)),
                       ),
 
                       // Inline Modal Note Dialog
@@ -244,6 +234,44 @@ class _AnnotterState extends State<Annotter> {
                             ),
                           ),
                         ),
+
+                      // Inline Modal Annotation List Sheet
+                      if (_showListSheet)
+                        Positioned.fill(
+                          child: Container(
+                            color: Colors.black.withValues(alpha: 0.65),
+                            alignment: Alignment.bottomCenter,
+                            child: AnnotationListSheet(
+                              items: _items,
+                              onClose: () => setState(() => _showListSheet = false),
+                              onReorder: (newItems) {
+                                _saveSnapshot();
+                                setState(() {
+                                  _items = newItems;
+                                  _renumberItems();
+                                });
+                              },
+                              onEdit: (item) {
+                                setState(() {
+                                  _showListSheet = false;
+                                  _activeDialogItem = item;
+                                  _isCreatingItem = false;
+                                });
+                              },
+                              onDelete: (item) {
+                                _saveSnapshot();
+                                setState(() {
+                                  _items.removeWhere((i) => i.id == item.id);
+                                  _renumberItems();
+                                });
+                              },
+                              onClearAll: () {
+                                _saveSnapshot();
+                                setState(() => _items.clear());
+                              },
+                            ),
+                          ),
+                        ),
                     ],
                   ),
                 ),
@@ -255,221 +283,178 @@ class _AnnotterState extends State<Annotter> {
     );
   }
 
-  // Top Minimal Studio Bar (Truncated to Prevent Overflow)
-  Widget _buildTopStudioBar(Size size) {
+  // Full-Width Thin Bottom Bar Dock
+  Widget _buildFullWidthBottomBar(Size size) {
     final modeLabel = _activeMode == AnnotterMode.navigate ? 'NAVIGATE (SCROLL)' : _activeMode.name.toUpperCase();
     final modeColor = _activeMode == AnnotterMode.navigate ? const Color(0xFF10B981) : const Color(0xFF0284C7);
 
-    return Material(
-      color: Colors.transparent,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-        decoration: BoxDecoration(
-          color: const Color(0xFF1E293B).withValues(alpha: 0.95),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.white12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.4),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 7,
-              height: 7,
-              decoration: BoxDecoration(color: modeColor, shape: BoxShape.circle),
-            ),
-            const SizedBox(width: 8),
-            ConstrainedBox(
-              constraints: BoxConstraints(maxWidth: size.width * 0.65),
-              child: Text(
-                _bannerMessage ?? '$_activeScreenName • $modeLabel',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                  fontFamily: 'sans-serif',
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // Bottom Sliding Toolbar Dock
-  Widget _buildBottomDock() {
     return Container(
-      margin: const EdgeInsets.only(left: 12, right: 12, bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      width: double.infinity,
       decoration: BoxDecoration(
-        color: const Color(0xFF1E293B), // Slate 800
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.6),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
-          ),
-        ],
-        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+        color: const Color(0xFF0F172A), // Slate 900
+        border: Border(
+          top: BorderSide(color: Colors.white.withValues(alpha: 0.12)),
+        ),
       ),
-      child: Material(
-        color: Colors.transparent,
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          physics: const BouncingScrollPhysics(),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Close Button
-              IconButton(
-                icon: const Icon(Icons.close, color: Colors.white70, size: 20),
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-                onPressed: () => setState(() => _isActive = false),
-              ),
-              const SizedBox(
-                height: 22,
-                child: VerticalDivider(color: Colors.white12, width: 14),
-              ),
-
-              // Navigate Mode (Green)
-              _buildDockTool(
-                icon: Icons.pan_tool_outlined,
-                label: 'Nav',
-                mode: AnnotterMode.navigate,
-              ),
-              const SizedBox(width: 4),
-
-              // Inspect Mode (Cyan)
-              _buildDockTool(
-                icon: Icons.touch_app_outlined,
-                label: 'Inspect',
-                mode: AnnotterMode.inspect,
-              ),
-              const SizedBox(width: 4),
-
-              // Area Mode
-              _buildDockTool(
-                icon: Icons.crop_square_outlined,
-                label: 'Area',
-                mode: AnnotterMode.rectangle,
-              ),
-              const SizedBox(width: 4),
-
-              // Pin Mode
-              _buildDockTool(
-                icon: Icons.pin_drop_outlined,
-                label: 'Pin',
-                mode: AnnotterMode.pin,
-              ),
-
-              const SizedBox(
-                height: 22,
-                child: VerticalDivider(color: Colors.white12, width: 14),
-              ),
-
-              // Undo
-              IconButton(
-                icon: Icon(
-                  Icons.undo,
-                  size: 19,
-                  color: _undoStack.isEmpty ? Colors.white24 : Colors.white70,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Integrated Slim Status Strip (Frees the top of screen completely!)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 3),
+            color: const Color(0xFF1E293B), // Slate 800
+            child: Row(
+              children: [
+                Container(
+                  width: 6,
+                  height: 6,
+                  decoration: BoxDecoration(color: modeColor, shape: BoxShape.circle),
                 ),
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
-                onPressed: _undoStack.isEmpty ? null : _undo,
-              ),
-
-              // Redo
-              IconButton(
-                icon: Icon(
-                  Icons.redo,
-                  size: 19,
-                  color: _redoStack.isEmpty ? Colors.white24 : Colors.white70,
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    _bannerMessage ?? '$_activeScreenName • $modeLabel',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                      fontFamily: 'sans-serif',
+                    ),
+                  ),
                 ),
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
-                onPressed: _redoStack.isEmpty ? null : _redo,
-              ),
+              ],
+            ),
+          ),
 
-              // Reorderable Notes List Sheet
-              IconButton(
-                icon: Stack(
-                  alignment: Alignment.center,
+          // Horizontal Sliding Tool Bar
+          Container(
+            height: 50,
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: Material(
+              color: Colors.transparent,
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                physics: const BouncingScrollPhysics(),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.format_list_numbered, size: 20, color: Colors.white70),
+                    // Exit Studio
+                    _buildBarAction(
+                      icon: Icons.close,
+                      label: 'Exit',
+                      color: Colors.white54,
+                      onTap: () => setState(() => _isActive = false),
+                    ),
+
+                    const SizedBox(
+                      height: 24,
+                      child: VerticalDivider(color: Colors.white12, width: 12),
+                    ),
+
+                    // Navigate Tool
+                    _buildBarTool(
+                      icon: Icons.pan_tool_outlined,
+                      label: 'Nav',
+                      mode: AnnotterMode.navigate,
+                    ),
+
+                    // Inspect Tool
+                    _buildBarTool(
+                      icon: Icons.touch_app_outlined,
+                      label: 'Inspect',
+                      mode: AnnotterMode.inspect,
+                    ),
+
+                    // Area Tool
+                    _buildBarTool(
+                      icon: Icons.crop_square_outlined,
+                      label: 'Area',
+                      mode: AnnotterMode.rectangle,
+                    ),
+
+                    // Pin Tool
+                    _buildBarTool(
+                      icon: Icons.pin_drop_outlined,
+                      label: 'Pin',
+                      mode: AnnotterMode.pin,
+                    ),
+
+                    const SizedBox(
+                      height: 24,
+                      child: VerticalDivider(color: Colors.white12, width: 12),
+                    ),
+
+                    // Undo
+                    _buildBarAction(
+                      icon: Icons.undo,
+                      label: 'Undo',
+                      color: _undoStack.isEmpty ? Colors.white24 : Colors.white70,
+                      onTap: _undoStack.isEmpty ? null : _undo,
+                    ),
+
+                    // Redo
+                    _buildBarAction(
+                      icon: Icons.redo,
+                      label: 'Redo',
+                      color: _redoStack.isEmpty ? Colors.white24 : Colors.white70,
+                      onTap: _redoStack.isEmpty ? null : _redo,
+                    ),
+
+                    // Notes List
+                    _buildBarAction(
+                      icon: Icons.format_list_numbered,
+                      label: _items.isEmpty ? 'List' : 'List (${_items.length})',
+                      color: _items.isEmpty ? Colors.white54 : const Color(0xFF38BDF8),
+                      badgeCount: _items.isNotEmpty ? _items.length : null,
+                      onTap: () => setState(() => _showListSheet = true),
+                    ),
+
+                    // Clear All
                     if (_items.isNotEmpty)
-                      Positioned(
-                        top: 0,
-                        right: 0,
-                        child: Container(
-                          padding: const EdgeInsets.all(3),
-                          decoration: const BoxDecoration(
-                            color: Color(0xFF0284C7),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Text(
-                            '${_items.length}',
-                            style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold),
-                          ),
-                        ),
+                      _buildBarAction(
+                        icon: Icons.delete_sweep_outlined,
+                        label: 'Clear',
+                        color: Colors.redAccent,
+                        onTap: () {
+                          _saveSnapshot();
+                          setState(() => _items.clear());
+                        },
                       ),
+
+                    const SizedBox(width: 8),
+
+                    // Copy Button
+                    ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF0284C7),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        elevation: 0,
+                      ),
+                      icon: const Icon(Icons.copy_all, size: 16),
+                      label: Text(
+                        _items.isEmpty ? 'Copy' : 'Copy (${_items.length})',
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, fontFamily: 'sans-serif'),
+                      ),
+                      onPressed: _copyNotes,
+                    ),
+                    const SizedBox(width: 8),
                   ],
                 ),
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-                onPressed: _openNotesListSheet,
               ),
-
-              // Clear All
-              if (_items.isNotEmpty)
-                IconButton(
-                  icon: const Icon(Icons.delete_sweep_outlined, color: Colors.redAccent, size: 19),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
-                  onPressed: () {
-                    _saveSnapshot();
-                    setState(() => _items.clear());
-                  },
-                ),
-
-              const SizedBox(width: 6),
-
-              // Copy Button
-              ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF0284C7),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  elevation: 4,
-                ),
-                icon: const Icon(Icons.copy_all, size: 16),
-                label: Text(
-                  _items.isEmpty ? 'Copy' : 'Copy (${_items.length})',
-                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, fontFamily: 'sans-serif'),
-                ),
-                onPressed: _copyNotes,
-              ),
-              const SizedBox(width: 4),
-            ],
+            ),
           ),
-        ),
+          SizedBox(height: MediaQuery.of(context).padding.bottom),
+        ],
       ),
     );
   }
 
-  Widget _buildDockTool({
+  Widget _buildBarTool({
     required IconData icon,
     required String label,
     required AnnotterMode mode,
@@ -478,24 +463,31 @@ class _AnnotterState extends State<Annotter> {
     final activeColor = mode == AnnotterMode.navigate ? const Color(0xFF10B981) : const Color(0xFF0284C7);
 
     return InkWell(
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(6),
       onTap: () => setState(() => _activeMode = mode),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        margin: const EdgeInsets.symmetric(horizontal: 2),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
-          color: isSelected ? activeColor : Colors.transparent,
-          borderRadius: BorderRadius.circular(14),
+          color: isSelected ? activeColor.withValues(alpha: 0.22) : Colors.transparent,
+          borderRadius: BorderRadius.circular(6),
+          border: isSelected ? Border.all(color: activeColor, width: 1.2) : null,
         ),
-        child: Row(
+        child: Column(
           mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 16, color: isSelected ? Colors.white : Colors.white60),
-            const SizedBox(width: 4),
+            Icon(
+              icon,
+              size: 18,
+              color: isSelected ? activeColor : Colors.white60,
+            ),
+            const SizedBox(height: 2),
             Text(
               label,
               style: TextStyle(
-                color: isSelected ? Colors.white : Colors.white60,
-                fontSize: 11,
+                color: isSelected ? Colors.white : Colors.white54,
+                fontSize: 9,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                 fontFamily: 'sans-serif',
               ),
@@ -506,37 +498,55 @@ class _AnnotterState extends State<Annotter> {
     );
   }
 
-  void _openNotesListSheet() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (context) => AnnotationListSheet(
-        items: _items,
-        onReorder: (newItems) {
-          _saveSnapshot();
-          setState(() {
-            _items = newItems;
-            _renumberItems();
-          });
-        },
-        onEdit: (item) {
-          setState(() {
-            _activeDialogItem = item;
-            _isCreatingItem = false;
-          });
-        },
-        onDelete: (item) {
-          _saveSnapshot();
-          setState(() {
-            _items.removeWhere((i) => i.id == item.id);
-            _renumberItems();
-          });
-        },
-        onClearAll: () {
-          _saveSnapshot();
-          setState(() => _items.clear());
-        },
+  Widget _buildBarAction({
+    required IconData icon,
+    required String label,
+    required Color color,
+    VoidCallback? onTap,
+    int? badgeCount,
+  }) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(6),
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icon, size: 18, color: color),
+                const SizedBox(height: 2),
+                Text(
+                  label,
+                  style: TextStyle(
+                    color: color,
+                    fontSize: 9,
+                    fontFamily: 'sans-serif',
+                  ),
+                ),
+              ],
+            ),
+            if (badgeCount != null)
+              Positioned(
+                top: 0,
+                right: 0,
+                child: Container(
+                  padding: const EdgeInsets.all(2),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF0284C7),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Text(
+                    '$badgeCount',
+                    style: const TextStyle(color: Colors.white, fontSize: 7, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }

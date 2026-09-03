@@ -19,7 +19,7 @@ class InspectedWidgetInfo {
 }
 
 class WidgetInspectorHelper {
-  // Set of basic framework composition primitives that are built into Flutter
+  // Set of basic framework primitives that are built into Flutter
   static const Set<String> _frameworkPrimitives = {
     'Container',
     'Card',
@@ -32,6 +32,7 @@ class WidgetInspectorHelper {
     'ColoredBox',
     'GestureDetector',
     'InkWell',
+    'InkResponse',
     'SafeArea',
     'Stack',
     'Column',
@@ -49,45 +50,53 @@ class WidgetInspectorHelper {
     'SingleChildScrollView',
     'Hero',
     'DefaultTextStyle',
+    'Text',
+    'RichText',
+    'Icon',
+    'Image',
+    'RawImage',
     'Annotter',
     'AnnotterCanvas',
     'AnnotationDialog',
   };
 
-  // ponytail: Strips generic type parameters e.g. ValueListenableBuilder<bool> -> ValueListenableBuilder
   static String cleanType(String type) {
     final idx = type.indexOf('<');
     return idx != -1 ? type.substring(0, idx) : type;
   }
 
-  // ponytail: Architectural validation: checks if a widget is a true user component.
-  // In Flutter, user components always extend StatelessWidget or StatefulWidget.
-  // Internal framework wrappers (InheritedWidget, RenderObjectWidget, etc.) are excluded.
-  static bool _isNoise(Widget widget) {
+  static bool _isCustomComponent(Widget widget) {
     if (widget is! StatelessWidget && widget is! StatefulWidget) {
-      return true;
+      return false;
     }
-
-    final rawType = widget.runtimeType.toString();
-    final type = cleanType(rawType);
-
-    if (type.startsWith('_')) return true;
-    if (type.contains('Annotter')) return true;
-    if (type.contains('Builder')) return true;
-    if (type.contains('Listener')) return true;
-
-    return _frameworkPrimitives.contains(type);
+    final type = cleanType(widget.runtimeType.toString());
+    if (type.startsWith('_')) return false;
+    if (type.contains('Annotter')) return false;
+    if (type.contains('Builder')) return false;
+    if (type.contains('Listener')) return false;
+    return !_frameworkPrimitives.contains(type);
   }
 
-  // ponytail: Direct hit-test and architectural component resolution.
-  static InspectedWidgetInfo inspectAt(BuildContext context, Offset globalOffset) {
+  static InspectedWidgetInfo inspectAt(BuildContext context, Offset globalOrLocalOffset) {
     final canvasBox = context.findRenderObject() as RenderBox?;
-    final localOffset = canvasBox?.globalToLocal(globalOffset) ?? globalOffset;
+    Offset localOffset;
+    if (canvasBox != null) {
+      try {
+        localOffset = canvasBox.globalToLocal(globalOrLocalOffset);
+        if (!localOffset.dx.isFinite || !localOffset.dy.isFinite) {
+          localOffset = globalOrLocalOffset;
+        }
+      } catch (_) {
+        localOffset = globalOrLocalOffset;
+      }
+    } else {
+      localOffset = globalOrLocalOffset;
+    }
 
     final hitResult = HitTestResult();
     bool hitAppDirectly = false;
 
-    // Direct app hit-test: bypasses outer studio and root window plumbing
+    // Direct hit-test on child RenderBox in Stack
     final parent = canvasBox?.parent;
     if (parent is ContainerRenderObjectMixin<RenderBox, StackParentData>) {
       final appBox = parent.firstChild;
@@ -106,7 +115,7 @@ class WidgetInspectorHelper {
       try {
         final view = View.maybeOf(context);
         if (view != null) {
-          WidgetsBinding.instance.hitTestInView(hitResult, globalOffset, view.viewId);
+          WidgetsBinding.instance.hitTestInView(hitResult, globalOrLocalOffset, view.viewId);
         }
       } catch (_) {}
     }
@@ -119,64 +128,65 @@ class WidgetInspectorHelper {
 
     for (final entry in hitResult.path) {
       final target = entry.target;
-      if (target is RenderObject) {
-        if (target is RenderBox && target.hasSize && canvasBox != null) {
-          try {
-            final globalTopLeft = target.localToGlobal(Offset.zero);
-            final globalBottomRight = target.localToGlobal(Offset(target.size.width, target.size.height));
-            final localTopLeft = canvasBox.globalToLocal(globalTopLeft);
-            final localBottomRight = canvasBox.globalToLocal(globalBottomRight);
+      if (target is RenderBox && target.hasSize && canvasBox != null) {
+        try {
+          final globalTopLeft = target.localToGlobal(Offset.zero);
+          final globalBottomRight = target.localToGlobal(Offset(target.size.width, target.size.height));
+          final localTopLeft = canvasBox.globalToLocal(globalTopLeft);
+          final localBottomRight = canvasBox.globalToLocal(globalBottomRight);
 
-            if (localTopLeft.isFinite && localBottomRight.isFinite) {
-              final boxRect = Rect.fromPoints(localTopLeft, localBottomRight);
-              final area = boxRect.width * boxRect.height;
+          if (localTopLeft.isFinite && localBottomRight.isFinite) {
+            final boxRect = Rect.fromPoints(localTopLeft, localBottomRight);
+            final area = boxRect.width * boxRect.height;
 
-              if (boxRect.width > 2 && boxRect.height > 2) {
-                if (kDebugMode && target.debugCreator is DebugCreator) {
-                  final element = (target.debugCreator as DebugCreator).element;
-                  final widget = element.widget;
+            if (boxRect.width > 2 && boxRect.height > 2) {
+              if (kDebugMode && target.debugCreator is DebugCreator) {
+                final element = (target.debugCreator as DebugCreator).element;
 
-                  if (!_isNoise(widget)) {
-                    final widgetType = cleanType(widget.runtimeType.toString());
-                    if (smallestRect == null || area < (smallestRect.width * smallestRect.height)) {
-                      smallestRect = boxRect;
-                      foundWidgetName = widgetType;
-                    }
-                    if (!hierarchy.contains(widgetType)) {
-                      hierarchy.add(widgetType);
-                    }
+                // Find the nearest custom component in the ancestor chain
+                Element? customElement;
+                element.visitAncestorElements((ancestor) {
+                  final aw = ancestor.widget;
+                  final type = cleanType(aw.runtimeType.toString());
+
+                  if (aw is Scrollable) {
+                    detectedScrollable = true;
                   }
 
-                  // Walk ancestor elements to discover active Screen and user custom components
-                  element.visitAncestorElements((ancestor) {
-                    final ancestorWidget = ancestor.widget;
-                    if (ancestorWidget is Scrollable) {
-                      detectedScrollable = true;
-                    }
+                  if ((type.endsWith('Screen') || type.endsWith('Page')) &&
+                      type != 'RawView' &&
+                      !type.startsWith('_')) {
+                    detectedScreen ??= type;
+                  }
 
-                    final type = cleanType(ancestorWidget.runtimeType.toString());
+                  if (customElement == null && _isCustomComponent(aw)) {
+                    customElement = ancestor;
+                  }
 
-                    if ((type.endsWith('Screen') || type.endsWith('Page')) &&
-                        type != 'RawView' &&
-                        !type.startsWith('_')) {
-                      detectedScreen ??= type;
-                    }
+                  if (!hierarchy.contains(type) && !type.startsWith('_') && !type.contains('Annotter')) {
+                    hierarchy.add(type);
+                  }
+                  return hierarchy.length < 8;
+                });
 
-                    if (!_isNoise(ancestorWidget)) {
-                      if (foundWidgetName == 'CustomElement') {
-                        foundWidgetName = type;
-                      }
-                      if (!hierarchy.contains(type)) {
-                        hierarchy.add(type);
-                      }
-                    }
-                    return hierarchy.length < 8;
-                  });
+                if (customElement != null) {
+                  final customType = cleanType(customElement!.widget.runtimeType.toString());
+                  // Use bounding box of target or custom element
+                  if (smallestRect == null || area < (smallestRect.width * smallestRect.height)) {
+                    smallestRect = boxRect;
+                    foundWidgetName = customType;
+                  }
+                } else if (smallestRect == null) {
+                  smallestRect = boxRect;
+                  final rawType = cleanType(element.widget.runtimeType.toString());
+                  if (foundWidgetName == 'CustomElement' && !rawType.startsWith('_')) {
+                    foundWidgetName = rawType;
+                  }
                 }
               }
             }
-          } catch (_) {}
-        }
+          }
+        } catch (_) {}
       }
     }
 
@@ -190,7 +200,6 @@ class WidgetInspectorHelper {
   }
 
   /// Traverses the mounted element tree to find the currently active/visible Screen or Page.
-  /// Automatically skips inactive Offstage branches (such as tabs in IndexedStack).
   static String? detectActiveScreen(BuildContext context) {
     String? activeScreen;
 

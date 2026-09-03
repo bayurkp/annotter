@@ -7,6 +7,7 @@ class AnnotationListSheet extends StatefulWidget {
   final ValueChanged<AnnotterItem> onEdit;
   final ValueChanged<AnnotterItem> onDelete;
   final VoidCallback onClearAll;
+  final VoidCallback onClose;
 
   const AnnotationListSheet({
     super.key,
@@ -15,6 +16,7 @@ class AnnotationListSheet extends StatefulWidget {
     required this.onEdit,
     required this.onDelete,
     required this.onClearAll,
+    required this.onClose,
   });
 
   @override
@@ -85,12 +87,12 @@ class _AnnotationListSheetState extends State<AnnotationListSheet> {
                       label: const Text('Clear All', style: TextStyle(fontSize: 12)),
                       onPressed: () {
                         widget.onClearAll();
-                        Navigator.of(context).pop();
+                        widget.onClose();
                       },
                     ),
                   IconButton(
                     icon: const Icon(Icons.close, color: Colors.white60, size: 20),
-                    onPressed: () => Navigator.of(context).pop(),
+                    onPressed: widget.onClose,
                   ),
                 ],
               ),
@@ -164,7 +166,7 @@ class _AnnotationListSheetState extends State<AnnotationListSheet> {
                         Expanded(
                           child: InkWell(
                             onTap: () {
-                              Navigator.of(context).pop();
+                              widget.onClose();
                               widget.onEdit(item);
                             },
                             child: Column(
@@ -218,7 +220,7 @@ class _AnnotationListSheetState extends State<AnnotationListSheet> {
                           padding: EdgeInsets.zero,
                           constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
                           onPressed: () {
-                            Navigator.of(context).pop();
+                            widget.onClose();
                             widget.onEdit(item);
                           },
                         ),

@@ -35,13 +35,13 @@ class _AnnotterCanvasState extends State<AnnotterCanvas> {
       child: IgnorePointer(
         ignoring: isNavigating,
         child: MouseRegion(
-          onHover: (event) => _updateHover(event.position),
+          onHover: (event) => _updateHover(event.localPosition),
           onExit: (_) {
             if (_hoveredWidget != null) setState(() => _hoveredWidget = null);
           },
           child: Listener(
-            onPointerDown: (event) => _updateHover(event.position),
-            onPointerMove: (event) => _updateHover(event.position),
+            onPointerDown: (event) => _updateHover(event.localPosition),
+            onPointerMove: (event) => _updateHover(event.localPosition),
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
               onTapDown: _handleTapDown,
@@ -64,12 +64,12 @@ class _AnnotterCanvasState extends State<AnnotterCanvas> {
     );
   }
 
-  void _updateHover(Offset globalPos) {
+  void _updateHover(Offset localPos) {
     if (widget.activeMode != AnnotterMode.inspect) {
       if (_hoveredWidget != null) setState(() => _hoveredWidget = null);
       return;
     }
-    final info = WidgetInspectorHelper.inspectAt(context, globalPos);
+    final info = WidgetInspectorHelper.inspectAt(context, localPos);
     if (_hoveredWidget?.rect != info.rect || _hoveredWidget?.name != info.name) {
       setState(() => _hoveredWidget = info);
     }
@@ -78,16 +78,16 @@ class _AnnotterCanvasState extends State<AnnotterCanvas> {
   void _handleTapDown(TapDownDetails details) {
     if (widget.activeMode == AnnotterMode.navigate) return;
 
-    // 1. Check if user tapped an existing item to edit
+    // 1. Only tap directly on a numbered badge edits the item
     final tappedItem = _findItemAt(details.localPosition);
     if (tappedItem != null) {
       widget.onRequestEdit(tappedItem);
       return;
     }
 
-    // 2. Create new item based on active mode
+    // 2. Create new annotation based on active tool
     if (widget.activeMode == AnnotterMode.inspect) {
-      final info = _hoveredWidget ?? WidgetInspectorHelper.inspectAt(context, details.globalPosition);
+      final info = _hoveredWidget ?? WidgetInspectorHelper.inspectAt(context, details.localPosition);
       final newItem = AnnotterItem(
         id: DateTime.now().millisecondsSinceEpoch,
         number: widget.items.length + 1,
@@ -102,7 +102,7 @@ class _AnnotterCanvasState extends State<AnnotterCanvas> {
       widget.onRequestCreate(newItem, info.screenName);
     } else if (widget.activeMode == AnnotterMode.pin) {
       final pos = details.localPosition;
-      final info = WidgetInspectorHelper.inspectAt(context, details.globalPosition);
+      final info = WidgetInspectorHelper.inspectAt(context, pos);
       final newItem = AnnotterItem(
         id: DateTime.now().millisecondsSinceEpoch,
         number: widget.items.length + 1,
@@ -133,7 +133,7 @@ class _AnnotterCanvasState extends State<AnnotterCanvas> {
   void _handlePanEnd(DragEndDetails details) {
     if (_dragStart != null && _dragCurrent != null) {
       final rect = Rect.fromPoints(_dragStart!, _dragCurrent!);
-      if (rect.width > 10 && rect.height > 10) {
+      if (rect.width > 8 && rect.height > 8) {
         final info = WidgetInspectorHelper.inspectAt(context, _dragStart!);
         final newItem = AnnotterItem(
           id: DateTime.now().millisecondsSinceEpoch,
@@ -162,10 +162,9 @@ class _AnnotterCanvasState extends State<AnnotterCanvas> {
       final badgeCenter = item.mode == AnnotterMode.pin
           ? displayRect.center
           : Offset(displayRect.left + 12, displayRect.top + 12);
-      if ((pos - badgeCenter).distance <= 18) {
-        return item;
-      }
-      if (displayRect.contains(pos)) {
+
+      // Only direct hit on the circular badge triggers edit mode!
+      if ((pos - badgeCenter).distance <= 22) {
         return item;
       }
     }
