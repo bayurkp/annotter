@@ -137,8 +137,10 @@ class _AnnotterState extends State<Annotter> {
                                     decoration: BoxDecoration(
                                       border: Border.all(
                                         color: _activeMode == AnnotterMode.navigate
-                                            ? const Color(0xFF10B981) // Green in navigate
-                                            : const Color(0xFF0284C7), // DevTools Blue in annotate
+                                            ? const Color(0xFF10B981) // Green in Move
+                                            : _activeMode == AnnotterMode.select
+                                                ? const Color(0xFF6366F1) // Indigo in Select
+                                                : const Color(0xFF0284C7), // DevTools Blue in annotate
                                         width: 2.0,
                                       ),
                                     ),
@@ -369,6 +371,12 @@ class _AnnotterState extends State<Annotter> {
                       ),
                       const SizedBox(width: 2),
                       _buildSegmentTool(
+                        icon: Icons.near_me_outlined,
+                        label: 'Select',
+                        mode: AnnotterMode.select,
+                      ),
+                      const SizedBox(width: 2),
+                      _buildSegmentTool(
                         icon: Icons.touch_app_outlined,
                         label: 'Inspect',
                         mode: AnnotterMode.inspect,
@@ -490,7 +498,11 @@ class _AnnotterState extends State<Annotter> {
     required AnnotterMode mode,
   }) {
     final isSelected = _activeMode == mode;
-    final activeColor = mode == AnnotterMode.navigate ? const Color(0xFF10B981) : const Color(0xFF0284C7);
+    final activeColor = mode == AnnotterMode.navigate
+        ? const Color(0xFF10B981)
+        : mode == AnnotterMode.select
+            ? const Color(0xFF6366F1)
+            : const Color(0xFF0284C7);
 
     return InkWell(
       borderRadius: BorderRadius.circular(7),

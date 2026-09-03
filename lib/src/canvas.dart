@@ -74,8 +74,17 @@ class _AnnotterCanvasState extends State<AnnotterCanvas> {
   void _handleTapDown(TapDownDetails details) {
     if (widget.activeMode == AnnotterMode.navigate) return;
 
-    // 1. Check if user tapped an existing numbered badge to edit
-    final tappedItem = _findItemAt(details.localPosition);
+    // 1. Dedicated Select Mode: tap anywhere on annotation box or badge opens edit
+    if (widget.activeMode == AnnotterMode.select) {
+      final selectedItem = _findItemAt(details.localPosition, allowEntireRect: true);
+      if (selectedItem != null) {
+        widget.onRequestEdit(selectedItem);
+      }
+      return;
+    }
+
+    // 2. In other modes: direct tap on numbered badge edits the item
+    final tappedItem = _findItemAt(details.localPosition, allowEntireRect: false);
     if (tappedItem != null) {
       widget.onRequestEdit(tappedItem);
       return;
@@ -152,7 +161,7 @@ class _AnnotterCanvasState extends State<AnnotterCanvas> {
     });
   }
 
-  AnnotterItem? _findItemAt(Offset pos) {
+  AnnotterItem? _findItemAt(Offset pos, {bool allowEntireRect = false}) {
     for (final item in widget.items.reversed) {
       final dy = item.isScrollable ? (item.scrollOffsetAtCreation - widget.currentScrollOffset) : 0.0;
       final displayRect = item.rect.translate(0, dy);
@@ -161,8 +170,13 @@ class _AnnotterCanvasState extends State<AnnotterCanvas> {
           ? displayRect.center
           : Offset(displayRect.left + 12, displayRect.top + 12);
 
-      // Only direct hit on the circular numbered badge triggers edit
+      // Direct hit on the circular numbered badge
       if ((pos - badgeCenter).distance <= 22) {
+        return item;
+      }
+
+      // Hit anywhere inside the bounding rectangle (for Select tool)
+      if (allowEntireRect && displayRect.contains(pos)) {
         return item;
       }
     }
@@ -318,6 +332,8 @@ class _AnnotterPainter extends CustomPainter {
     switch (mode) {
       case AnnotterMode.navigate:
         return const Color(0xFF10B981); // Emerald Green
+      case AnnotterMode.select:
+        return const Color(0xFF6366F1); // Indigo / Violet
       case AnnotterMode.inspect:
         return const Color(0xFF0284C7); // DevTools Cyan/Blue
       case AnnotterMode.rectangle:
