@@ -445,7 +445,7 @@ class _AnnotterState extends State<Annotter> {
 
               const SizedBox(width: 6),
 
-              // Copy for AI Button
+              // Copy Button
               ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF0284C7),
@@ -456,10 +456,10 @@ class _AnnotterState extends State<Annotter> {
                 ),
                 icon: const Icon(Icons.copy_all, size: 16),
                 label: Text(
-                  _items.isEmpty ? 'AI' : 'AI (${_items.length})',
+                  _items.isEmpty ? 'Copy' : 'Copy (${_items.length})',
                   style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, fontFamily: 'sans-serif'),
                 ),
-                onPressed: _copyForAI,
+                onPressed: _copyNotes,
               ),
               const SizedBox(width: 4),
             ],
@@ -610,7 +610,7 @@ class _AnnotterState extends State<Annotter> {
     }
   }
 
-  void _copyForAI() async {
+  void _copyNotes() async {
     final size = MediaQuery.of(context).size;
 
     // 1. Auto-capture current visible viewport screenshot
