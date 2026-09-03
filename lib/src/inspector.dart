@@ -19,15 +19,33 @@ class InspectedWidgetInfo {
 }
 
 class WidgetInspectorHelper {
+  /// Layout primitives: structural vocabulary of Flutter, equivalent to
+  /// HTML's <div>, <span>, <section>. Never a semantic component name.
+  /// Stable since Flutter 1.0, will never change.
+  static const _layoutPrimitives = {
+    'Container', 'SizedBox', 'Padding', 'Center', 'Align',
+    'Row', 'Column', 'Stack', 'Flex', 'Wrap',
+    'Expanded', 'Flexible', 'Spacer',
+  };
+
   /// Determines whether a widget is a component-level candidate for the
   /// Annotter UI Tree. Uses an architectural heuristic, not a name blacklist.
   ///
+  /// Pipeline:
+  ///   Element traversal
+  ///     → Stateless / Stateful boundary
+  ///     → Private / Annotter filter
+  ///     → Layout primitive filter
+  ///     → Semantic Component Tree
+  ///
   /// Principles:
-  ///   Element           = traversal mechanism
-  ///   Stateless/Stateful = component boundary
-  ///   _                 = internal / private
-  ///   Annotter          = infrastructure owned by Annotter
-  ///   No widget-name blacklists
+  ///   ❌ Don't filter based on "looks unimportant"
+  ///   ❌ Don't blacklist Builder/Focus/GestureDetector
+  ///   ❌ Don't blacklist based on contains()
+  ///   ✅ Filter by architectural type
+  ///   ✅ Filter private/internal
+  ///   ✅ Filter Annotter infrastructure
+  ///   ✅ Filter layout primitives (structural vocabulary)
   static bool _isComponentCandidate(Widget widget) {
     // 1. Component boundary: StatelessWidget / StatefulWidget
     //    (includes ConsumerWidget, HookWidget, BlocBuilder, etc.)
@@ -42,6 +60,9 @@ class WidgetInspectorHelper {
 
     // 3. Annotter's own overlay infrastructure
     if (type.contains('Annotter')) return false;
+
+    // 4. Layout primitives (structural vocabulary, not semantic components)
+    if (_layoutPrimitives.contains(type)) return false;
 
     return true;
   }
