@@ -20,6 +20,19 @@ class InspectedWidgetInfo {
 
 class WidgetInspectorHelper {
   static const Set<String> _frameworkPrimitives = {
+    // Focus, shortcuts & actions
+    'Focus',
+    'FocusScope',
+    'Actions',
+    'Shortcuts',
+    'CallbackShortcuts',
+    'PrimaryScrollController',
+    'ScrollConfiguration',
+    'Scrollable',
+    'Scrollbar',
+    'RawScrollbar',
+
+    // Primitives & layout
     'Container',
     'Card',
     'Material',
@@ -46,6 +59,11 @@ class WidgetInspectorHelper {
     'Flexible',
     'DecoratedBox',
     'ConstrainedBox',
+    'UnconstrainedBox',
+    'FractionallySizedBox',
+    'LimitedBox',
+    'OverflowBox',
+    'SizedOverflowBox',
     'Offstage',
     'Visibility',
     'FittedBox',
@@ -59,9 +77,21 @@ class WidgetInspectorHelper {
     'Icon',
     'Image',
     'RawImage',
+    'KeyedSubtree',
+    'RepaintBoundary',
+    'ClipRect',
+    'ClipRRect',
+    'ClipOval',
+    'Transform',
+    'Opacity',
+    'BackdropFilter',
+    'Positioned',
+
+    // Annotter Studio internals
     'Annotter',
     'AnnotterCanvas',
     'AnnotationDialog',
+    'AnnotationListSheet',
   };
 
   static String cleanType(String type) {
@@ -69,16 +99,30 @@ class WidgetInspectorHelper {
     return idx != -1 ? type.substring(0, idx) : type;
   }
 
+  static bool _isMeaningfulWidget(String type) {
+    if (_frameworkPrimitives.contains(type)) return false;
+    if (type.startsWith('_')) return false;
+    if (type.contains('Annotter')) return false;
+    if (type.contains('Builder')) return false;
+    if (type.contains('Listener')) return false;
+    if (type.contains('Transition')) return false;
+    if (type.startsWith('Animated')) return false;
+    if (type.startsWith('Default')) return false;
+    if (type.startsWith('Raw')) return false;
+    if (type.startsWith('Focus')) return false;
+    if (type.startsWith('Action')) return false;
+    if (type.startsWith('Shortcut')) return false;
+    if (type.startsWith('Scroll')) return false;
+    if (type.startsWith('Sliver')) return false;
+    return true;
+  }
+
   static bool _isCustomComponent(Widget widget) {
     if (widget is! StatelessWidget && widget is! StatefulWidget) {
       return false;
     }
     final type = cleanType(widget.runtimeType.toString());
-    if (type.startsWith('_')) return false;
-    if (type.contains('Annotter')) return false;
-    if (type.contains('Builder')) return false;
-    if (type.contains('Listener')) return false;
-    return !_frameworkPrimitives.contains(type);
+    return _isMeaningfulWidget(type);
   }
 
   // ponytail: Hit-tests the app sibling RenderBox directly using local coordinates.
@@ -131,6 +175,7 @@ class WidgetInspectorHelper {
 
                 // Discover custom component and scrollable ancestors (up to 80 levels)
                 Element? customElement;
+                Element? firstMeaningfulElement;
                 int depth = 0;
                 element.visitAncestorElements((ancestor) {
                   depth++;
@@ -154,26 +199,31 @@ class WidgetInspectorHelper {
                     detectedScreen ??= type;
                   }
 
+                  if (_isMeaningfulWidget(type)) {
+                    firstMeaningfulElement ??= ancestor;
+                    if (!hierarchy.contains(type) && hierarchy.length < 8) {
+                      hierarchy.add(type);
+                    }
+                  }
+
                   if (customElement == null && _isCustomComponent(aw)) {
                     customElement = ancestor;
                   }
 
-                  if (!hierarchy.contains(type) && !type.startsWith('_') && !type.contains('Annotter') && hierarchy.length < 8) {
-                    hierarchy.add(type);
-                  }
                   return depth < 80;
                 });
 
-                if (customElement != null) {
-                  final customType = cleanType(customElement!.widget.runtimeType.toString());
+                final chosenElement = customElement ?? firstMeaningfulElement;
+                if (chosenElement != null) {
+                  final chosenType = cleanType(chosenElement.widget.runtimeType.toString());
                   if (smallestRect == null || area < (smallestRect.width * smallestRect.height)) {
                     smallestRect = boxRect;
-                    foundWidgetName = customType;
+                    foundWidgetName = chosenType;
                   }
                 } else if (smallestRect == null) {
                   smallestRect = boxRect;
                   final rawType = cleanType(element.widget.runtimeType.toString());
-                  if (foundWidgetName == 'CustomElement' && !rawType.startsWith('_')) {
+                  if (foundWidgetName == 'CustomElement' && _isMeaningfulWidget(rawType)) {
                     foundWidgetName = rawType;
                   }
                 }
