@@ -167,7 +167,10 @@ class WidgetInspectorHelper {
                     }
 
                     if (!_isNoise(type)) {
-                      if (foundWidgetName == 'CustomElement' || foundWidgetName == 'RichText') {
+                      if (foundWidgetName == 'CustomElement' ||
+                          foundWidgetName == 'RichText' ||
+                          foundWidgetName == 'Text' ||
+                          foundWidgetName == 'Icon') {
                         foundWidgetName = type;
                       }
                       if (!hierarchy.contains(type)) {
@@ -228,6 +231,17 @@ class WidgetInspectorHelper {
   static bool _isNoise(String type) {
     if (type.startsWith('_')) return true;
     if (type.contains('Annotter')) return true;
+    if (type.startsWith('Inherited')) return true;
+    if (type.startsWith('Cupertino')) return true;
+    if (type.contains('Theme')) return true;
+    if (type.endsWith('Builder')) return true;
+    if (type.contains('Focus')) return true;
+    if (type.contains('Shortcut')) return true;
+    if (type.contains('Selection')) return true;
+    if (type.contains('Scope')) return true;
+    if (type.startsWith('Default')) return true;
+    if (type.startsWith('Raw')) return true;
+    if (type == 'Title') return true;
     return _frameworkNoise.contains(type);
   }
 }
