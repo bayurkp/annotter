@@ -34,16 +34,19 @@ class _AnnotationListSheetState extends State<AnnotationListSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      constraints: BoxConstraints(
-        maxHeight: MediaQuery.of(context).size.height * 0.7,
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: const BoxDecoration(
-        color: Color(0xFF1E293B), // Slate 800
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      child: Column(
+    return Material(
+      color: Colors.transparent,
+      textStyle: const TextStyle(decoration: TextDecoration.none, fontFamily: 'sans-serif'),
+      child: Container(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.7,
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: const BoxDecoration(
+          color: Color(0xFF1E293B), // Slate 800
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           // Drag handle indicator
@@ -246,6 +249,7 @@ class _AnnotationListSheetState extends State<AnnotationListSheet> {
             ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 }

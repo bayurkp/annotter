@@ -44,7 +44,6 @@ class _AnnotterState extends State<Annotter> {
   AnnotterItem? _activeDialogItem;
   bool _isCreatingItem = false;
   bool _showListSheet = false;
-  String? _bannerMessage;
   String _currentScreenName = 'HomeScreen';
 
   String get _activeScreenName {
@@ -111,38 +110,33 @@ class _AnnotterState extends State<Annotter> {
                 );
               }
 
-              // Active: Full-width Bottom Bar Studio (Clean top, zero rounded)
-              return Container(
-                color: const Color(0xFF0B0F19), // Deep studio backdrop
-                child: SafeArea(
-                  bottom: false,
-                  child: Stack(
-                    children: [
-                      Column(
-                        children: [
-                          // Proportional Scaled App Viewport
-                          Expanded(
-                            child: Center(
-                              child: Padding(
-                                padding: const EdgeInsets.fromLTRB(8, 6, 8, 2),
+              // Active: Full-width Ultra-Thin Bottom Dock Studio
+              return Material(
+                color: Colors.transparent,
+                textStyle: const TextStyle(decoration: TextDecoration.none, fontFamily: 'sans-serif'),
+                child: Container(
+                  color: const Color(0xFF0B0F19), // Deep studio backdrop
+                  child: SafeArea(
+                    top: true,
+                    bottom: false,
+                    child: Stack(
+                      children: [
+                        Column(
+                          children: [
+                            // Proportional Scaled App Viewport
+                            Expanded(
+                              child: Center(
                                 child: FittedBox(
                                   fit: BoxFit.contain,
                                   child: Container(
                                     width: size.width,
                                     height: size.height,
                                     decoration: BoxDecoration(
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.black.withValues(alpha: 0.7),
-                                          blurRadius: 28,
-                                          offset: const Offset(0, 10),
-                                        ),
-                                      ],
                                       border: Border.all(
                                         color: _activeMode == AnnotterMode.navigate
                                             ? const Color(0xFF10B981) // Green in navigate
                                             : const Color(0xFF0284C7), // DevTools Blue in annotate
-                                        width: 2.5,
+                                        width: 2.0,
                                       ),
                                     ),
                                     child: RepaintBoundary(
@@ -160,7 +154,7 @@ class _AnnotterState extends State<Annotter> {
                                                   });
                                                 }
                                               } else if (notification is NavigationNotification) {
-                                                setState(() {}); // Instant route update
+                                                setState(() {});
                                               }
                                               return false;
                                             },
@@ -193,86 +187,87 @@ class _AnnotterState extends State<Annotter> {
                                 ),
                               ),
                             ),
+
+                            // Ultra-Thin Full-Width Bottom Bar
+                            _buildSlimBottomBar(context),
+                          ],
+                        ),
+
+                        // Inline Modal Note Dialog
+                        if (_activeDialogItem != null)
+                          Positioned.fill(
+                            child: Container(
+                              color: Colors.black.withValues(alpha: 0.65),
+                              alignment: Alignment.center,
+                              child: SingleChildScrollView(
+                                child: AnnotationDialog(
+                                  item: _activeDialogItem!,
+                                  isNew: _isCreatingItem,
+                                  onCancel: () => setState(() => _activeDialogItem = null),
+                                  onDelete: () {
+                                    _saveSnapshot();
+                                    setState(() {
+                                      final deleteId = _activeDialogItem!.id;
+                                      _items.removeWhere((i) => i.id == deleteId);
+                                      _renumberItems();
+                                      _activeDialogItem = null;
+                                    });
+                                  },
+                                  onSave: (note) {
+                                    _saveSnapshot();
+                                    setState(() {
+                                      _activeDialogItem!.note = note;
+                                      if (_isCreatingItem) {
+                                        _items.add(_activeDialogItem!);
+                                      }
+                                      _activeDialogItem = null;
+                                    });
+                                  },
+                                ),
+                              ),
+                            ),
                           ),
 
-                          // Full-Width Thin Bottom Bar Dock (No rounded, sits flush at bottom)
-                          _buildFullWidthBottomBar(size),
-                        ],
-                      ),
-
-                      // Inline Modal Note Dialog
-                      if (_activeDialogItem != null)
-                        Positioned.fill(
-                          child: Container(
-                            color: Colors.black.withValues(alpha: 0.65),
-                            alignment: Alignment.center,
-                            child: SingleChildScrollView(
-                              child: AnnotationDialog(
-                                item: _activeDialogItem!,
-                                isNew: _isCreatingItem,
-                                onCancel: () => setState(() => _activeDialogItem = null),
-                                onDelete: () {
+                        // Inline Modal Annotation List Sheet
+                        if (_showListSheet)
+                          Positioned.fill(
+                            child: Container(
+                              color: Colors.black.withValues(alpha: 0.65),
+                              alignment: Alignment.bottomCenter,
+                              child: AnnotationListSheet(
+                                items: _items,
+                                onClose: () => setState(() => _showListSheet = false),
+                                onReorder: (newItems) {
                                   _saveSnapshot();
                                   setState(() {
-                                    final deleteId = _activeDialogItem!.id;
-                                    _items.removeWhere((i) => i.id == deleteId);
+                                    _items = newItems;
                                     _renumberItems();
-                                    _activeDialogItem = null;
                                   });
                                 },
-                                onSave: (note) {
+                                onEdit: (item) {
+                                  setState(() {
+                                    _showListSheet = false;
+                                    _activeDialogItem = item;
+                                    _isCreatingItem = false;
+                                  });
+                                },
+                                onDelete: (item) {
                                   _saveSnapshot();
                                   setState(() {
-                                    _activeDialogItem!.note = note;
-                                    if (_isCreatingItem) {
-                                      _items.add(_activeDialogItem!);
-                                    }
-                                    _activeDialogItem = null;
+                                    final deleteId = item.id;
+                                    _items.removeWhere((i) => i.id == deleteId);
+                                    _renumberItems();
                                   });
+                                },
+                                onClearAll: () {
+                                  _saveSnapshot();
+                                  setState(() => _items.clear());
                                 },
                               ),
                             ),
                           ),
-                        ),
-
-                      // Inline Modal Annotation List Sheet
-                      if (_showListSheet)
-                        Positioned.fill(
-                          child: Container(
-                            color: Colors.black.withValues(alpha: 0.65),
-                            alignment: Alignment.bottomCenter,
-                            child: AnnotationListSheet(
-                              items: _items,
-                              onClose: () => setState(() => _showListSheet = false),
-                              onReorder: (newItems) {
-                                _saveSnapshot();
-                                setState(() {
-                                  _items = newItems;
-                                  _renumberItems();
-                                });
-                              },
-                              onEdit: (item) {
-                                setState(() {
-                                  _showListSheet = false;
-                                  _activeDialogItem = item;
-                                  _isCreatingItem = false;
-                                });
-                              },
-                              onDelete: (item) {
-                                _saveSnapshot();
-                                setState(() {
-                                  _items.removeWhere((i) => i.id == item.id);
-                                  _renumberItems();
-                                });
-                              },
-                              onClearAll: () {
-                                _saveSnapshot();
-                                setState(() => _items.clear());
-                              },
-                            ),
-                          ),
-                        ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               );
@@ -283,178 +278,179 @@ class _AnnotterState extends State<Annotter> {
     );
   }
 
-  // Full-Width Thin Bottom Bar Dock
-  Widget _buildFullWidthBottomBar(Size size) {
-    final modeLabel = _activeMode == AnnotterMode.navigate ? 'NAVIGATE (SCROLL)' : _activeMode.name.toUpperCase();
-    final modeColor = _activeMode == AnnotterMode.navigate ? const Color(0xFF10B981) : const Color(0xFF0284C7);
-
+  // Ultra-Thin Full-Width Bottom Bar Dock (No rounded corners, exactly 46px)
+  Widget _buildSlimBottomBar(BuildContext context) {
     return Container(
       width: double.infinity,
-      decoration: BoxDecoration(
-        color: const Color(0xFF0F172A), // Slate 900
-        border: Border(
-          top: BorderSide(color: Colors.white.withValues(alpha: 0.12)),
-        ),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Integrated Slim Status Strip (Frees the top of screen completely!)
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 3),
-            color: const Color(0xFF1E293B), // Slate 800
+      color: const Color(0xFF0F172A), // Slate 900
+      child: SafeArea(
+        top: false,
+        child: Container(
+          height: 46,
+          decoration: BoxDecoration(
+            border: Border(
+              top: BorderSide(color: Colors.white.withValues(alpha: 0.12)),
+            ),
+          ),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
             child: Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Container(
-                  width: 6,
-                  height: 6,
-                  decoration: BoxDecoration(color: modeColor, shape: BoxShape.circle),
+                // Exit Studio
+                IconButton(
+                  icon: const Icon(Icons.close, color: Colors.white60, size: 20),
+                  tooltip: 'Exit Studio',
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 38, minHeight: 46),
+                  onPressed: () => setState(() => _isActive = false),
                 ),
+
+                const SizedBox(
+                  height: 20,
+                  child: VerticalDivider(color: Colors.white12, width: 8),
+                ),
+
+                // Navigate Tool
+                _buildCompactTool(
+                  icon: Icons.pan_tool_outlined,
+                  label: 'Nav',
+                  mode: AnnotterMode.navigate,
+                ),
+
+                // Inspect Tool
+                _buildCompactTool(
+                  icon: Icons.touch_app_outlined,
+                  label: 'Inspect',
+                  mode: AnnotterMode.inspect,
+                ),
+
+                // Area Tool
+                _buildCompactTool(
+                  icon: Icons.crop_square_outlined,
+                  label: 'Area',
+                  mode: AnnotterMode.rectangle,
+                ),
+
+                // Pin Tool
+                _buildCompactTool(
+                  icon: Icons.pin_drop_outlined,
+                  label: 'Pin',
+                  mode: AnnotterMode.pin,
+                ),
+
+                const SizedBox(
+                  height: 20,
+                  child: VerticalDivider(color: Colors.white12, width: 8),
+                ),
+
+                // Undo
+                IconButton(
+                  icon: Icon(
+                    Icons.undo,
+                    size: 19,
+                    color: _undoStack.isEmpty ? Colors.white24 : Colors.white70,
+                  ),
+                  tooltip: 'Undo',
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 36, minHeight: 46),
+                  onPressed: _undoStack.isEmpty ? null : _undo,
+                ),
+
+                // Redo
+                IconButton(
+                  icon: Icon(
+                    Icons.redo,
+                    size: 19,
+                    color: _redoStack.isEmpty ? Colors.white24 : Colors.white70,
+                  ),
+                  tooltip: 'Redo',
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 36, minHeight: 46),
+                  onPressed: _redoStack.isEmpty ? null : _redo,
+                ),
+
+                // Notes List
+                IconButton(
+                  icon: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      const Icon(Icons.format_list_numbered, size: 20, color: Colors.white70),
+                      if (_items.isNotEmpty)
+                        Positioned(
+                          top: 0,
+                          right: 0,
+                          child: Container(
+                            padding: const EdgeInsets.all(2),
+                            decoration: const BoxDecoration(
+                              color: Color(0xFF0284C7),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Text(
+                              '${_items.length}',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 8,
+                                fontWeight: FontWeight.bold,
+                                decoration: TextDecoration.none,
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  tooltip: 'Annotations List',
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 38, minHeight: 46),
+                  onPressed: () => setState(() => _showListSheet = true),
+                ),
+
+                // Clear All
+                if (_items.isNotEmpty)
+                  IconButton(
+                    icon: const Icon(Icons.delete_sweep_outlined, color: Colors.redAccent, size: 20),
+                    tooltip: 'Clear All',
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(minWidth: 36, minHeight: 46),
+                    onPressed: () {
+                      _saveSnapshot();
+                      setState(() => _items.clear());
+                    },
+                  ),
+
                 const SizedBox(width: 6),
-                Expanded(
-                  child: Text(
-                    _bannerMessage ?? '$_activeScreenName • $modeLabel',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
-                      fontFamily: 'sans-serif',
+
+                // Copy Button
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF0284C7),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      minimumSize: const Size(60, 32),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                      elevation: 0,
                     ),
+                    icon: const Icon(Icons.copy_all, size: 15),
+                    label: Text(
+                      _items.isEmpty ? 'Copy' : 'Copy (${_items.length})',
+                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, fontFamily: 'sans-serif'),
+                    ),
+                    onPressed: _copyNotes,
                   ),
                 ),
+                const SizedBox(width: 8),
               ],
             ),
           ),
-
-          // Horizontal Sliding Tool Bar
-          Container(
-            height: 50,
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: Material(
-              color: Colors.transparent,
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                physics: const BouncingScrollPhysics(),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Exit Studio
-                    _buildBarAction(
-                      icon: Icons.close,
-                      label: 'Exit',
-                      color: Colors.white54,
-                      onTap: () => setState(() => _isActive = false),
-                    ),
-
-                    const SizedBox(
-                      height: 24,
-                      child: VerticalDivider(color: Colors.white12, width: 12),
-                    ),
-
-                    // Navigate Tool
-                    _buildBarTool(
-                      icon: Icons.pan_tool_outlined,
-                      label: 'Nav',
-                      mode: AnnotterMode.navigate,
-                    ),
-
-                    // Inspect Tool
-                    _buildBarTool(
-                      icon: Icons.touch_app_outlined,
-                      label: 'Inspect',
-                      mode: AnnotterMode.inspect,
-                    ),
-
-                    // Area Tool
-                    _buildBarTool(
-                      icon: Icons.crop_square_outlined,
-                      label: 'Area',
-                      mode: AnnotterMode.rectangle,
-                    ),
-
-                    // Pin Tool
-                    _buildBarTool(
-                      icon: Icons.pin_drop_outlined,
-                      label: 'Pin',
-                      mode: AnnotterMode.pin,
-                    ),
-
-                    const SizedBox(
-                      height: 24,
-                      child: VerticalDivider(color: Colors.white12, width: 12),
-                    ),
-
-                    // Undo
-                    _buildBarAction(
-                      icon: Icons.undo,
-                      label: 'Undo',
-                      color: _undoStack.isEmpty ? Colors.white24 : Colors.white70,
-                      onTap: _undoStack.isEmpty ? null : _undo,
-                    ),
-
-                    // Redo
-                    _buildBarAction(
-                      icon: Icons.redo,
-                      label: 'Redo',
-                      color: _redoStack.isEmpty ? Colors.white24 : Colors.white70,
-                      onTap: _redoStack.isEmpty ? null : _redo,
-                    ),
-
-                    // Notes List
-                    _buildBarAction(
-                      icon: Icons.format_list_numbered,
-                      label: _items.isEmpty ? 'List' : 'List (${_items.length})',
-                      color: _items.isEmpty ? Colors.white54 : const Color(0xFF38BDF8),
-                      badgeCount: _items.isNotEmpty ? _items.length : null,
-                      onTap: () => setState(() => _showListSheet = true),
-                    ),
-
-                    // Clear All
-                    if (_items.isNotEmpty)
-                      _buildBarAction(
-                        icon: Icons.delete_sweep_outlined,
-                        label: 'Clear',
-                        color: Colors.redAccent,
-                        onTap: () {
-                          _saveSnapshot();
-                          setState(() => _items.clear());
-                        },
-                      ),
-
-                    const SizedBox(width: 8),
-
-                    // Copy Button
-                    ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF0284C7),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                        elevation: 0,
-                      ),
-                      icon: const Icon(Icons.copy_all, size: 16),
-                      label: Text(
-                        _items.isEmpty ? 'Copy' : 'Copy (${_items.length})',
-                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, fontFamily: 'sans-serif'),
-                      ),
-                      onPressed: _copyNotes,
-                    ),
-                    const SizedBox(width: 8),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          SizedBox(height: MediaQuery.of(context).padding.bottom),
-        ],
+        ),
       ),
     );
   }
 
-  Widget _buildBarTool({
+  Widget _buildCompactTool({
     required IconData icon,
     required String label,
     required AnnotterMode mode,
@@ -466,85 +462,36 @@ class _AnnotterState extends State<Annotter> {
       borderRadius: BorderRadius.circular(6),
       onTap: () => setState(() => _activeMode = mode),
       child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 2),
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        margin: const EdgeInsets.symmetric(horizontal: 2, vertical: 5),
+        padding: EdgeInsets.symmetric(horizontal: isSelected ? 10 : 7),
         decoration: BoxDecoration(
-          color: isSelected ? activeColor.withValues(alpha: 0.22) : Colors.transparent,
+          color: isSelected ? activeColor.withValues(alpha: 0.25) : Colors.transparent,
           borderRadius: BorderRadius.circular(6),
           border: isSelected ? Border.all(color: activeColor, width: 1.2) : null,
         ),
-        child: Column(
+        child: Row(
           mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
               icon,
-              size: 18,
+              size: 17,
               color: isSelected ? activeColor : Colors.white60,
             ),
-            const SizedBox(height: 2),
-            Text(
-              label,
-              style: TextStyle(
-                color: isSelected ? Colors.white : Colors.white54,
-                fontSize: 9,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                fontFamily: 'sans-serif',
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildBarAction({
-    required IconData icon,
-    required String label,
-    required Color color,
-    VoidCallback? onTap,
-    int? badgeCount,
-  }) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(6),
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            Column(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(icon, size: 18, color: color),
-                const SizedBox(height: 2),
-                Text(
-                  label,
-                  style: TextStyle(
-                    color: color,
-                    fontSize: 9,
-                    fontFamily: 'sans-serif',
-                  ),
-                ),
-              ],
-            ),
-            if (badgeCount != null)
-              Positioned(
-                top: 0,
-                right: 0,
-                child: Container(
-                  padding: const EdgeInsets.all(2),
-                  decoration: const BoxDecoration(
-                    color: Color(0xFF0284C7),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Text(
-                    '$badgeCount',
-                    style: const TextStyle(color: Colors.white, fontSize: 7, fontWeight: FontWeight.bold),
-                  ),
+            // Only show text label for the active tool to keep it ultra compact
+            if (isSelected) ...[
+              const SizedBox(width: 4),
+              Text(
+                label,
+                style: TextStyle(
+                  color: isSelected ? Colors.white : Colors.white54,
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'sans-serif',
+                  decoration: TextDecoration.none,
                 ),
               ),
+            ],
           ],
         ),
       ),
@@ -600,6 +547,7 @@ class _AnnotterState extends State<Annotter> {
                               fontSize: 9,
                               fontWeight: FontWeight.bold,
                               fontFamily: 'sans-serif',
+                              decoration: TextDecoration.none,
                             ),
                           ),
                         ),
@@ -665,14 +613,13 @@ class _AnnotterState extends State<Annotter> {
       screenshotPath: savedScreenshotPath,
     );
 
-    setState(() {
-      _bannerMessage = '✓ Copied Markdown & Screenshot!';
-    });
-
-    Future.delayed(const Duration(seconds: 3), () {
-      if (mounted) {
-        setState(() => _bannerMessage = null);
-      }
-    });
+    if (mounted) {
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+        const SnackBar(
+          content: Text('✓ Copied Markdown & Screenshot!'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
   }
 }

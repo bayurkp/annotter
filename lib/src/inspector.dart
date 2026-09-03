@@ -19,7 +19,6 @@ class InspectedWidgetInfo {
 }
 
 class WidgetInspectorHelper {
-  // Set of basic framework primitives that are built into Flutter
   static const Set<String> _frameworkPrimitives = {
     'Container',
     'Card',
@@ -77,47 +76,22 @@ class WidgetInspectorHelper {
     return !_frameworkPrimitives.contains(type);
   }
 
-  static InspectedWidgetInfo inspectAt(BuildContext context, Offset globalOrLocalOffset) {
+  // ponytail: Hit-tests the app sibling RenderBox directly using local coordinates.
+  static InspectedWidgetInfo inspectAt(BuildContext context, Offset localOffset) {
     final canvasBox = context.findRenderObject() as RenderBox?;
-    Offset localOffset;
-    if (canvasBox != null) {
-      try {
-        localOffset = canvasBox.globalToLocal(globalOrLocalOffset);
-        if (!localOffset.dx.isFinite || !localOffset.dy.isFinite) {
-          localOffset = globalOrLocalOffset;
-        }
-      } catch (_) {
-        localOffset = globalOrLocalOffset;
-      }
-    } else {
-      localOffset = globalOrLocalOffset;
-    }
-
-    final hitResult = HitTestResult();
-    bool hitAppDirectly = false;
-
-    // Direct hit-test on child RenderBox in Stack
     final parent = canvasBox?.parent;
+
+    RenderBox? appBox;
     if (parent is ContainerRenderObjectMixin<RenderBox, StackParentData>) {
-      final appBox = parent.firstChild;
-      if (appBox != null && appBox != canvasBox) {
-        final boxResult = BoxHitTestResult();
-        if (appBox.hitTest(boxResult, position: localOffset)) {
-          for (final entry in boxResult.path) {
-            hitResult.add(entry);
-          }
-          hitAppDirectly = true;
-        }
+      final first = parent.firstChild;
+      if (first != null && first != canvasBox) {
+        appBox = first;
       }
     }
 
-    if (!hitAppDirectly) {
-      try {
-        final view = View.maybeOf(context);
-        if (view != null) {
-          WidgetsBinding.instance.hitTestInView(hitResult, globalOrLocalOffset, view.viewId);
-        }
-      } catch (_) {}
+    final boxResult = BoxHitTestResult();
+    if (appBox != null) {
+      appBox.hitTest(boxResult, position: localOffset);
     }
 
     String foundWidgetName = 'CustomElement';
@@ -126,24 +100,24 @@ class WidgetInspectorHelper {
     Rect? smallestRect;
     bool detectedScrollable = false;
 
-    for (final entry in hitResult.path) {
+    for (final entry in boxResult.path) {
       final target = entry.target;
       if (target is RenderBox && target.hasSize && canvasBox != null) {
         try {
           final globalTopLeft = target.localToGlobal(Offset.zero);
           final globalBottomRight = target.localToGlobal(Offset(target.size.width, target.size.height));
-          final localTopLeft = canvasBox.globalToLocal(globalTopLeft);
-          final localBottomRight = canvasBox.globalToLocal(globalBottomRight);
+          final targetLocalTopLeft = canvasBox.globalToLocal(globalTopLeft);
+          final targetLocalBottomRight = canvasBox.globalToLocal(globalBottomRight);
 
-          if (localTopLeft.isFinite && localBottomRight.isFinite) {
-            final boxRect = Rect.fromPoints(localTopLeft, localBottomRight);
+          if (targetLocalTopLeft.isFinite && targetLocalBottomRight.isFinite) {
+            final boxRect = Rect.fromPoints(targetLocalTopLeft, targetLocalBottomRight);
             final area = boxRect.width * boxRect.height;
 
             if (boxRect.width > 2 && boxRect.height > 2) {
               if (kDebugMode && target.debugCreator is DebugCreator) {
                 final element = (target.debugCreator as DebugCreator).element;
 
-                // Find the nearest custom component in the ancestor chain
+                // Discover custom component by walking ancestor elements
                 Element? customElement;
                 element.visitAncestorElements((ancestor) {
                   final aw = ancestor.widget;
@@ -171,7 +145,6 @@ class WidgetInspectorHelper {
 
                 if (customElement != null) {
                   final customType = cleanType(customElement!.widget.runtimeType.toString());
-                  // Use bounding box of target or custom element
                   if (smallestRect == null || area < (smallestRect.width * smallestRect.height)) {
                     smallestRect = boxRect;
                     foundWidgetName = customType;

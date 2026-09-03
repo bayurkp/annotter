@@ -39,23 +39,19 @@ class _AnnotterCanvasState extends State<AnnotterCanvas> {
           onExit: (_) {
             if (_hoveredWidget != null) setState(() => _hoveredWidget = null);
           },
-          child: Listener(
-            onPointerDown: (event) => _updateHover(event.localPosition),
-            onPointerMove: (event) => _updateHover(event.localPosition),
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTapDown: _handleTapDown,
-              onPanStart: widget.activeMode == AnnotterMode.rectangle ? _handlePanStart : null,
-              onPanUpdate: widget.activeMode == AnnotterMode.rectangle ? _handlePanUpdate : null,
-              onPanEnd: widget.activeMode == AnnotterMode.rectangle ? _handlePanEnd : null,
-              child: CustomPaint(
-                painter: _AnnotterPainter(
-                  items: widget.items,
-                  dragStart: _dragStart,
-                  dragCurrent: _dragCurrent,
-                  hoveredWidget: _hoveredWidget,
-                  currentScrollOffset: widget.currentScrollOffset,
-                ),
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTapDown: _handleTapDown,
+            onPanStart: widget.activeMode == AnnotterMode.rectangle ? _handlePanStart : null,
+            onPanUpdate: widget.activeMode == AnnotterMode.rectangle ? _handlePanUpdate : null,
+            onPanEnd: widget.activeMode == AnnotterMode.rectangle ? _handlePanEnd : null,
+            child: CustomPaint(
+              painter: _AnnotterPainter(
+                items: widget.items,
+                dragStart: _dragStart,
+                dragCurrent: _dragCurrent,
+                hoveredWidget: _hoveredWidget,
+                currentScrollOffset: widget.currentScrollOffset,
               ),
             ),
           ),
@@ -78,7 +74,7 @@ class _AnnotterCanvasState extends State<AnnotterCanvas> {
   void _handleTapDown(TapDownDetails details) {
     if (widget.activeMode == AnnotterMode.navigate) return;
 
-    // 1. Only tap directly on a numbered badge edits the item
+    // 1. Check if user tapped an existing numbered badge to edit
     final tappedItem = _findItemAt(details.localPosition);
     if (tappedItem != null) {
       widget.onRequestEdit(tappedItem);
@@ -87,7 +83,7 @@ class _AnnotterCanvasState extends State<AnnotterCanvas> {
 
     // 2. Create new annotation based on active tool
     if (widget.activeMode == AnnotterMode.inspect) {
-      final info = _hoveredWidget ?? WidgetInspectorHelper.inspectAt(context, details.localPosition);
+      final info = WidgetInspectorHelper.inspectAt(context, details.localPosition);
       final newItem = AnnotterItem(
         id: DateTime.now().millisecondsSinceEpoch,
         number: widget.items.length + 1,
@@ -133,7 +129,7 @@ class _AnnotterCanvasState extends State<AnnotterCanvas> {
   void _handlePanEnd(DragEndDetails details) {
     if (_dragStart != null && _dragCurrent != null) {
       final rect = Rect.fromPoints(_dragStart!, _dragCurrent!);
-      if (rect.width > 8 && rect.height > 8) {
+      if (rect.width > 12 && rect.height > 12) {
         final info = WidgetInspectorHelper.inspectAt(context, _dragStart!);
         final newItem = AnnotterItem(
           id: DateTime.now().millisecondsSinceEpoch,
@@ -163,7 +159,7 @@ class _AnnotterCanvasState extends State<AnnotterCanvas> {
           ? displayRect.center
           : Offset(displayRect.left + 12, displayRect.top + 12);
 
-      // Only direct hit on the circular badge triggers edit mode!
+      // Only direct hit on the circular numbered badge triggers edit
       if ((pos - badgeCenter).distance <= 22) {
         return item;
       }
@@ -217,6 +213,7 @@ class _AnnotterPainter extends CustomPainter {
             fontSize: 10,
             fontWeight: FontWeight.bold,
             fontFamily: 'monospace',
+            decoration: TextDecoration.none,
           ),
         ),
         textDirection: TextDirection.ltr,
@@ -285,6 +282,7 @@ class _AnnotterPainter extends CustomPainter {
             fontSize: 11,
             fontWeight: FontWeight.bold,
             fontFamily: 'sans-serif',
+            decoration: TextDecoration.none,
           ),
         ),
         textDirection: TextDirection.ltr,
