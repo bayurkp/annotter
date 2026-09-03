@@ -364,7 +364,7 @@ class _AnnotterState extends State<Annotter> {
                     children: [
                       _buildSegmentTool(
                         icon: Icons.pan_tool_outlined,
-                        label: 'Nav',
+                        label: 'Move',
                         mode: AnnotterMode.navigate,
                       ),
                       const SizedBox(width: 2),
