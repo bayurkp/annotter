@@ -47,21 +47,4 @@ class AnnotterItem {
       scrollOffsetAtCreation: scrollOffsetAtCreation,
     );
   }
-
-  // ponytail: Minimal map serialization.
-  Map<String, dynamic> toJson() => {
-    'number': number,
-    'widgetName': widgetName,
-    'screenName': screenName,
-    'hierarchy': hierarchy,
-    'position': {
-      'x': rect.left.toInt(),
-      'y': rect.top.toInt(),
-      'width': rect.width.toInt(),
-      'height': rect.height.toInt(),
-    },
-    'note': note,
-    'mode': mode.name,
-    'isScrollable': isScrollable,
-  };
 }
