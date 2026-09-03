@@ -107,6 +107,13 @@ class WidgetInspectorHelper {
 
     for (final entry in boxResult.path) {
       final target = entry.target;
+
+      // Direct RenderSliver / Viewport check
+      final targetType = target.runtimeType.toString();
+      if (target is RenderSliver || targetType.contains('Sliver') || targetType.contains('Viewport')) {
+        detectedScrollable = true;
+      }
+
       if (target is RenderBox && target.hasSize && canvasBox != null) {
         try {
           final globalTopLeft = target.localToGlobal(Offset.zero);
@@ -122,13 +129,22 @@ class WidgetInspectorHelper {
               if (kDebugMode && target.debugCreator is DebugCreator) {
                 final element = (target.debugCreator as DebugCreator).element;
 
-                // Discover custom component by walking ancestor elements
+                // Discover custom component and scrollable ancestors (up to 80 levels)
                 Element? customElement;
+                int depth = 0;
                 element.visitAncestorElements((ancestor) {
+                  depth++;
                   final aw = ancestor.widget;
                   final type = cleanType(aw.runtimeType.toString());
 
-                  if (aw is Scrollable) {
+                  if (aw is Scrollable ||
+                      type == 'CustomScrollView' ||
+                      type == 'ListView' ||
+                      type == 'SingleChildScrollView' ||
+                      type == 'GridView' ||
+                      type.contains('Scrollable') ||
+                      type.contains('ScrollView') ||
+                      type.startsWith('Sliver')) {
                     detectedScrollable = true;
                   }
 
@@ -142,10 +158,10 @@ class WidgetInspectorHelper {
                     customElement = ancestor;
                   }
 
-                  if (!hierarchy.contains(type) && !type.startsWith('_') && !type.contains('Annotter')) {
+                  if (!hierarchy.contains(type) && !type.startsWith('_') && !type.contains('Annotter') && hierarchy.length < 8) {
                     hierarchy.add(type);
                   }
-                  return hierarchy.length < 8;
+                  return depth < 80;
                 });
 
                 if (customElement != null) {
