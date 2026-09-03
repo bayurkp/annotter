@@ -108,8 +108,11 @@ class WidgetInspectorHelper {
     '_RenderInkFeatures',
   };
 
-  // ponytail: HitTest scan that chooses the smallest non-noise widget (leaf-first precision).
+  // ponytail: Converts target coordinates to local canvas space to ensure 1:1 pixel accuracy under FittedBox scaling.
   static InspectedWidgetInfo inspectAt(BuildContext context, Offset globalOffset) {
+    final canvasBox = context.findRenderObject() as RenderBox?;
+    final localFallback = canvasBox?.globalToLocal(globalOffset) ?? globalOffset;
+
     final hitResult = HitTestResult();
     try {
       final view = View.maybeOf(context);
@@ -126,43 +129,54 @@ class WidgetInspectorHelper {
     for (final entry in hitResult.path) {
       final target = entry.target;
       if (target is RenderObject) {
-        if (target is RenderBox && target.hasSize) {
+        if (target is RenderBox && target.hasSize && canvasBox != null) {
           try {
-            final origin = target.localToGlobal(Offset.zero);
-            final size = target.size;
-            if (origin.isFinite && size.isFinite && size.width > 2 && size.height > 2) {
-              final boxRect = origin & size;
+            // Convert target bounding box from global screen coordinates into canvas local space
+            final globalTopLeft = target.localToGlobal(Offset.zero);
+            final globalBottomRight = target.localToGlobal(Offset(target.size.width, target.size.height));
+            final localTopLeft = canvasBox.globalToLocal(globalTopLeft);
+            final localBottomRight = canvasBox.globalToLocal(globalBottomRight);
+
+            if (localTopLeft.isFinite && localBottomRight.isFinite) {
+              final boxRect = Rect.fromPoints(localTopLeft, localBottomRight);
               final area = boxRect.width * boxRect.height;
 
-              if (kDebugMode && target.debugCreator is DebugCreator) {
-                final element = (target.debugCreator as DebugCreator).element;
-                final widgetType = element.widget.runtimeType.toString();
+              if (boxRect.width > 2 && boxRect.height > 2) {
+                if (kDebugMode && target.debugCreator is DebugCreator) {
+                  final element = (target.debugCreator as DebugCreator).element;
+                  final widgetType = element.widget.runtimeType.toString();
 
-                if (!_isNoise(widgetType)) {
-                  // Prefer the smallest enclosing non-noise widget
-                  if (smallestRect == null || area < (smallestRect.width * smallestRect.height)) {
-                    smallestRect = boxRect;
-                    foundWidgetName = widgetType;
+                  if (!_isNoise(widgetType)) {
+                    // Prefer the smallest enclosing non-noise widget
+                    if (smallestRect == null || area < (smallestRect.width * smallestRect.height)) {
+                      smallestRect = boxRect;
+                      foundWidgetName = widgetType;
+                    }
+                    if (!hierarchy.contains(widgetType)) {
+                      hierarchy.add(widgetType);
+                    }
                   }
-                  if (!hierarchy.contains(widgetType)) {
-                    hierarchy.add(widgetType);
-                  }
+
+                  // Traverse ancestors to discover Screen/Page name and meaningful hierarchy
+                  element.visitAncestorElements((ancestor) {
+                    final type = ancestor.widget.runtimeType.toString();
+                    if ((type.endsWith('Screen') || type.endsWith('Page')) &&
+                        type != 'RawView' &&
+                        !type.startsWith('_')) {
+                      detectedScreen ??= type;
+                    }
+
+                    if (!_isNoise(type)) {
+                      if (foundWidgetName == 'CustomElement' || foundWidgetName == 'RichText') {
+                        foundWidgetName = type;
+                      }
+                      if (!hierarchy.contains(type)) {
+                        hierarchy.add(type);
+                      }
+                    }
+                    return hierarchy.length < 8;
+                  });
                 }
-
-                // Traverse ancestors to discover Screen/Page name and hierarchy
-                element.visitAncestorElements((ancestor) {
-                  final type = ancestor.widget.runtimeType.toString();
-                  if ((type.endsWith('Screen') || type.endsWith('Page')) &&
-                      type != 'RawView' &&
-                      !type.startsWith('_')) {
-                    detectedScreen ??= type;
-                  }
-
-                  if (!_isNoise(type) && !hierarchy.contains(type)) {
-                    hierarchy.add(type);
-                  }
-                  return hierarchy.length < 8;
-                });
               }
             }
           } catch (_) {}
@@ -173,7 +187,7 @@ class WidgetInspectorHelper {
     return InspectedWidgetInfo(
       name: foundWidgetName,
       hierarchy: hierarchy,
-      rect: smallestRect ?? Rect.fromCenter(center: globalOffset, width: 40, height: 40),
+      rect: smallestRect ?? Rect.fromCenter(center: localFallback, width: 40, height: 40),
       screenName: detectedScreen,
     );
   }
