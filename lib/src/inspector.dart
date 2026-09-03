@@ -100,6 +100,14 @@ class WidgetInspectorHelper {
     'SafeArea',
     'ModalBarrier',
     'BackdropFilter',
+    // Root & App Wrappers
+    'RootWidget',
+    'MyApp',
+    'MaterialApp',
+    'WidgetsApp',
+    'ScrollConfiguration',
+    'SharedAppData',
+    'Title',
     // Annotter Internal Widgets
     'Annotter',
     'AnnotterOverlay',
@@ -108,18 +116,43 @@ class WidgetInspectorHelper {
     '_RenderInkFeatures',
   };
 
-  // ponytail: Converts target coordinates to local canvas space to ensure 1:1 pixel accuracy under FittedBox scaling.
+  // ponytail: Strips generic type parameters e.g. ValueListenableBuilder<bool> -> ValueListenableBuilder
+  static String cleanType(String type) {
+    final idx = type.indexOf('<');
+    return idx != -1 ? type.substring(0, idx) : type;
+  }
+
+  // ponytail: Hit-tests the app directly via sibling RenderBox to bypass all outer MaterialApp plumbing.
   static InspectedWidgetInfo inspectAt(BuildContext context, Offset globalOffset) {
     final canvasBox = context.findRenderObject() as RenderBox?;
-    final localFallback = canvasBox?.globalToLocal(globalOffset) ?? globalOffset;
+    final localOffset = canvasBox?.globalToLocal(globalOffset) ?? globalOffset;
 
     final hitResult = HitTestResult();
-    try {
-      final view = View.maybeOf(context);
-      if (view != null) {
-        WidgetsBinding.instance.hitTestInView(hitResult, globalOffset, view.viewId);
+    bool hitAppDirectly = false;
+
+    // Direct app hit-test: bypasses outer studio, MaterialApp, and root widgets
+    final parent = canvasBox?.parent;
+    if (parent is ContainerRenderObjectMixin<RenderBox, StackParentData>) {
+      final appBox = parent.firstChild;
+      if (appBox != null && appBox != canvasBox) {
+        final boxResult = BoxHitTestResult();
+        if (appBox.hitTest(boxResult, position: localOffset)) {
+          for (final entry in boxResult.path) {
+            hitResult.add(entry);
+          }
+          hitAppDirectly = true;
+        }
       }
-    } catch (_) {}
+    }
+
+    if (!hitAppDirectly) {
+      try {
+        final view = View.maybeOf(context);
+        if (view != null) {
+          WidgetsBinding.instance.hitTestInView(hitResult, globalOffset, view.viewId);
+        }
+      } catch (_) {}
+    }
 
     String foundWidgetName = 'CustomElement';
     String? detectedScreen;
@@ -144,7 +177,7 @@ class WidgetInspectorHelper {
               if (boxRect.width > 2 && boxRect.height > 2) {
                 if (kDebugMode && target.debugCreator is DebugCreator) {
                   final element = (target.debugCreator as DebugCreator).element;
-                  final widgetType = element.widget.runtimeType.toString();
+                  final widgetType = cleanType(element.widget.runtimeType.toString());
 
                   if (!_isNoise(widgetType)) {
                     // Prefer the smallest enclosing non-noise widget
@@ -157,9 +190,11 @@ class WidgetInspectorHelper {
                     }
                   }
 
-                  // Traverse ancestors to discover Screen/Page name and meaningful hierarchy
+                  // Traverse ancestors to discover Screen/Page name and promote to custom component
                   element.visitAncestorElements((ancestor) {
-                    final type = ancestor.widget.runtimeType.toString();
+                    final rawType = ancestor.widget.runtimeType.toString();
+                    final type = cleanType(rawType);
+
                     if ((type.endsWith('Screen') || type.endsWith('Page')) &&
                         type != 'RawView' &&
                         !type.startsWith('_')) {
@@ -170,7 +205,8 @@ class WidgetInspectorHelper {
                       if (foundWidgetName == 'CustomElement' ||
                           foundWidgetName == 'RichText' ||
                           foundWidgetName == 'Text' ||
-                          foundWidgetName == 'Icon') {
+                          foundWidgetName == 'Icon' ||
+                          foundWidgetName == 'Image') {
                         foundWidgetName = type;
                       }
                       if (!hierarchy.contains(type)) {
@@ -190,7 +226,7 @@ class WidgetInspectorHelper {
     return InspectedWidgetInfo(
       name: foundWidgetName,
       hierarchy: hierarchy,
-      rect: smallestRect ?? Rect.fromCenter(center: localFallback, width: 40, height: 40),
+      rect: smallestRect ?? Rect.fromCenter(center: localOffset, width: 40, height: 40),
       screenName: detectedScreen,
     );
   }
@@ -211,7 +247,8 @@ class WidgetInspectorHelper {
         return;
       }
 
-      final type = widget.runtimeType.toString();
+      final rawType = widget.runtimeType.toString();
+      final type = cleanType(rawType);
       if ((type.endsWith('Screen') || type.endsWith('Page')) &&
           type != 'RawView' &&
           !type.startsWith('_')) {
@@ -228,13 +265,15 @@ class WidgetInspectorHelper {
     return activeScreen;
   }
 
-  static bool _isNoise(String type) {
+  static bool _isNoise(String rawType) {
+    final type = cleanType(rawType);
     if (type.startsWith('_')) return true;
     if (type.contains('Annotter')) return true;
     if (type.startsWith('Inherited')) return true;
     if (type.startsWith('Cupertino')) return true;
     if (type.contains('Theme')) return true;
-    if (type.endsWith('Builder')) return true;
+    if (type.contains('Builder')) return true;
+    if (type.contains('Listener')) return true;
     if (type.contains('Focus')) return true;
     if (type.contains('Shortcut')) return true;
     if (type.contains('Selection')) return true;
@@ -245,4 +284,3 @@ class WidgetInspectorHelper {
     return _frameworkNoise.contains(type);
   }
 }
-
