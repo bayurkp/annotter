@@ -690,8 +690,13 @@ class _AnnotterState extends State<Annotter> {
         final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
         if (byteData != null) {
           final pngBytes = byteData.buffer.asUint8List();
+
+          if (kIsWeb) {
+            return 'web_$filename';
+          }
+
           File? file;
-          if (Platform.isAndroid) {
+          if (defaultTargetPlatform == TargetPlatform.android) {
             final downloadDir = Directory('/sdcard/Download');
             if (await downloadDir.exists()) {
               file = File('${downloadDir.path}/$filename');
@@ -719,17 +724,16 @@ class _AnnotterState extends State<Annotter> {
         ? (size.height - appTopPadding - appBottomPadding)
         : size.height;
 
-    final platformName = Platform.isAndroid
-        ? 'Android'
-        : Platform.isIOS
-            ? 'iOS'
-            : Platform.isWindows
-                ? 'Windows'
-                : Platform.isMacOS
-                    ? 'macOS'
-                    : Platform.isLinux
-                        ? 'Linux'
-                        : 'Web';
+    final String platformName = kIsWeb
+        ? 'Web'
+        : switch (defaultTargetPlatform) {
+            TargetPlatform.android => 'Android',
+            TargetPlatform.iOS => 'iOS',
+            TargetPlatform.windows => 'Windows',
+            TargetPlatform.macOS => 'macOS',
+            TargetPlatform.linux => 'Linux',
+            TargetPlatform.fuchsia => 'Fuchsia',
+          };
     final themeName = mediaQuery.platformBrightness == Brightness.dark ? 'Dark Mode' : 'Light Mode';
     final orientationName = mediaQuery.orientation == Orientation.portrait ? 'Portrait' : 'Landscape';
     final dpr = mediaQuery.devicePixelRatio;
