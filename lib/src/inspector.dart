@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import 'package:flutter/widgets.dart';
 
 class InspectedWidgetInfo {
   final String name;
@@ -78,7 +78,7 @@ class WidgetInspectorHelper {
   /// Priority scoring for target resolution:
   ///   >= 80: Semantic Target (Developer component, button, icon, text)
   ///      30: Layout primitive (Container, Padding, etc.)
-  ///      10: Behavioral wrapper (RawGestureDetector, Focus, Builder, etc.)
+  ///      10: Behavioral wrapper (RawGestureDetector, Focus, Builder, InkResponse, etc.)
   static int _calculatePriority(Widget widget, String name) {
     // 1. Behavioral wrappers (plumbing)
     if (widget is RawGestureDetector ||
@@ -89,7 +89,8 @@ class WidgetInspectorHelper {
         widget is Builder ||
         widget is StatefulBuilder ||
         widget is ImplicitlyAnimatedWidget ||
-        widget is AnimatedWidget) {
+        widget is AnimatedWidget ||
+        widget is InkResponse) {
       return 10;
     }
 
@@ -115,8 +116,6 @@ class WidgetInspectorHelper {
         name == 'OutlinedButton' ||
         name == 'IconButton' ||
         name == 'FloatingActionButton' ||
-        name == 'InkResponse' ||
-        name == 'InkWell' ||
         name == 'TextField' ||
         name == 'Checkbox' ||
         name == 'Switch' ||
@@ -145,6 +144,21 @@ class WidgetInspectorHelper {
     return sorted.first.name;
   }
 
+  static void _findContentChild(Element element, void Function(Widget widget, String name) onFound) {
+    bool found = false;
+    void search(Element el, int depth) {
+      if (found || depth > 3) return;
+      final type = cleanType(el.widget.runtimeType.toString());
+      if (type == 'Icon' || type == 'Text' || type == 'Image') {
+        onFound(el.widget, type);
+        found = true;
+        return;
+      }
+      el.visitChildren((c) => search(c, depth + 1));
+    }
+    element.visitChildren((c) => search(c, 1));
+  }
+
   static String cleanType(String type) {
     final idx = type.indexOf('<');
     return idx != -1 ? type.substring(0, idx) : type;
@@ -168,17 +182,15 @@ class WidgetInspectorHelper {
       appBox.hitTest(boxResult, position: localOffset);
     }
 
-    String foundWidgetName = 'Element';
-    String? detectedScreen;
-    List<String> bestHierarchy = [];
+    RenderBox? bestTarget;
     Rect? smallestRect;
     double smallestArea = double.infinity;
     bool detectedScrollable = false;
 
+    // Pass 1: Quick geometric scan to find smallest RenderBox without heavy tree walks
     for (final entry in boxResult.path) {
       final target = entry.target;
 
-      // Direct RenderSliver / Viewport check
       final targetType = target.runtimeType.toString();
       if (target is RenderSliver || targetType.contains('Sliver') || targetType.contains('Viewport')) {
         detectedScrollable = true;
@@ -195,58 +207,73 @@ class WidgetInspectorHelper {
             final boxRect = Rect.fromPoints(targetLocalTopLeft, targetLocalBottomRight);
             final area = boxRect.width * boxRect.height;
 
-            if (boxRect.width >= 4 && boxRect.height >= 4) {
-              if (kDebugMode && target.debugCreator is DebugCreator) {
-                final element = (target.debugCreator as DebugCreator).element;
-                final List<String> chain = [];
-                final List<_TargetCandidate> candidates = [];
-
-                if (_isComponentCandidate(element.widget)) {
-                  final rawType = cleanType(element.widget.runtimeType.toString());
-                  chain.add(rawType);
-                  candidates.add(_TargetCandidate(element.widget, rawType, _calculatePriority(element.widget, rawType)));
-                }
-
-                element.visitAncestorElements((ancestor) {
-                  final aw = ancestor.widget;
-                  final type = cleanType(aw.runtimeType.toString());
-
-                  if (aw is Scrollable ||
-                      type == 'CustomScrollView' ||
-                      type == 'ListView' ||
-                      type == 'SingleChildScrollView' ||
-                      type == 'GridView' ||
-                      type.contains('Scrollable') ||
-                      type.contains('ScrollView')) {
-                    detectedScrollable = true;
-                  }
-
-                  if ((type.endsWith('Screen') || type.endsWith('Page')) &&
-                      type != 'RawView' &&
-                      !type.startsWith('_')) {
-                    detectedScreen ??= type;
-                  }
-
-                  if (_isComponentCandidate(aw)) {
-                    if (chain.isEmpty || chain.last != type) {
-                      chain.add(type);
-                      candidates.add(_TargetCandidate(aw, type, _calculatePriority(aw, type)));
-                    }
-                  }
-
-                  return chain.length < 15;
-                });
-
-                if (chain.isNotEmpty && area < smallestArea) {
-                  smallestArea = area;
-                  smallestRect = boxRect;
-                  foundWidgetName = _resolveTarget(candidates);
-                  bestHierarchy = List.from(chain);
-                }
-              }
+            if (boxRect.width >= 4 && boxRect.height >= 4 && area < smallestArea) {
+              smallestArea = area;
+              smallestRect = boxRect;
+              bestTarget = target;
             }
           }
         } catch (_) {}
+      }
+    }
+
+    String foundWidgetName = 'Element';
+    String? detectedScreen;
+    List<String> bestHierarchy = [];
+
+    // Pass 2: Inspect ONLY the single best RenderBox (0ms overhead)
+    if (bestTarget != null && kDebugMode && bestTarget.debugCreator is DebugCreator) {
+      final element = (bestTarget.debugCreator as DebugCreator).element;
+      final List<String> chain = [];
+      final List<_TargetCandidate> candidates = [];
+
+      // Check if button has a content child (Icon/Text)
+      _findContentChild(element, (childWidget, childName) {
+        chain.add(childName);
+        candidates.add(_TargetCandidate(childWidget, childName, 80));
+      });
+
+      if (_isComponentCandidate(element.widget)) {
+        final rawType = cleanType(element.widget.runtimeType.toString());
+        if (chain.isEmpty || chain.last != rawType) {
+          chain.add(rawType);
+          candidates.add(_TargetCandidate(element.widget, rawType, _calculatePriority(element.widget, rawType)));
+        }
+      }
+
+      element.visitAncestorElements((ancestor) {
+        final aw = ancestor.widget;
+        final type = cleanType(aw.runtimeType.toString());
+
+        if (aw is Scrollable ||
+            type == 'CustomScrollView' ||
+            type == 'ListView' ||
+            type == 'SingleChildScrollView' ||
+            type == 'GridView' ||
+            type.contains('Scrollable') ||
+            type.contains('ScrollView')) {
+          detectedScrollable = true;
+        }
+
+        if ((type.endsWith('Screen') || type.endsWith('Page')) &&
+            type != 'RawView' &&
+            !type.startsWith('_')) {
+          detectedScreen ??= type;
+        }
+
+        if (_isComponentCandidate(aw)) {
+          if (chain.isEmpty || chain.last != type) {
+            chain.add(type);
+            candidates.add(_TargetCandidate(aw, type, _calculatePriority(aw, type)));
+          }
+        }
+
+        return chain.length < 15;
+      });
+
+      if (chain.isNotEmpty) {
+        foundWidgetName = _resolveTarget(candidates);
+        bestHierarchy = List.from(chain);
       }
     }
 
