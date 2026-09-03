@@ -18,6 +18,14 @@ class InspectedWidgetInfo {
   });
 }
 
+class _TargetCandidate {
+  final Widget widget;
+  final String name;
+  final int priority;
+
+  const _TargetCandidate(this.widget, this.name, this.priority);
+}
+
 class WidgetInspectorHelper {
   /// Layout primitives: structural vocabulary of Flutter, equivalent to
   /// HTML's <div>, <span>, <section>. Never a semantic component name.
@@ -65,6 +73,76 @@ class WidgetInspectorHelper {
     if (_layoutPrimitives.contains(type)) return false;
 
     return true;
+  }
+
+  /// Priority scoring for target resolution:
+  ///   >= 80: Semantic Target (Developer component, button, icon, text)
+  ///      30: Layout primitive (Container, Padding, etc.)
+  ///      10: Behavioral wrapper (RawGestureDetector, Focus, Builder, etc.)
+  static int _calculatePriority(Widget widget, String name) {
+    // 1. Behavioral wrappers (plumbing)
+    if (widget is RawGestureDetector ||
+        widget is GestureDetector ||
+        widget is Focus ||
+        widget is Actions ||
+        widget is Shortcuts ||
+        widget is Builder ||
+        widget is StatefulBuilder ||
+        widget is ImplicitlyAnimatedWidget ||
+        widget is AnimatedWidget) {
+      return 10;
+    }
+
+    // 2. Layout primitives
+    if (_layoutPrimitives.contains(name)) {
+      return 30;
+    }
+
+    // 3. Screen / Page containers (should not override child widgets)
+    if (name.endsWith('Screen') || name.endsWith('Page') || name.endsWith('View')) {
+      return 50;
+    }
+
+    // 4. Semantic Content
+    if (name == 'Icon' || name == 'Text' || name == 'Image' || name == 'RichText' || name == 'CircleAvatar') {
+      return 80;
+    }
+
+    // 5. Semantic Interactive standard Flutter
+    if (name == 'ElevatedButton' ||
+        name == 'TextButton' ||
+        name == 'FilledButton' ||
+        name == 'OutlinedButton' ||
+        name == 'IconButton' ||
+        name == 'FloatingActionButton' ||
+        name == 'InkResponse' ||
+        name == 'InkWell' ||
+        name == 'TextField' ||
+        name == 'Checkbox' ||
+        name == 'Switch' ||
+        name == 'Radio' ||
+        name == 'Slider') {
+      return 90;
+    }
+
+    // 6. Developer Custom Component (AppButton, MissionCard, etc.)
+    return 100;
+  }
+
+  /// Resolves the primary semantic target name from the candidate chain.
+  /// Walks bottom-up and stops at the first true semantic target (priority >= 80).
+  /// Falls back to highest priority candidate if none >= 80.
+  static String _resolveTarget(List<_TargetCandidate> candidates) {
+    if (candidates.isEmpty) return 'Element';
+
+    for (final c in candidates) {
+      if (c.priority >= 80) {
+        return c.name;
+      }
+    }
+
+    final sorted = List.of(candidates)..sort((a, b) => b.priority.compareTo(a.priority));
+    return sorted.first.name;
   }
 
   static String cleanType(String type) {
@@ -121,10 +199,12 @@ class WidgetInspectorHelper {
               if (kDebugMode && target.debugCreator is DebugCreator) {
                 final element = (target.debugCreator as DebugCreator).element;
                 final List<String> chain = [];
+                final List<_TargetCandidate> candidates = [];
 
                 if (_isComponentCandidate(element.widget)) {
                   final rawType = cleanType(element.widget.runtimeType.toString());
                   chain.add(rawType);
+                  candidates.add(_TargetCandidate(element.widget, rawType, _calculatePriority(element.widget, rawType)));
                 }
 
                 element.visitAncestorElements((ancestor) {
@@ -150,6 +230,7 @@ class WidgetInspectorHelper {
                   if (_isComponentCandidate(aw)) {
                     if (chain.isEmpty || chain.last != type) {
                       chain.add(type);
+                      candidates.add(_TargetCandidate(aw, type, _calculatePriority(aw, type)));
                     }
                   }
 
@@ -159,7 +240,7 @@ class WidgetInspectorHelper {
                 if (chain.isNotEmpty && area < smallestArea) {
                   smallestArea = area;
                   smallestRect = boxRect;
-                  foundWidgetName = chain.first;
+                  foundWidgetName = _resolveTarget(candidates);
                   bestHierarchy = List.from(chain);
                 }
               }
