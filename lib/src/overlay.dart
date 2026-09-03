@@ -110,10 +110,15 @@ class _AnnotterState extends State<Annotter> {
                 );
               }
 
+              final appTopPadding = mediaQuery.viewPadding.top > 0
+                  ? mediaQuery.viewPadding.top
+                  : mediaQuery.padding.top;
               final appBottomPadding = mediaQuery.viewPadding.bottom > 0
                   ? mediaQuery.viewPadding.bottom
                   : mediaQuery.padding.bottom;
-              final canvasHeight = (appBottomPadding > 0) ? (size.height - appBottomPadding) : size.height;
+              final canvasHeight = (appBottomPadding > 0 || appTopPadding > 0)
+                  ? (size.height - appTopPadding - appBottomPadding)
+                  : size.height;
 
               // Active: Full-width Ultra-Thin Bottom Dock Studio
               return Material(
@@ -171,8 +176,8 @@ class _AnnotterState extends State<Annotter> {
                                               child: MediaQuery(
                                                 data: mediaQuery.copyWith(
                                                   size: Size(size.width, canvasHeight),
-                                                  padding: mediaQuery.padding.copyWith(bottom: 0),
-                                                  viewPadding: mediaQuery.viewPadding.copyWith(bottom: 0),
+                                                  padding: EdgeInsets.zero,
+                                                  viewPadding: EdgeInsets.zero,
                                                   viewInsets: EdgeInsets.zero,
                                                 ),
                                                 child: KeyedSubtree(key: _appChildKey, child: widget.child),
@@ -704,10 +709,15 @@ class _AnnotterState extends State<Annotter> {
   void _copyNotes() async {
     final mediaQuery = MediaQuery.of(context);
     final size = mediaQuery.size;
+    final appTopPadding = mediaQuery.viewPadding.top > 0
+        ? mediaQuery.viewPadding.top
+        : mediaQuery.padding.top;
     final appBottomPadding = mediaQuery.viewPadding.bottom > 0
         ? mediaQuery.viewPadding.bottom
         : mediaQuery.padding.bottom;
-    final canvasHeight = (appBottomPadding > 0) ? (size.height - appBottomPadding) : size.height;
+    final canvasHeight = (appBottomPadding > 0 || appTopPadding > 0)
+        ? (size.height - appTopPadding - appBottomPadding)
+        : size.height;
 
     final platformName = Platform.isAndroid
         ? 'Android'
