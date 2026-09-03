@@ -17,103 +17,39 @@ class InspectedWidgetInfo {
 }
 
 class WidgetInspectorHelper {
-  // Set of internal framework, layout primitives, and wrapper widgets to ignore
-  static const Set<String> _frameworkNoise = {
-    // Layout Primitives
+  // Set of basic framework composition primitives that are built into Flutter
+  static const Set<String> _frameworkPrimitives = {
+    'Container',
+    'Card',
+    'Material',
+    'Scaffold',
+    'Center',
+    'Align',
+    'SizedBox',
+    'Padding',
+    'ColoredBox',
+    'GestureDetector',
+    'InkWell',
+    'SafeArea',
     'Stack',
-    'Positioned',
-    'Row',
     'Column',
+    'Row',
     'Flex',
     'Expanded',
     'Flexible',
-    'Align',
-    'Center',
-    'Container',
-    'ClipRRect',
-    'ClipRect',
-    'ClipOval',
     'DecoratedBox',
     'ConstrainedBox',
-    'Padding',
-    'ColoredBox',
-    'SizedBox',
-    'Transform',
-    'Opacity',
     'Offstage',
-    'CustomPaint',
+    'Visibility',
     'FittedBox',
     'AspectRatio',
-    'LimitedBox',
-    'FractionallySizedBox',
-    // Pointer, Gesture & Touch Handlers
-    'IgnorePointer',
-    'AbsorbPointer',
-    'GestureDetector',
-    'RawGestureDetector',
-    'Listener',
-    'MouseRegion',
-    'InkWell',
-    'InkResponse',
-    'TapRegionSurface',
-    'TapRegion',
-    'NotificationListener',
-    // Internal Framework & Structural Wrappers
-    'Semantics',
-    'RepaintBoundary',
-    'KeyedSubtree',
-    'Builder',
-    'StatefulBuilder',
-    'LayoutBuilder',
-    'MetaData',
-    'DefaultTextStyle',
-    'AnimatedDefaultTextStyle',
-    'DefaultSelectionStyle',
-    'MediaQuery',
-    'Directionality',
-    'Localizations',
-    'TickerMode',
-    'AnimatedTheme',
-    'Theme',
-    'IconTheme',
-    'ScaffoldMessenger',
-    'Scaffold',
-    'Focus',
-    'FocusScope',
-    'Actions',
-    'Shortcuts',
-    'RawView',
-    'View',
-    'Overlay',
-    'OverlayEntry',
-    'Navigator',
-    'HeroControllerScope',
-    'PrimaryScrollController',
-    'Scrollable',
-    'Viewport',
-    'CustomScrollView',
-    'SliverToBoxAdapter',
-    'SliverPadding',
-    'SliverList',
+    'CustomPaint',
     'SingleChildScrollView',
-    'Material',
-    'SafeArea',
-    'ModalBarrier',
-    'BackdropFilter',
-    // Root & App Wrappers
-    'RootWidget',
-    'MyApp',
-    'MaterialApp',
-    'WidgetsApp',
-    'ScrollConfiguration',
-    'SharedAppData',
-    'Title',
-    // Annotter Internal Widgets
+    'Hero',
+    'DefaultTextStyle',
     'Annotter',
-    'AnnotterOverlay',
     'AnnotterCanvas',
     'AnnotationDialog',
-    '_RenderInkFeatures',
   };
 
   // ponytail: Strips generic type parameters e.g. ValueListenableBuilder<bool> -> ValueListenableBuilder
@@ -122,7 +58,26 @@ class WidgetInspectorHelper {
     return idx != -1 ? type.substring(0, idx) : type;
   }
 
-  // ponytail: Hit-tests the app directly via sibling RenderBox to bypass all outer MaterialApp plumbing.
+  // ponytail: Architectural validation: checks if a widget is a true user component.
+  // In Flutter, user components always extend StatelessWidget or StatefulWidget.
+  // Internal framework wrappers (InheritedWidget, RenderObjectWidget, etc.) are excluded.
+  static bool _isNoise(Widget widget) {
+    if (widget is! StatelessWidget && widget is! StatefulWidget) {
+      return true;
+    }
+
+    final rawType = widget.runtimeType.toString();
+    final type = cleanType(rawType);
+
+    if (type.startsWith('_')) return true;
+    if (type.contains('Annotter')) return true;
+    if (type.contains('Builder')) return true;
+    if (type.contains('Listener')) return true;
+
+    return _frameworkPrimitives.contains(type);
+  }
+
+  // ponytail: Direct hit-test and architectural component resolution.
   static InspectedWidgetInfo inspectAt(BuildContext context, Offset globalOffset) {
     final canvasBox = context.findRenderObject() as RenderBox?;
     final localOffset = canvasBox?.globalToLocal(globalOffset) ?? globalOffset;
@@ -130,7 +85,7 @@ class WidgetInspectorHelper {
     final hitResult = HitTestResult();
     bool hitAppDirectly = false;
 
-    // Direct app hit-test: bypasses outer studio, MaterialApp, and root widgets
+    // Direct app hit-test: bypasses outer studio and root window plumbing
     final parent = canvasBox?.parent;
     if (parent is ContainerRenderObjectMixin<RenderBox, StackParentData>) {
       final appBox = parent.firstChild;
@@ -164,7 +119,6 @@ class WidgetInspectorHelper {
       if (target is RenderObject) {
         if (target is RenderBox && target.hasSize && canvasBox != null) {
           try {
-            // Convert target bounding box from global screen coordinates into canvas local space
             final globalTopLeft = target.localToGlobal(Offset.zero);
             final globalBottomRight = target.localToGlobal(Offset(target.size.width, target.size.height));
             final localTopLeft = canvasBox.globalToLocal(globalTopLeft);
@@ -177,10 +131,10 @@ class WidgetInspectorHelper {
               if (boxRect.width > 2 && boxRect.height > 2) {
                 if (kDebugMode && target.debugCreator is DebugCreator) {
                   final element = (target.debugCreator as DebugCreator).element;
-                  final widgetType = cleanType(element.widget.runtimeType.toString());
+                  final widget = element.widget;
 
-                  if (!_isNoise(widgetType)) {
-                    // Prefer the smallest enclosing non-noise widget
+                  if (!_isNoise(widget)) {
+                    final widgetType = cleanType(widget.runtimeType.toString());
                     if (smallestRect == null || area < (smallestRect.width * smallestRect.height)) {
                       smallestRect = boxRect;
                       foundWidgetName = widgetType;
@@ -190,10 +144,10 @@ class WidgetInspectorHelper {
                     }
                   }
 
-                  // Traverse ancestors to discover Screen/Page name and promote to custom component
+                  // Walk ancestor elements to discover active Screen and user custom components
                   element.visitAncestorElements((ancestor) {
-                    final rawType = ancestor.widget.runtimeType.toString();
-                    final type = cleanType(rawType);
+                    final ancestorWidget = ancestor.widget;
+                    final type = cleanType(ancestorWidget.runtimeType.toString());
 
                     if ((type.endsWith('Screen') || type.endsWith('Page')) &&
                         type != 'RawView' &&
@@ -201,12 +155,8 @@ class WidgetInspectorHelper {
                       detectedScreen ??= type;
                     }
 
-                    if (!_isNoise(type)) {
-                      if (foundWidgetName == 'CustomElement' ||
-                          foundWidgetName == 'RichText' ||
-                          foundWidgetName == 'Text' ||
-                          foundWidgetName == 'Icon' ||
-                          foundWidgetName == 'Image') {
+                    if (!_isNoise(ancestorWidget)) {
+                      if (foundWidgetName == 'CustomElement') {
                         foundWidgetName = type;
                       }
                       if (!hierarchy.contains(type)) {
@@ -239,7 +189,6 @@ class WidgetInspectorHelper {
     void visitor(Element element) {
       final widget = element.widget;
 
-      // Skip inactive/hidden tabs in IndexedStack or Offstage trees
       if (widget is Offstage && widget.offstage) {
         return;
       }
@@ -263,24 +212,5 @@ class WidgetInspectorHelper {
     } catch (_) {}
 
     return activeScreen;
-  }
-
-  static bool _isNoise(String rawType) {
-    final type = cleanType(rawType);
-    if (type.startsWith('_')) return true;
-    if (type.contains('Annotter')) return true;
-    if (type.startsWith('Inherited')) return true;
-    if (type.startsWith('Cupertino')) return true;
-    if (type.contains('Theme')) return true;
-    if (type.contains('Builder')) return true;
-    if (type.contains('Listener')) return true;
-    if (type.contains('Focus')) return true;
-    if (type.contains('Shortcut')) return true;
-    if (type.contains('Selection')) return true;
-    if (type.contains('Scope')) return true;
-    if (type.startsWith('Default')) return true;
-    if (type.startsWith('Raw')) return true;
-    if (type == 'Title') return true;
-    return _frameworkNoise.contains(type);
   }
 }
