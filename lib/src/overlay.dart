@@ -110,6 +110,9 @@ class _AnnotterState extends State<Annotter> {
                 );
               }
 
+              final appBottomPadding = mediaQuery.padding.bottom;
+              final canvasHeight = (appBottomPadding > 0) ? (size.height - appBottomPadding) : size.height;
+
               // Active: Full-width Ultra-Thin Bottom Dock Studio
               return Material(
                 color: Colors.transparent,
@@ -130,7 +133,7 @@ class _AnnotterState extends State<Annotter> {
                                   fit: BoxFit.contain,
                                   child: Container(
                                     width: size.width,
-                                    height: size.height,
+                                    height: canvasHeight,
                                     decoration: BoxDecoration(
                                       border: Border.all(
                                         color: _activeMode == AnnotterMode.navigate
@@ -144,7 +147,7 @@ class _AnnotterState extends State<Annotter> {
                                       child: Stack(
                                         fit: StackFit.expand,
                                         children: [
-                                          // Reactive Scroll & Navigation Listener
+                                          // Reactive Scroll & Navigation Listener + Inset override
                                           NotificationListener<Notification>(
                                             onNotification: (notification) {
                                               if (notification is ScrollNotification) {
@@ -158,7 +161,14 @@ class _AnnotterState extends State<Annotter> {
                                               }
                                               return false;
                                             },
-                                            child: KeyedSubtree(key: _appChildKey, child: widget.child),
+                                            child: MediaQuery(
+                                              data: mediaQuery.copyWith(
+                                                size: Size(size.width, canvasHeight),
+                                                padding: mediaQuery.padding.copyWith(bottom: 0),
+                                                viewPadding: mediaQuery.viewPadding.copyWith(bottom: 0),
+                                              ),
+                                              child: KeyedSubtree(key: _appChildKey, child: widget.child),
+                                            ),
                                           ),
 
                                           AnnotterCanvas(
@@ -598,18 +608,21 @@ class _AnnotterState extends State<Annotter> {
       }
     } catch (_) {}
 
+    final appBottomPadding = MediaQuery.of(context).padding.bottom;
+    final canvasHeight = (appBottomPadding > 0) ? (size.height - appBottomPadding) : size.height;
+
     // 2. Filter visible-only annotations on screen to match the screenshot
     final visibleItems = _items.where((item) {
       final dy = item.isScrollable ? (item.scrollOffsetAtCreation - _currentScrollOffset) : 0.0;
       final displayRect = item.rect.translate(0, dy);
-      return displayRect.bottom > 0 && displayRect.top < size.height;
+      return displayRect.bottom > 0 && displayRect.top < canvasHeight;
     }).toList();
 
     // 3. Export structured Markdown matching the visual screenshot
     await AnnotterExporter.copyToClipboard(
       items: visibleItems.isNotEmpty ? visibleItems : _items,
       routeName: _activeScreenName,
-      viewportSize: size,
+      viewportSize: Size(size.width, canvasHeight),
       screenshotPath: savedScreenshotPath,
     );
 
