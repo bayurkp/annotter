@@ -112,7 +112,7 @@ class _AnnotterCanvasState extends State<AnnotterCanvas> {
         id: DateTime.now().millisecondsSinceEpoch,
         number: widget.items.length + 1,
         rect: Rect.fromCenter(center: pos, width: 32, height: 32),
-        widgetName: info.name != 'CustomElement' ? info.name : 'PointLocation',
+        widgetName: info.name != 'Element' ? info.name : 'PointLocation',
         hierarchy: info.hierarchy,
         mode: AnnotterMode.point,
         isScrollable: info.isScrollable,
@@ -139,12 +139,12 @@ class _AnnotterCanvasState extends State<AnnotterCanvas> {
     if (_dragStart != null && _dragCurrent != null) {
       final rect = Rect.fromPoints(_dragStart!, _dragCurrent!);
       if (rect.width > 12 && rect.height > 12) {
-        final info = WidgetInspectorHelper.inspectAt(context, _dragStart!);
+        final info = WidgetInspectorHelper.inspectAt(context, rect.center);
         final newItem = AnnotterItem(
           id: DateTime.now().millisecondsSinceEpoch,
           number: widget.items.length + 1,
           rect: rect,
-          widgetName: (info.name != 'CustomElement' && !info.name.contains('Gesture') && !info.name.contains('Detector'))
+          widgetName: (info.name != 'Element' && !info.name.contains('Gesture') && !info.name.contains('Detector'))
             ? info.name
             : 'SelectionArea',
           hierarchy: info.hierarchy,

@@ -19,35 +19,33 @@ class InspectedWidgetInfo {
 }
 
 class WidgetInspectorHelper {
-  static bool _isFrameworkNoise(String type) {
+  static bool _isFrameworkPlumbing(Widget widget) {
+    // Tier 1: Architectural rule
+    // True visual components inherit from StatelessWidget or StatefulWidget
+    // (includes Riverpod ConsumerWidget/ConsumerStatefulWidget, HookWidget, BlocBuilder, etc.)
+    // All rendering nodes (RenderObjectWidget), data scopes (InheritedWidget),
+    // and parent data (ParentDataWidget) are plumbing!
+    if (widget is! StatelessWidget && widget is! StatefulWidget) {
+      return true;
+    }
+
+    // Tier 2: Behavioral wrapper filter
+    // Internal Flutter framework behavioral/event wrappers that are technically Stateful/StatelessWidget
+    // but carry zero visual design intent:
+    final type = cleanType(widget.runtimeType.toString());
     if (type.startsWith('_')) return true;
     if (type.contains('Annotter')) return true;
-    if (type.contains('Semantics') || type.endsWith('Semantics')) return true;
-    if (type.contains('KeepAlive')) return true;
     if (type.contains('Focus')) return true;
     if (type.contains('Action') && type != 'ActionRow') return true;
     if (type.contains('Shortcut')) return true;
     if (type.contains('Listener')) return true;
-    if (type.contains('Notification')) return true;
-    if (type.contains('Inherited')) return true;
-    if (type.contains('Transition')) return true;
     if (type.contains('Builder')) return true;
-    if (type.contains('Scope') && !type.endsWith('Screen') && !type.endsWith('Page')) return true;
-    if (type == 'MediaQuery' || type == 'LayoutId' || type == 'CustomMultiChildLayout') return true;
-    if (type == 'PhysicalModel' || type == 'PhysicalShape' || type == 'FractionalTranslation') return true;
-    if (type == 'IgnorePointer' || type == 'AbsorbPointer' || type == 'TickerMode') return true;
-    if (type == 'KeyedSubtree' || type == 'RepaintBoundary' || type == 'Offstage' || type == 'Visibility') return true;
-    if (type == 'PrimaryScrollController' || type == 'ScrollConfiguration') return true;
+    if (type.contains('Transition')) return true;
+    if (type.contains('Notification')) return true;
     if (type == 'RawGestureDetector' || type == 'GestureDetector') return true;
-    if (type == 'TapRegion' || type == 'MouseRegion') return true;
-    if (type == 'Transform' || type == 'ClipRect' || type == 'ClipRRect' || type == 'ClipOval') return true;
-    if (type == 'Center' || type == 'Align' || type == 'Padding' || type == 'SizedBox') return true;
-    if (type == 'ConstrainedBox' || type == 'UnconstrainedBox' || type == 'LimitedBox' || type == 'OverflowBox') return true;
-    if (type == 'DecoratedBox' || type == 'ColoredBox' || type == 'Container') return true;
-    if (type == 'Stack' || type == 'Row' || type == 'Column' || type == 'Flex' || type == 'Expanded' || type == 'Flexible') return true;
-    if (type == 'DefaultTextStyle' || type == 'RichText' || type == 'RawImage') return true;
-    if (type == 'Material' || type == 'Card' || type == 'Scaffold' || type == 'SafeArea') return true;
-    if (type.startsWith('Sliver') && type != 'SliverAppBar') return true;
+    if (type == 'MouseRegion' || type == 'TapRegion') return true;
+    if (type == 'TickerMode' || type == 'Scrollbar' || type == 'Hero') return true;
+    if (type.contains('Scope') && !type.endsWith('Screen') && !type.endsWith('Page')) return true;
     return false;
   }
 
@@ -106,8 +104,8 @@ class WidgetInspectorHelper {
                 final element = (target.debugCreator as DebugCreator).element;
                 final List<String> chain = [];
 
-                final rawType = cleanType(element.widget.runtimeType.toString());
-                if (!_isFrameworkNoise(rawType)) {
+                if (!_isFrameworkPlumbing(element.widget)) {
+                  final rawType = cleanType(element.widget.runtimeType.toString());
                   chain.add(rawType);
                 }
 
@@ -131,7 +129,7 @@ class WidgetInspectorHelper {
                     detectedScreen ??= type;
                   }
 
-                  if (!_isFrameworkNoise(type)) {
+                  if (!_isFrameworkPlumbing(aw)) {
                     if (chain.isEmpty || chain.last != type) {
                       chain.add(type);
                     }
