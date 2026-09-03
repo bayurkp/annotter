@@ -142,20 +142,37 @@ class _AnnotationDialogState extends State<AnnotationDialog> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    TextButton(
+                    OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.white70,
+                        backgroundColor: Colors.white.withValues(alpha: 0.06),
+                        side: BorderSide(color: Colors.white.withValues(alpha: 0.12)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        minimumSize: const Size(0, 36),
+                      ),
                       onPressed: widget.onCancel,
-                      child: const Text('Cancel', style: TextStyle(color: Colors.white60, fontFamily: 'sans-serif')),
+                      child: const Text(
+                        'Cancel',
+                        style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, fontFamily: 'sans-serif'),
+                      ),
                     ),
                     const SizedBox(width: 8),
                     ElevatedButton.icon(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF0284C7),
                         foregroundColor: Colors.white,
+                        elevation: 0,
+                        side: const BorderSide(color: Color(0x6638BDF8)),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        minimumSize: const Size(0, 36),
                       ),
                       icon: const Icon(Icons.check, size: 16),
-                      label: const Text('Save Note', style: TextStyle(fontSize: 13, fontFamily: 'sans-serif')),
+                      label: const Text(
+                        'Save Note',
+                        style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, fontFamily: 'sans-serif'),
+                      ),
                       onPressed: () {
                         widget.onSave(_controller.text.trim());
                       },
