@@ -19,110 +19,41 @@ class InspectedWidgetInfo {
 }
 
 class WidgetInspectorHelper {
-  static const Set<String> _frameworkPrimitives = {
-    // Focus, shortcuts & actions
-    'Focus',
-    'FocusScope',
-    'Actions',
-    'Shortcuts',
-    'CallbackShortcuts',
-    'PrimaryScrollController',
-    'ScrollConfiguration',
-    'Scrollable',
-    'Scrollbar',
-    'RawScrollbar',
-
-    // Primitives & layout
-    'Container',
-    'Card',
-    'Material',
-    'Scaffold',
-    'Center',
-    'Align',
-    'SizedBox',
-    'Padding',
-    'ColoredBox',
-    'GestureDetector',
-    'RawGestureDetector',
-    'Listener',
-    'MouseRegion',
-    'TapRegion',
-    'Semantics',
-    'InkWell',
-    'InkResponse',
-    'SafeArea',
-    'Stack',
-    'Column',
-    'Row',
-    'Flex',
-    'Expanded',
-    'Flexible',
-    'DecoratedBox',
-    'ConstrainedBox',
-    'UnconstrainedBox',
-    'FractionallySizedBox',
-    'LimitedBox',
-    'OverflowBox',
-    'SizedOverflowBox',
-    'Offstage',
-    'Visibility',
-    'FittedBox',
-    'AspectRatio',
-    'CustomPaint',
-    'SingleChildScrollView',
-    'Hero',
-    'DefaultTextStyle',
-    'Text',
-    'RichText',
-    'Icon',
-    'Image',
-    'RawImage',
-    'KeyedSubtree',
-    'RepaintBoundary',
-    'ClipRect',
-    'ClipRRect',
-    'ClipOval',
-    'Transform',
-    'Opacity',
-    'BackdropFilter',
-    'Positioned',
-
-    // Annotter Studio internals
-    'Annotter',
-    'AnnotterCanvas',
-    'AnnotationDialog',
-    'AnnotationListSheet',
-  };
+  static bool _isFrameworkNoise(String type) {
+    if (type.startsWith('_')) return true;
+    if (type.contains('Annotter')) return true;
+    if (type.contains('Semantics') || type.endsWith('Semantics')) return true;
+    if (type.contains('KeepAlive')) return true;
+    if (type.contains('Focus')) return true;
+    if (type.contains('Action') && type != 'ActionRow') return true;
+    if (type.contains('Shortcut')) return true;
+    if (type.contains('Listener')) return true;
+    if (type.contains('Notification')) return true;
+    if (type.contains('Inherited')) return true;
+    if (type.contains('Transition')) return true;
+    if (type.contains('Builder')) return true;
+    if (type.contains('Scope') && !type.endsWith('Screen') && !type.endsWith('Page')) return true;
+    if (type == 'MediaQuery' || type == 'LayoutId' || type == 'CustomMultiChildLayout') return true;
+    if (type == 'PhysicalModel' || type == 'PhysicalShape' || type == 'FractionalTranslation') return true;
+    if (type == 'IgnorePointer' || type == 'AbsorbPointer' || type == 'TickerMode') return true;
+    if (type == 'KeyedSubtree' || type == 'RepaintBoundary' || type == 'Offstage' || type == 'Visibility') return true;
+    if (type == 'PrimaryScrollController' || type == 'ScrollConfiguration') return true;
+    if (type == 'RawGestureDetector' || type == 'GestureDetector') return true;
+    if (type == 'TapRegion' || type == 'MouseRegion') return true;
+    if (type == 'Transform' || type == 'ClipRect' || type == 'ClipRRect' || type == 'ClipOval') return true;
+    if (type == 'Center' || type == 'Align' || type == 'Padding' || type == 'SizedBox') return true;
+    if (type == 'ConstrainedBox' || type == 'UnconstrainedBox' || type == 'LimitedBox' || type == 'OverflowBox') return true;
+    if (type == 'DecoratedBox' || type == 'ColoredBox' || type == 'Container') return true;
+    if (type == 'Stack' || type == 'Row' || type == 'Column' || type == 'Flex' || type == 'Expanded' || type == 'Flexible') return true;
+    if (type == 'DefaultTextStyle' || type == 'RichText' || type == 'RawImage') return true;
+    if (type == 'Material' || type == 'Card' || type == 'Scaffold' || type == 'SafeArea') return true;
+    if (type.startsWith('Sliver') && type != 'SliverAppBar') return true;
+    return false;
+  }
 
   static String cleanType(String type) {
     final idx = type.indexOf('<');
     return idx != -1 ? type.substring(0, idx) : type;
-  }
-
-  static bool _isMeaningfulWidget(String type) {
-    if (_frameworkPrimitives.contains(type)) return false;
-    if (type.startsWith('_')) return false;
-    if (type.contains('Annotter')) return false;
-    if (type.contains('Builder')) return false;
-    if (type.contains('Listener')) return false;
-    if (type.contains('Transition')) return false;
-    if (type.startsWith('Animated')) return false;
-    if (type.startsWith('Default')) return false;
-    if (type.startsWith('Raw')) return false;
-    if (type.startsWith('Focus')) return false;
-    if (type.startsWith('Action')) return false;
-    if (type.startsWith('Shortcut')) return false;
-    if (type.startsWith('Scroll')) return false;
-    if (type.startsWith('Sliver')) return false;
-    return true;
-  }
-
-  static bool _isCustomComponent(Widget widget) {
-    if (widget is! StatelessWidget && widget is! StatefulWidget) {
-      return false;
-    }
-    final type = cleanType(widget.runtimeType.toString());
-    return _isMeaningfulWidget(type);
   }
 
   // ponytail: Hit-tests the app sibling RenderBox directly using local coordinates.
@@ -143,10 +74,11 @@ class WidgetInspectorHelper {
       appBox.hitTest(boxResult, position: localOffset);
     }
 
-    String foundWidgetName = 'CustomElement';
+    String foundWidgetName = 'Element';
     String? detectedScreen;
-    final List<String> hierarchy = [];
+    List<String> bestHierarchy = [];
     Rect? smallestRect;
+    double smallestArea = double.infinity;
     bool detectedScrollable = false;
 
     for (final entry in boxResult.path) {
@@ -169,16 +101,17 @@ class WidgetInspectorHelper {
             final boxRect = Rect.fromPoints(targetLocalTopLeft, targetLocalBottomRight);
             final area = boxRect.width * boxRect.height;
 
-            if (boxRect.width > 2 && boxRect.height > 2) {
+            if (boxRect.width >= 4 && boxRect.height >= 4) {
               if (kDebugMode && target.debugCreator is DebugCreator) {
                 final element = (target.debugCreator as DebugCreator).element;
+                final List<String> chain = [];
 
-                // Discover custom component and scrollable ancestors (up to 80 levels)
-                Element? customElement;
-                Element? firstMeaningfulElement;
-                int depth = 0;
+                final rawType = cleanType(element.widget.runtimeType.toString());
+                if (!_isFrameworkNoise(rawType)) {
+                  chain.add(rawType);
+                }
+
                 element.visitAncestorElements((ancestor) {
-                  depth++;
                   final aw = ancestor.widget;
                   final type = cleanType(aw.runtimeType.toString());
 
@@ -188,8 +121,7 @@ class WidgetInspectorHelper {
                       type == 'SingleChildScrollView' ||
                       type == 'GridView' ||
                       type.contains('Scrollable') ||
-                      type.contains('ScrollView') ||
-                      type.startsWith('Sliver')) {
+                      type.contains('ScrollView')) {
                     detectedScrollable = true;
                   }
 
@@ -199,33 +131,20 @@ class WidgetInspectorHelper {
                     detectedScreen ??= type;
                   }
 
-                  if (_isMeaningfulWidget(type)) {
-                    firstMeaningfulElement ??= ancestor;
-                    if (!hierarchy.contains(type) && hierarchy.length < 8) {
-                      hierarchy.add(type);
+                  if (!_isFrameworkNoise(type)) {
+                    if (chain.isEmpty || chain.last != type) {
+                      chain.add(type);
                     }
                   }
 
-                  if (customElement == null && _isCustomComponent(aw)) {
-                    customElement = ancestor;
-                  }
-
-                  return depth < 80;
+                  return chain.length < 15;
                 });
 
-                final chosenElement = customElement ?? firstMeaningfulElement;
-                if (chosenElement != null) {
-                  final chosenType = cleanType(chosenElement.widget.runtimeType.toString());
-                  if (smallestRect == null || area < (smallestRect.width * smallestRect.height)) {
-                    smallestRect = boxRect;
-                    foundWidgetName = chosenType;
-                  }
-                } else if (smallestRect == null) {
+                if (chain.isNotEmpty && area < smallestArea) {
+                  smallestArea = area;
                   smallestRect = boxRect;
-                  final rawType = cleanType(element.widget.runtimeType.toString());
-                  if (foundWidgetName == 'CustomElement' && _isMeaningfulWidget(rawType)) {
-                    foundWidgetName = rawType;
-                  }
+                  foundWidgetName = chain.first;
+                  bestHierarchy = List.from(chain);
                 }
               }
             }
@@ -236,7 +155,7 @@ class WidgetInspectorHelper {
 
     return InspectedWidgetInfo(
       name: foundWidgetName,
-      hierarchy: hierarchy,
+      hierarchy: bestHierarchy,
       rect: smallestRect ?? Rect.fromCenter(center: localOffset, width: 40, height: 40),
       screenName: detectedScreen,
       isScrollable: detectedScrollable,
