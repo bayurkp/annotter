@@ -19,34 +19,31 @@ class InspectedWidgetInfo {
 }
 
 class WidgetInspectorHelper {
-  static bool _isFrameworkPlumbing(Widget widget) {
-    // Tier 1: Architectural rule
-    // True visual components inherit from StatelessWidget or StatefulWidget
-    // (includes Riverpod ConsumerWidget/ConsumerStatefulWidget, HookWidget, BlocBuilder, etc.)
-    // All rendering nodes (RenderObjectWidget), data scopes (InheritedWidget),
-    // and parent data (ParentDataWidget) are plumbing!
+  /// Determines whether a widget is a component-level candidate for the
+  /// Annotter UI Tree. Uses an architectural heuristic, not a name blacklist.
+  ///
+  /// Principles:
+  ///   Element           = traversal mechanism
+  ///   Stateless/Stateful = component boundary
+  ///   _                 = internal / private
+  ///   Annotter          = infrastructure owned by Annotter
+  ///   No widget-name blacklists
+  static bool _isComponentCandidate(Widget widget) {
+    // 1. Component boundary: StatelessWidget / StatefulWidget
+    //    (includes ConsumerWidget, HookWidget, BlocBuilder, etc.)
+    //    RenderObjectWidget, InheritedWidget, ParentDataWidget are not components.
     if (widget is! StatelessWidget && widget is! StatefulWidget) {
-      return true;
+      return false;
     }
 
-    // Tier 2: Behavioral wrapper filter
-    // Internal Flutter framework behavioral/event wrappers that are technically Stateful/StatelessWidget
-    // but carry zero visual design intent:
+    // 2. Private/internal Flutter widgets (unreachable by developer code)
     final type = cleanType(widget.runtimeType.toString());
-    if (type.startsWith('_')) return true;
-    if (type.contains('Annotter')) return true;
-    if (type.contains('Focus')) return true;
-    if (type.contains('Action') && type != 'ActionRow') return true;
-    if (type.contains('Shortcut')) return true;
-    if (type.contains('Listener')) return true;
-    if (type.contains('Builder')) return true;
-    if (type.contains('Transition')) return true;
-    if (type.contains('Notification')) return true;
-    if (type == 'RawGestureDetector' || type == 'GestureDetector') return true;
-    if (type == 'MouseRegion' || type == 'TapRegion') return true;
-    if (type == 'TickerMode' || type == 'Scrollbar' || type == 'Hero') return true;
-    if (type.contains('Scope') && !type.endsWith('Screen') && !type.endsWith('Page')) return true;
-    return false;
+    if (type.startsWith('_')) return false;
+
+    // 3. Annotter's own overlay infrastructure
+    if (type.contains('Annotter')) return false;
+
+    return true;
   }
 
   static String cleanType(String type) {
@@ -104,7 +101,7 @@ class WidgetInspectorHelper {
                 final element = (target.debugCreator as DebugCreator).element;
                 final List<String> chain = [];
 
-                if (!_isFrameworkPlumbing(element.widget)) {
+                if (_isComponentCandidate(element.widget)) {
                   final rawType = cleanType(element.widget.runtimeType.toString());
                   chain.add(rawType);
                 }
@@ -129,7 +126,7 @@ class WidgetInspectorHelper {
                     detectedScreen ??= type;
                   }
 
-                  if (!_isFrameworkPlumbing(aw)) {
+                  if (_isComponentCandidate(aw)) {
                     if (chain.isEmpty || chain.last != type) {
                       chain.add(type);
                     }
