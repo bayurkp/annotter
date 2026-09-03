@@ -9,13 +9,15 @@ enum AnnotterMode {
 
 class AnnotterItem {
   final int id;
-  final int number;
+  int number;
   Rect rect;
-  final String widgetName;
-  final List<String> hierarchy;
+  String widgetName;
+  List<String> hierarchy;
   String note;
-  final AnnotterMode mode;
-  final String screenName;
+  AnnotterMode mode;
+  String screenName;
+  bool isScrollable;
+  double scrollOffsetAtCreation;
 
   AnnotterItem({
     required this.id,
@@ -25,8 +27,25 @@ class AnnotterItem {
     this.hierarchy = const [],
     this.note = '',
     this.mode = AnnotterMode.inspect,
-    this.screenName = 'Current Screen',
+    this.screenName = 'HomeScreen',
+    this.isScrollable = false,
+    this.scrollOffsetAtCreation = 0.0,
   });
+
+  AnnotterItem copy() {
+    return AnnotterItem(
+      id: id,
+      number: number,
+      rect: rect,
+      widgetName: widgetName,
+      hierarchy: List.from(hierarchy),
+      note: note,
+      mode: mode,
+      screenName: screenName,
+      isScrollable: isScrollable,
+      scrollOffsetAtCreation: scrollOffsetAtCreation,
+    );
+  }
 
   // ponytail: Minimal map serialization.
   Map<String, dynamic> toJson() => {
@@ -42,5 +61,6 @@ class AnnotterItem {
     },
     'note': note,
     'mode': mode.name,
+    'isScrollable': isScrollable,
   };
 }

@@ -8,6 +8,7 @@ import 'canvas.dart';
 import 'dialog.dart';
 import 'exporter.dart';
 import 'inspector.dart';
+import 'list_sheet.dart';
 
 /// The root wrapper for Annotter.
 /// Wraps your application to provide in-app UI inspection and annotation.
@@ -27,14 +28,18 @@ class Annotter extends StatefulWidget {
 
 class _AnnotterState extends State<Annotter> {
   final GlobalKey _repaintBoundaryKey = GlobalKey();
+  final GlobalKey _appChildKey = GlobalKey();
 
   bool _isActive = false;
   AnnotterMode _activeMode = AnnotterMode.inspect;
-  final List<AnnotterItem> _items = [];
+  List<AnnotterItem> _items = [];
+
+  // Undo / Redo History Stacks
+  final List<List<AnnotterItem>> _undoStack = [];
+  final List<List<AnnotterItem>> _redoStack = [];
 
   Offset _fabPosition = const Offset(20, 120);
-
-  final GlobalKey _appChildKey = GlobalKey();
+  double _currentScrollOffset = 0.0;
 
   AnnotterItem? _activeDialogItem;
   bool _isCreatingItem = false;
@@ -50,6 +55,32 @@ class _AnnotterState extends State<Annotter> {
       }
     }
     return _currentScreenName;
+  }
+
+  void _saveSnapshot() {
+    _undoStack.add(_items.map((i) => i.copy()).toList());
+    _redoStack.clear();
+    if (_undoStack.length > 30) {
+      _undoStack.removeAt(0);
+    }
+  }
+
+  void _undo() {
+    if (_undoStack.isEmpty) return;
+    _redoStack.add(_items.map((i) => i.copy()).toList());
+    setState(() {
+      _items = _undoStack.removeLast();
+      _renumberItems();
+    });
+  }
+
+  void _redo() {
+    if (_redoStack.isEmpty) return;
+    _undoStack.add(_items.map((i) => i.copy()).toList());
+    setState(() {
+      _items = _redoStack.removeLast();
+      _renumberItems();
+    });
   }
 
   @override
@@ -79,67 +110,84 @@ class _AnnotterState extends State<Annotter> {
                 );
               }
 
-              // Active: Proportional Scale Studio
+              // Active: Bottom Dock Studio with Reactive Scroll & Navigation
               return Container(
-                  color: const Color(0xFF0B0F19), // Deep studio backdrop
-                  child: SafeArea(
-                    child: Stack(
-                      children: [
-                        Row(
-                          children: [
-                            // Proportional Scaled App Viewport (Preserving exact aspect ratio & resolution)
-                            Expanded(
-                              child: Center(
-                                child: Padding(
-                                  padding: const EdgeInsets.fromLTRB(10, 8, 4, 8),
-                                  child: FittedBox(
-                                    fit: BoxFit.contain,
-                                    child: Container(
-                                      width: size.width,
-                                      height: size.height,
-                                      decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(24),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: Colors.black.withValues(alpha: 0.7),
-                                            blurRadius: 28,
-                                            offset: const Offset(0, 10),
-                                          ),
-                                        ],
-                                        border: Border.all(
-                                          color: _activeMode == AnnotterMode.navigate
-                                              ? const Color(0xFF10B981) // Green in navigate
-                                              : const Color(0xFF0284C7), // DevTools Blue in annotate
-                                          width: 3.0,
+                color: const Color(0xFF0B0F19), // Deep studio backdrop
+                child: SafeArea(
+                  child: Stack(
+                    children: [
+                      Column(
+                        children: [
+                          // Proportional Scaled App Viewport
+                          Expanded(
+                            child: Center(
+                              child: Padding(
+                                padding: const EdgeInsets.fromLTRB(10, 6, 10, 4),
+                                child: FittedBox(
+                                  fit: BoxFit.contain,
+                                  child: Container(
+                                    width: size.width,
+                                    height: size.height,
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(24),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withValues(alpha: 0.7),
+                                          blurRadius: 28,
+                                          offset: const Offset(0, 10),
                                         ),
+                                      ],
+                                      border: Border.all(
+                                        color: _activeMode == AnnotterMode.navigate
+                                            ? const Color(0xFF10B981) // Green in navigate
+                                            : const Color(0xFF0284C7), // DevTools Blue in annotate
+                                        width: 3.0,
                                       ),
-                                      child: ClipRRect(
-                                        borderRadius: BorderRadius.circular(21),
-                                        child: RepaintBoundary(
-                                          key: _repaintBoundaryKey,
-                                          child: Stack(
-                                            fit: StackFit.expand,
-                                            children: [
-                                              KeyedSubtree(key: _appChildKey, child: widget.child),
-                                              AnnotterCanvas(
-                                                items: _items,
-                                                activeMode: _activeMode,
-                                                onRequestCreate: (item, screenName) {
-                                                  setState(() {
-                                                    if (screenName != null) _currentScreenName = screenName;
-                                                    _activeDialogItem = item;
-                                                    _isCreatingItem = true;
-                                                  });
-                                                },
-                                                onRequestEdit: (item) {
-                                                  setState(() {
-                                                    _activeDialogItem = item;
-                                                    _isCreatingItem = false;
-                                                  });
-                                                },
-                                              ),
-                                            ],
-                                          ),
+                                    ),
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(21),
+                                      child: RepaintBoundary(
+                                        key: _repaintBoundaryKey,
+                                        child: Stack(
+                                          fit: StackFit.expand,
+                                          children: [
+                                            // Reactive Scroll & Navigation Listener
+                                            NotificationListener<Notification>(
+                                              onNotification: (notification) {
+                                                if (notification is ScrollNotification) {
+                                                  if (notification.metrics.axis == Axis.vertical) {
+                                                    setState(() {
+                                                      _currentScrollOffset = notification.metrics.pixels;
+                                                    });
+                                                  }
+                                                } else if (notification is NavigationNotification) {
+                                                  setState(() {}); // Instant route update
+                                                }
+                                                return false;
+                                              },
+                                              child: KeyedSubtree(key: _appChildKey, child: widget.child),
+                                            ),
+
+                                            AnnotterCanvas(
+                                              items: _items,
+                                              activeMode: _activeMode,
+                                              currentScrollOffset: _currentScrollOffset,
+                                              onRequestCreate: (item, screenName) {
+                                                _saveSnapshot();
+                                                setState(() {
+                                                  if (screenName != null) _currentScreenName = screenName;
+                                                  _activeDialogItem = item;
+                                                  _isCreatingItem = true;
+                                                });
+                                              },
+                                              onRequestEdit: (item) {
+                                                setState(() {
+                                                  _activeDialogItem = item;
+                                                  _isCreatingItem = false;
+                                                });
+                                              },
+                                            ),
+                                          ],
                                         ),
                                       ),
                                     ),
@@ -147,55 +195,59 @@ class _AnnotterState extends State<Annotter> {
                                 ),
                               ),
                             ),
+                          ),
 
-                            // Vertical Side Rail Toolbar
-                            _buildSideRail(),
-                          ],
-                        ),
+                          // Horizontal Sliding Bottom Toolbar Dock
+                          _buildBottomDock(),
+                        ],
+                      ),
 
-                        // Top Screen Name & Banner
-                        Positioned(
-                          top: 8,
-                          left: 14,
-                          child: _buildTopStudioBar(),
-                        ),
+                      // Top Screen Name Pill (Truncated with Ellipsis)
+                      Positioned(
+                        top: 10,
+                        left: 16,
+                        right: 16,
+                        child: Center(child: _buildTopStudioBar(size)),
+                      ),
 
-                        // Inline Modal Dialog
-                        if (_activeDialogItem != null)
-                          Positioned.fill(
-                            child: Container(
-                              color: Colors.black.withValues(alpha: 0.65),
-                              alignment: Alignment.center,
-                              child: SingleChildScrollView(
-                                child: AnnotationDialog(
-                                  item: _activeDialogItem!,
-                                  isNew: _isCreatingItem,
-                                  onCancel: () => setState(() => _activeDialogItem = null),
-                                  onDelete: () {
-                                    setState(() {
-                                      final deleteId = _activeDialogItem!.id;
-                                      _items.removeWhere((i) => i.id == deleteId);
-                                      _renumberItems();
-                                      _activeDialogItem = null;
-                                    });
-                                  },
-                                  onSave: (note) {
-                                    setState(() {
-                                      _activeDialogItem!.note = note;
-                                      if (_isCreatingItem) {
-                                        _items.add(_activeDialogItem!);
-                                      }
-                                      _activeDialogItem = null;
-                                    });
-                                  },
-                                ),
+                      // Inline Modal Note Dialog
+                      if (_activeDialogItem != null)
+                        Positioned.fill(
+                          child: Container(
+                            color: Colors.black.withValues(alpha: 0.65),
+                            alignment: Alignment.center,
+                            child: SingleChildScrollView(
+                              child: AnnotationDialog(
+                                item: _activeDialogItem!,
+                                isNew: _isCreatingItem,
+                                onCancel: () => setState(() => _activeDialogItem = null),
+                                onDelete: () {
+                                  _saveSnapshot();
+                                  setState(() {
+                                    final deleteId = _activeDialogItem!.id;
+                                    _items.removeWhere((i) => i.id == deleteId);
+                                    _renumberItems();
+                                    _activeDialogItem = null;
+                                  });
+                                },
+                                onSave: (note) {
+                                  _saveSnapshot();
+                                  setState(() {
+                                    _activeDialogItem!.note = note;
+                                    if (_isCreatingItem) {
+                                      _items.add(_activeDialogItem!);
+                                    }
+                                    _activeDialogItem = null;
+                                  });
+                                },
                               ),
                             ),
                           ),
-                      ],
-                    ),
+                        ),
+                    ],
                   ),
-                );
+                ),
+              );
             },
           ),
         ],
@@ -203,19 +255,26 @@ class _AnnotterState extends State<Annotter> {
     );
   }
 
-  // Top Minimal Studio Bar
-  Widget _buildTopStudioBar() {
+  // Top Minimal Studio Bar (Truncated to Prevent Overflow)
+  Widget _buildTopStudioBar(Size size) {
     final modeLabel = _activeMode == AnnotterMode.navigate ? 'NAVIGATE (SCROLL)' : _activeMode.name.toUpperCase();
     final modeColor = _activeMode == AnnotterMode.navigate ? const Color(0xFF10B981) : const Color(0xFF0284C7);
 
     return Material(
       color: Colors.transparent,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
         decoration: BoxDecoration(
-          color: const Color(0xFF1E293B).withValues(alpha: 0.9),
-          borderRadius: BorderRadius.circular(12),
+          color: const Color(0xFF1E293B).withValues(alpha: 0.95),
+          borderRadius: BorderRadius.circular(20),
           border: Border.all(color: Colors.white12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.4),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -225,14 +284,19 @@ class _AnnotterState extends State<Annotter> {
               height: 7,
               decoration: BoxDecoration(color: modeColor, shape: BoxShape.circle),
             ),
-            const SizedBox(width: 6),
-            Text(
-              _bannerMessage ?? '$_activeScreenName • $modeLabel',
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
-                fontFamily: 'sans-serif',
+            const SizedBox(width: 8),
+            ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: size.width * 0.65),
+              child: Text(
+                _bannerMessage ?? '$_activeScreenName • $modeLabel',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'sans-serif',
+                ),
               ),
             ),
           ],
@@ -241,19 +305,18 @@ class _AnnotterState extends State<Annotter> {
     );
   }
 
-  // Vertical Side Rail (DevTools Style)
-  Widget _buildSideRail() {
+  // Bottom Sliding Toolbar Dock
+  Widget _buildBottomDock() {
     return Container(
-      width: 54,
-      margin: const EdgeInsets.only(top: 8, bottom: 8, right: 8),
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      margin: const EdgeInsets.only(left: 12, right: 12, bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       decoration: BoxDecoration(
         color: const Color(0xFF1E293B), // Slate 800
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.5),
-            blurRadius: 14,
+            color: Colors.black.withValues(alpha: 0.6),
+            blurRadius: 16,
             offset: const Offset(0, 4),
           ),
         ],
@@ -261,104 +324,152 @@ class _AnnotterState extends State<Annotter> {
       ),
       child: Material(
         color: Colors.transparent,
-        child: Column(
-          children: [
-            // Close Button
-            IconButton(
-              icon: const Icon(Icons.close, color: Colors.white70, size: 20),
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(minWidth: 38, minHeight: 38),
-              onPressed: () => setState(() => _isActive = false),
-            ),
-            const Divider(color: Colors.white12, height: 14, indent: 6, endIndent: 6),
-
-            // Navigate (Scroll/Browse)
-            _buildRailTool(
-              icon: Icons.pan_tool_outlined,
-              label: 'Nav',
-              mode: AnnotterMode.navigate,
-            ),
-            const SizedBox(height: 6),
-
-            // Inspect
-            _buildRailTool(
-              icon: Icons.touch_app_outlined,
-              label: 'Inspect',
-              mode: AnnotterMode.inspect,
-            ),
-            const SizedBox(height: 6),
-
-            // Area (Rect)
-            _buildRailTool(
-              icon: Icons.crop_square_outlined,
-              label: 'Area',
-              mode: AnnotterMode.rectangle,
-            ),
-            const SizedBox(height: 6),
-
-            // Pin
-            _buildRailTool(
-              icon: Icons.pin_drop_outlined,
-              label: 'Pin',
-              mode: AnnotterMode.pin,
-            ),
-
-            if (_items.isNotEmpty) ...[
-              const Divider(color: Colors.white12, height: 14, indent: 6, endIndent: 6),
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          physics: const BouncingScrollPhysics(),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Close Button
               IconButton(
-                icon: const Icon(Icons.delete_sweep_outlined, color: Colors.redAccent, size: 18),
+                icon: const Icon(Icons.close, color: Colors.white70, size: 20),
                 padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(minWidth: 38, minHeight: 38),
-                onPressed: () => setState(() => _items.clear()),
+                constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                onPressed: () => setState(() => _isActive = false),
               ),
-            ],
+              const SizedBox(
+                height: 22,
+                child: VerticalDivider(color: Colors.white12, width: 14),
+              ),
 
-            const Spacer(),
+              // Navigate Mode (Green)
+              _buildDockTool(
+                icon: Icons.pan_tool_outlined,
+                label: 'Nav',
+                mode: AnnotterMode.navigate,
+              ),
+              const SizedBox(width: 4),
 
-            // Copy for AI Button (DevTools Blue)
-            InkWell(
-              borderRadius: BorderRadius.circular(14),
-              onTap: _copyForAI,
-              child: Container(
-                width: 42,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF0284C7), // DevTools Blue
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF0284C7).withValues(alpha: 0.4),
-                      blurRadius: 8,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
+              // Inspect Mode (Cyan)
+              _buildDockTool(
+                icon: Icons.touch_app_outlined,
+                label: 'Inspect',
+                mode: AnnotterMode.inspect,
+              ),
+              const SizedBox(width: 4),
+
+              // Area Mode
+              _buildDockTool(
+                icon: Icons.crop_square_outlined,
+                label: 'Area',
+                mode: AnnotterMode.rectangle,
+              ),
+              const SizedBox(width: 4),
+
+              // Pin Mode
+              _buildDockTool(
+                icon: Icons.pin_drop_outlined,
+                label: 'Pin',
+                mode: AnnotterMode.pin,
+              ),
+
+              const SizedBox(
+                height: 22,
+                child: VerticalDivider(color: Colors.white12, width: 14),
+              ),
+
+              // Undo
+              IconButton(
+                icon: Icon(
+                  Icons.undo,
+                  size: 19,
+                  color: _undoStack.isEmpty ? Colors.white24 : Colors.white70,
                 ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
+                onPressed: _undoStack.isEmpty ? null : _undo,
+              ),
+
+              // Redo
+              IconButton(
+                icon: Icon(
+                  Icons.redo,
+                  size: 19,
+                  color: _redoStack.isEmpty ? Colors.white24 : Colors.white70,
+                ),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
+                onPressed: _redoStack.isEmpty ? null : _redo,
+              ),
+
+              // Reorderable Notes List Sheet
+              IconButton(
+                icon: Stack(
+                  alignment: Alignment.center,
                   children: [
-                    const Icon(Icons.copy_all, color: Colors.white, size: 16),
-                    const SizedBox(height: 2),
-                    Text(
-                      _items.isEmpty ? 'AI' : 'AI (${_items.length})',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 8,
-                        fontWeight: FontWeight.bold,
-                        fontFamily: 'sans-serif',
+                    const Icon(Icons.format_list_numbered, size: 20, color: Colors.white70),
+                    if (_items.isNotEmpty)
+                      Positioned(
+                        top: 0,
+                        right: 0,
+                        child: Container(
+                          padding: const EdgeInsets.all(3),
+                          decoration: const BoxDecoration(
+                            color: Color(0xFF0284C7),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Text(
+                            '${_items.length}',
+                            style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold),
+                          ),
+                        ),
                       ),
-                    ),
                   ],
                 ),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                onPressed: _openNotesListSheet,
               ),
-            ),
-            const SizedBox(height: 4),
-          ],
+
+              // Clear All
+              if (_items.isNotEmpty)
+                IconButton(
+                  icon: const Icon(Icons.delete_sweep_outlined, color: Colors.redAccent, size: 19),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
+                  onPressed: () {
+                    _saveSnapshot();
+                    setState(() => _items.clear());
+                  },
+                ),
+
+              const SizedBox(width: 6),
+
+              // Copy for AI Button
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF0284C7),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  elevation: 4,
+                ),
+                icon: const Icon(Icons.copy_all, size: 16),
+                label: Text(
+                  _items.isEmpty ? 'AI' : 'AI (${_items.length})',
+                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, fontFamily: 'sans-serif'),
+                ),
+                onPressed: _copyForAI,
+              ),
+              const SizedBox(width: 4),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildRailTool({
+  Widget _buildDockTool({
     required IconData icon,
     required String label,
     required AnnotterMode mode,
@@ -367,25 +478,24 @@ class _AnnotterState extends State<Annotter> {
     final activeColor = mode == AnnotterMode.navigate ? const Color(0xFF10B981) : const Color(0xFF0284C7);
 
     return InkWell(
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(14),
       onTap: () => setState(() => _activeMode = mode),
       child: Container(
-        width: 42,
-        height: 42,
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
           color: isSelected ? activeColor : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(14),
         ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 17, color: isSelected ? Colors.white : Colors.white60),
-            const SizedBox(height: 2),
+            Icon(icon, size: 16, color: isSelected ? Colors.white : Colors.white60),
+            const SizedBox(width: 4),
             Text(
               label,
               style: TextStyle(
                 color: isSelected ? Colors.white : Colors.white60,
-                fontSize: 9,
+                fontSize: 11,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                 fontFamily: 'sans-serif',
               ),
@@ -396,7 +506,42 @@ class _AnnotterState extends State<Annotter> {
     );
   }
 
-  // Draggable FAB for idle trigger (DevTools Blue)
+  void _openNotesListSheet() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => AnnotationListSheet(
+        items: _items,
+        onReorder: (newItems) {
+          _saveSnapshot();
+          setState(() {
+            _items = newItems;
+            _renumberItems();
+          });
+        },
+        onEdit: (item) {
+          setState(() {
+            _activeDialogItem = item;
+            _isCreatingItem = false;
+          });
+        },
+        onDelete: (item) {
+          _saveSnapshot();
+          setState(() {
+            _items.removeWhere((i) => i.id == item.id);
+            _renumberItems();
+          });
+        },
+        onClearAll: () {
+          _saveSnapshot();
+          setState(() => _items.clear());
+        },
+      ),
+    );
+  }
+
+  // Draggable FAB for idle trigger
   Widget _buildIdleFab(MediaQueryData mediaQuery, Size size) {
     return Positioned(
       left: _fabPosition.dx,
@@ -461,23 +606,14 @@ class _AnnotterState extends State<Annotter> {
 
   void _renumberItems() {
     for (int i = 0; i < _items.length; i++) {
-      _items[i] = AnnotterItem(
-        id: _items[i].id,
-        number: i + 1,
-        rect: _items[i].rect,
-        widgetName: _items[i].widgetName,
-        hierarchy: _items[i].hierarchy,
-        note: _items[i].note,
-        mode: _items[i].mode,
-        screenName: _items[i].screenName,
-      );
+      _items[i].number = i + 1;
     }
   }
 
   void _copyForAI() async {
     final size = MediaQuery.of(context).size;
 
-    // 1. Auto-capture screenshot
+    // 1. Auto-capture current visible viewport screenshot
     String? savedScreenshotPath;
     try {
       final boundary = _repaintBoundaryKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
@@ -504,9 +640,16 @@ class _AnnotterState extends State<Annotter> {
       }
     } catch (_) {}
 
-    // 2. Export structured Markdown grouped by screen
+    // 2. Filter visible-only annotations on screen to match the screenshot
+    final visibleItems = _items.where((item) {
+      final dy = item.isScrollable ? (item.scrollOffsetAtCreation - _currentScrollOffset) : 0.0;
+      final displayRect = item.rect.translate(0, dy);
+      return displayRect.bottom > 0 && displayRect.top < size.height;
+    }).toList();
+
+    // 3. Export structured Markdown matching the visual screenshot
     await AnnotterExporter.copyToClipboard(
-      items: _items,
+      items: visibleItems.isNotEmpty ? visibleItems : _items,
       routeName: _activeScreenName,
       viewportSize: size,
       screenshotPath: savedScreenshotPath,

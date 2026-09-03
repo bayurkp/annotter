@@ -5,6 +5,7 @@ import 'inspector.dart';
 class AnnotterCanvas extends StatefulWidget {
   final List<AnnotterItem> items;
   final AnnotterMode activeMode;
+  final double currentScrollOffset;
   final void Function(AnnotterItem item, String? screenName) onRequestCreate;
   final ValueChanged<AnnotterItem> onRequestEdit;
 
@@ -12,6 +13,7 @@ class AnnotterCanvas extends StatefulWidget {
     super.key,
     required this.items,
     required this.activeMode,
+    this.currentScrollOffset = 0.0,
     required this.onRequestCreate,
     required this.onRequestEdit,
   });
@@ -52,6 +54,7 @@ class _AnnotterCanvasState extends State<AnnotterCanvas> {
                   dragStart: _dragStart,
                   dragCurrent: _dragCurrent,
                   hoveredWidget: _hoveredWidget,
+                  currentScrollOffset: widget.currentScrollOffset,
                 ),
               ),
             ),
@@ -92,6 +95,8 @@ class _AnnotterCanvasState extends State<AnnotterCanvas> {
         widgetName: info.name,
         hierarchy: info.hierarchy,
         mode: AnnotterMode.inspect,
+        isScrollable: info.isScrollable,
+        scrollOffsetAtCreation: widget.currentScrollOffset,
       );
       setState(() => _hoveredWidget = null);
       widget.onRequestCreate(newItem, info.screenName);
@@ -105,6 +110,8 @@ class _AnnotterCanvasState extends State<AnnotterCanvas> {
         widgetName: info.name != 'CustomElement' ? info.name : 'PinLocation',
         hierarchy: info.hierarchy,
         mode: AnnotterMode.pin,
+        isScrollable: info.isScrollable,
+        scrollOffsetAtCreation: widget.currentScrollOffset,
       );
       widget.onRequestCreate(newItem, info.screenName);
     }
@@ -135,6 +142,8 @@ class _AnnotterCanvasState extends State<AnnotterCanvas> {
           widgetName: info.name != 'CustomElement' ? info.name : 'SelectionArea',
           hierarchy: info.hierarchy,
           mode: AnnotterMode.rectangle,
+          isScrollable: info.isScrollable,
+          scrollOffsetAtCreation: widget.currentScrollOffset,
         );
         widget.onRequestCreate(newItem, info.screenName);
       }
@@ -147,13 +156,16 @@ class _AnnotterCanvasState extends State<AnnotterCanvas> {
 
   AnnotterItem? _findItemAt(Offset pos) {
     for (final item in widget.items.reversed) {
+      final dy = item.isScrollable ? (item.scrollOffsetAtCreation - widget.currentScrollOffset) : 0.0;
+      final displayRect = item.rect.translate(0, dy);
+
       final badgeCenter = item.mode == AnnotterMode.pin
-          ? item.rect.center
-          : Offset(item.rect.left + 12, item.rect.top + 12);
+          ? displayRect.center
+          : Offset(displayRect.left + 12, displayRect.top + 12);
       if ((pos - badgeCenter).distance <= 18) {
         return item;
       }
-      if (item.rect.contains(pos)) {
+      if (displayRect.contains(pos)) {
         return item;
       }
     }
@@ -166,12 +178,14 @@ class _AnnotterPainter extends CustomPainter {
   final Offset? dragStart;
   final Offset? dragCurrent;
   final InspectedWidgetInfo? hoveredWidget;
+  final double currentScrollOffset;
 
   _AnnotterPainter({
     required this.items,
     this.dragStart,
     this.dragCurrent,
     this.hoveredWidget,
+    this.currentScrollOffset = 0.0,
   });
 
   @override
@@ -223,12 +237,20 @@ class _AnnotterPainter extends CustomPainter {
       );
     }
 
-    // 2. Existing Annotations
+    // 2. Existing Annotations (Transformed by Scroll Offset)
     for (final item in items) {
+      final dy = item.isScrollable ? (item.scrollOffsetAtCreation - currentScrollOffset) : 0.0;
+      final displayRect = item.rect.translate(0, dy);
+
+      // Skip painting if scrolled completely off-screen
+      if (displayRect.bottom < 0 || displayRect.top > size.height) {
+        continue;
+      }
+
       final color = _getColor(item.mode);
 
       if (item.mode != AnnotterMode.pin) {
-        final rrect = RRect.fromRectAndRadius(item.rect, const Radius.circular(8));
+        final rrect = RRect.fromRectAndRadius(displayRect, const Radius.circular(8));
         final fillPaint = Paint()
           ..color = color.withValues(alpha: 0.18)
           ..style = PaintingStyle.fill;
@@ -242,8 +264,8 @@ class _AnnotterPainter extends CustomPainter {
       }
 
       final badgeCenter = item.mode == AnnotterMode.pin
-          ? item.rect.center
-          : Offset(item.rect.left + 12, item.rect.top + 12);
+          ? displayRect.center
+          : Offset(displayRect.left + 12, displayRect.top + 12);
 
       final badgePaint = Paint()
         ..color = color

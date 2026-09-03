@@ -7,12 +7,14 @@ class InspectedWidgetInfo {
   final List<String> hierarchy;
   final Rect rect;
   final String? screenName;
+  final bool isScrollable;
 
   const InspectedWidgetInfo({
     required this.name,
     required this.hierarchy,
     required this.rect,
     this.screenName,
+    this.isScrollable = false,
   });
 }
 
@@ -113,6 +115,7 @@ class WidgetInspectorHelper {
     String? detectedScreen;
     final List<String> hierarchy = [];
     Rect? smallestRect;
+    bool detectedScrollable = false;
 
     for (final entry in hitResult.path) {
       final target = entry.target;
@@ -147,6 +150,10 @@ class WidgetInspectorHelper {
                   // Walk ancestor elements to discover active Screen and user custom components
                   element.visitAncestorElements((ancestor) {
                     final ancestorWidget = ancestor.widget;
+                    if (ancestorWidget is Scrollable) {
+                      detectedScrollable = true;
+                    }
+
                     final type = cleanType(ancestorWidget.runtimeType.toString());
 
                     if ((type.endsWith('Screen') || type.endsWith('Page')) &&
@@ -178,6 +185,7 @@ class WidgetInspectorHelper {
       hierarchy: hierarchy,
       rect: smallestRect ?? Rect.fromCenter(center: localOffset, width: 40, height: 40),
       screenName: detectedScreen,
+      isScrollable: detectedScrollable,
     );
   }
 
