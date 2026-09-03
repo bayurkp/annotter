@@ -65,12 +65,8 @@ class _AnnotterState extends State<Annotter> {
                 );
               }
 
-              // Active: DevTools Theme Studio with isolated typography
-              return Theme(
-                data: ThemeData.dark().copyWith(
-                  textTheme: const TextTheme().apply(fontFamily: 'sans-serif'),
-                ),
-                child: Container(
+              // Active: Proportional Scale Studio
+              return Container(
                   color: const Color(0xFF0B0F19), // Deep studio backdrop
                   child: SafeArea(
                     child: Stack(
@@ -185,8 +181,7 @@ class _AnnotterState extends State<Annotter> {
                       ],
                     ),
                   ),
-                ),
-              );
+                );
             },
           ),
         ],
