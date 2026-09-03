@@ -17,7 +17,7 @@ class InspectedWidgetInfo {
 }
 
 class WidgetInspectorHelper {
-  // Set of internal framework and layout primitives to ignore
+  // Set of internal framework, layout primitives, and wrapper widgets to ignore
   static const Set<String> _frameworkNoise = {
     // Layout Primitives
     'Stack',
@@ -32,6 +32,7 @@ class WidgetInspectorHelper {
     'Container',
     'ClipRRect',
     'ClipRect',
+    'ClipOval',
     'DecoratedBox',
     'ConstrainedBox',
     'Padding',
@@ -41,7 +42,13 @@ class WidgetInspectorHelper {
     'Opacity',
     'Offstage',
     'CustomPaint',
-    // Gestures & Events
+    'FittedBox',
+    'AspectRatio',
+    'LimitedBox',
+    'FractionallySizedBox',
+    // Pointer, Gesture & Touch Handlers
+    'IgnorePointer',
+    'AbsorbPointer',
     'GestureDetector',
     'RawGestureDetector',
     'Listener',
@@ -51,7 +58,7 @@ class WidgetInspectorHelper {
     'TapRegionSurface',
     'TapRegion',
     'NotificationListener',
-    // Internal Framework & State
+    // Internal Framework & Structural Wrappers
     'Semantics',
     'RepaintBoundary',
     'KeyedSubtree',
@@ -90,7 +97,10 @@ class WidgetInspectorHelper {
     'SliverList',
     'SingleChildScrollView',
     'Material',
-    // Annotter widgets
+    'SafeArea',
+    'ModalBarrier',
+    'BackdropFilter',
+    // Annotter Internal Widgets
     'Annotter',
     'AnnotterOverlay',
     'AnnotterCanvas',
@@ -98,7 +108,7 @@ class WidgetInspectorHelper {
     '_RenderInkFeatures',
   };
 
-  // ponytail: HitTest scan with aggressive framework noise filtering to pinpoint custom widgets.
+  // ponytail: HitTest scan that chooses the smallest non-noise widget (leaf-first precision).
   static InspectedWidgetInfo inspectAt(BuildContext context, Offset globalOffset) {
     final hitResult = HitTestResult();
     try {
@@ -111,51 +121,51 @@ class WidgetInspectorHelper {
     String foundWidgetName = 'CustomElement';
     String? detectedScreen;
     final List<String> hierarchy = [];
-    Rect detectedRect = Rect.fromCenter(center: globalOffset, width: 40, height: 40);
+    Rect? smallestRect;
 
     for (final entry in hitResult.path) {
       final target = entry.target;
       if (target is RenderObject) {
-        if (target is RenderBox && target.hasSize && detectedRect.width <= 40) {
+        if (target is RenderBox && target.hasSize) {
           try {
             final origin = target.localToGlobal(Offset.zero);
-            if (origin.isFinite && target.size.isFinite && target.size.width > 0 && target.size.height > 0) {
-              detectedRect = origin & target.size;
+            final size = target.size;
+            if (origin.isFinite && size.isFinite && size.width > 2 && size.height > 2) {
+              final boxRect = origin & size;
+              final area = boxRect.width * boxRect.height;
+
+              if (kDebugMode && target.debugCreator is DebugCreator) {
+                final element = (target.debugCreator as DebugCreator).element;
+                final widgetType = element.widget.runtimeType.toString();
+
+                if (!_isNoise(widgetType)) {
+                  // Prefer the smallest enclosing non-noise widget
+                  if (smallestRect == null || area < (smallestRect.width * smallestRect.height)) {
+                    smallestRect = boxRect;
+                    foundWidgetName = widgetType;
+                  }
+                  if (!hierarchy.contains(widgetType)) {
+                    hierarchy.add(widgetType);
+                  }
+                }
+
+                // Traverse ancestors to discover Screen/Page name and hierarchy
+                element.visitAncestorElements((ancestor) {
+                  final type = ancestor.widget.runtimeType.toString();
+                  if ((type.endsWith('Screen') || type.endsWith('Page')) &&
+                      type != 'RawView' &&
+                      !type.startsWith('_')) {
+                    detectedScreen ??= type;
+                  }
+
+                  if (!_isNoise(type) && !hierarchy.contains(type)) {
+                    hierarchy.add(type);
+                  }
+                  return hierarchy.length < 8;
+                });
+              }
             }
           } catch (_) {}
-        }
-
-        if (kDebugMode) {
-          final creator = target.debugCreator;
-          if (creator is DebugCreator) {
-            final element = creator.element;
-            final widgetType = element.widget.runtimeType.toString();
-
-            if (!_isNoise(widgetType)) {
-              if (foundWidgetName == 'CustomElement') {
-                foundWidgetName = widgetType;
-              }
-              if (!hierarchy.contains(widgetType)) {
-                hierarchy.add(widgetType);
-              }
-            }
-
-            // Traverse ancestors to find user custom widgets and screen name
-            element.visitAncestorElements((ancestor) {
-              final type = ancestor.widget.runtimeType.toString();
-              if (type.endsWith('Screen') || type.endsWith('Page') || type.endsWith('View')) {
-                detectedScreen ??= type;
-              }
-
-              if (!_isNoise(type) && !hierarchy.contains(type)) {
-                if (foundWidgetName == 'CustomElement') {
-                  foundWidgetName = type;
-                }
-                hierarchy.add(type);
-              }
-              return hierarchy.length < 8;
-            });
-          }
         }
       }
     }
@@ -163,13 +173,14 @@ class WidgetInspectorHelper {
     return InspectedWidgetInfo(
       name: foundWidgetName,
       hierarchy: hierarchy,
-      rect: detectedRect,
+      rect: smallestRect ?? Rect.fromCenter(center: globalOffset, width: 40, height: 40),
       screenName: detectedScreen,
     );
   }
 
   static bool _isNoise(String type) {
     if (type.startsWith('_')) return true;
+    if (type.contains('Annotter')) return true;
     return _frameworkNoise.contains(type);
   }
 }
