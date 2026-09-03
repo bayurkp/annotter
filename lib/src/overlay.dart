@@ -288,18 +288,20 @@ class _AnnotterState extends State<Annotter> {
     );
   }
 
-  // Ultra-Thin Full-Width Bottom Bar Dock (No rounded corners, exactly 46px)
+  // Modern Glassmorphic Developer Tool Bottom Bar (Linear / Figma Dev Mode Aesthetic)
   Widget _buildSlimBottomBar(BuildContext context) {
     return Container(
       width: double.infinity,
-      color: const Color(0xFF0F172A), // Slate 900
+      color: const Color(0xFF090D16), // Deep Obsidian
       child: SafeArea(
         top: false,
         child: Container(
-          height: 46,
+          height: 48,
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
           decoration: BoxDecoration(
+            color: const Color(0xFF0F172A), // Slate 900
             border: Border(
-              top: BorderSide(color: Colors.white.withValues(alpha: 0.12)),
+              top: BorderSide(color: Colors.white.withValues(alpha: 0.12), width: 1.0),
             ),
           ),
           child: SingleChildScrollView(
@@ -308,150 +310,149 @@ class _AnnotterState extends State<Annotter> {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Exit Studio
-                IconButton(
-                  icon: const Icon(Icons.close, color: Colors.white60, size: 20),
-                  tooltip: 'Exit Studio',
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(minWidth: 38, minHeight: 46),
-                  onPressed: () => setState(() => _isActive = false),
-                ),
-
-                const SizedBox(
-                  height: 20,
-                  child: VerticalDivider(color: Colors.white12, width: 8),
-                ),
-
-                // Navigate Tool
-                _buildCompactTool(
-                  icon: Icons.pan_tool_outlined,
-                  label: 'Nav',
-                  mode: AnnotterMode.navigate,
-                ),
-
-                // Inspect Tool
-                _buildCompactTool(
-                  icon: Icons.touch_app_outlined,
-                  label: 'Inspect',
-                  mode: AnnotterMode.inspect,
-                ),
-
-                // Area Tool
-                _buildCompactTool(
-                  icon: Icons.crop_square_outlined,
-                  label: 'Area',
-                  mode: AnnotterMode.rectangle,
-                ),
-
-                // Pin Tool
-                _buildCompactTool(
-                  icon: Icons.pin_drop_outlined,
-                  label: 'Pin',
-                  mode: AnnotterMode.pin,
-                ),
-
-                const SizedBox(
-                  height: 20,
-                  child: VerticalDivider(color: Colors.white12, width: 8),
-                ),
-
-                // Undo
-                IconButton(
-                  icon: Icon(
-                    Icons.undo,
-                    size: 19,
-                    color: _undoStack.isEmpty ? Colors.white24 : Colors.white70,
+                // 1. Exit Button (Micro-glass rounded square)
+                InkWell(
+                  borderRadius: BorderRadius.circular(8),
+                  onTap: () => setState(() => _isActive = false),
+                  child: Container(
+                    width: 34,
+                    height: 34,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.06),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                    ),
+                    child: const Icon(Icons.close_rounded, color: Colors.white70, size: 18),
                   ),
-                  tooltip: 'Undo',
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(minWidth: 36, minHeight: 46),
-                  onPressed: _undoStack.isEmpty ? null : _undo,
                 ),
 
-                // Redo
-                IconButton(
-                  icon: Icon(
-                    Icons.redo,
-                    size: 19,
-                    color: _redoStack.isEmpty ? Colors.white24 : Colors.white70,
+                const SizedBox(width: 8),
+
+                // 2. Cohesive Segmented Control Capsule for Tools
+                Container(
+                  padding: const EdgeInsets.all(3),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1E293B),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
                   ),
-                  tooltip: 'Redo',
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(minWidth: 36, minHeight: 46),
-                  onPressed: _redoStack.isEmpty ? null : _redo,
-                ),
-
-                // Notes List
-                IconButton(
-                  icon: Stack(
-                    alignment: Alignment.center,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.format_list_numbered, size: 20, color: Colors.white70),
-                      if (_items.isNotEmpty)
-                        Positioned(
-                          top: 0,
-                          right: 0,
-                          child: Container(
-                            padding: const EdgeInsets.all(2),
-                            decoration: const BoxDecoration(
-                              color: Color(0xFF0284C7),
-                              shape: BoxShape.circle,
-                            ),
-                            child: Text(
-                              '${_items.length}',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 8,
-                                fontWeight: FontWeight.bold,
-                                decoration: TextDecoration.none,
-                              ),
-                            ),
-                          ),
-                        ),
+                      _buildSegmentTool(
+                        icon: Icons.pan_tool_outlined,
+                        label: 'Nav',
+                        mode: AnnotterMode.navigate,
+                      ),
+                      const SizedBox(width: 2),
+                      _buildSegmentTool(
+                        icon: Icons.touch_app_outlined,
+                        label: 'Inspect',
+                        mode: AnnotterMode.inspect,
+                      ),
+                      const SizedBox(width: 2),
+                      _buildSegmentTool(
+                        icon: Icons.crop_square_rounded,
+                        label: 'Area',
+                        mode: AnnotterMode.rectangle,
+                      ),
+                      const SizedBox(width: 2),
+                      _buildSegmentTool(
+                        icon: Icons.pin_drop_outlined,
+                        label: 'Pin',
+                        mode: AnnotterMode.pin,
+                      ),
                     ],
                   ),
-                  tooltip: 'Annotations List',
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(minWidth: 38, minHeight: 46),
-                  onPressed: () => setState(() => _showListSheet = true),
                 ),
 
-                // Clear All
-                if (_items.isNotEmpty)
-                  IconButton(
-                    icon: const Icon(Icons.delete_sweep_outlined, color: Colors.redAccent, size: 20),
+                const SizedBox(width: 8),
+
+                // 3. Action Buttons Group (Undo, Redo, List, Clear)
+                _buildActionSquare(
+                  icon: Icons.undo_rounded,
+                  tooltip: 'Undo',
+                  enabled: _undoStack.isNotEmpty,
+                  onTap: _undoStack.isEmpty ? null : _undo,
+                ),
+                const SizedBox(width: 4),
+
+                _buildActionSquare(
+                  icon: Icons.redo_rounded,
+                  tooltip: 'Redo',
+                  enabled: _redoStack.isNotEmpty,
+                  onTap: _redoStack.isEmpty ? null : _redo,
+                ),
+                const SizedBox(width: 4),
+
+                _buildActionSquare(
+                  icon: Icons.format_list_numbered_rounded,
+                  tooltip: 'Annotations List',
+                  badgeCount: _items.isNotEmpty ? _items.length : null,
+                  enabled: true,
+                  onTap: () => setState(() => _showListSheet = true),
+                ),
+                const SizedBox(width: 4),
+
+                if (_items.isNotEmpty) ...[
+                  _buildActionSquare(
+                    icon: Icons.delete_outline_rounded,
                     tooltip: 'Clear All',
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(minWidth: 36, minHeight: 46),
-                    onPressed: () {
+                    iconColor: Colors.redAccent.shade100,
+                    enabled: true,
+                    onTap: () {
                       _saveSnapshot();
                       setState(() => _items.clear());
                     },
                   ),
+                  const SizedBox(width: 4),
+                ],
 
-                const SizedBox(width: 6),
+                const SizedBox(width: 4),
 
-                // Copy Button
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 6),
-                  child: ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF0284C7),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      minimumSize: const Size(60, 32),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-                      elevation: 0,
+                // 4. Copy CTA Button (High-contrast DevTools Blue Gradient)
+                InkWell(
+                  borderRadius: BorderRadius.circular(8),
+                  onTap: _copyNotes,
+                  child: Container(
+                    height: 34,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF0284C7), Color(0xFF0369A1)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0x6638BDF8), width: 0.8),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF0284C7).withValues(alpha: 0.35),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
                     ),
-                    icon: const Icon(Icons.copy_all, size: 15),
-                    label: Text(
-                      _items.isEmpty ? 'Copy' : 'Copy (${_items.length})',
-                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, fontFamily: 'sans-serif'),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.copy_rounded, color: Colors.white, size: 15),
+                        const SizedBox(width: 5),
+                        Text(
+                          _items.isEmpty ? 'Copy' : 'Copy (${_items.length})',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'sans-serif',
+                            letterSpacing: 0.2,
+                          ),
+                        ),
+                      ],
                     ),
-                    onPressed: _copyNotes,
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 6),
               ],
             ),
           ),
@@ -460,7 +461,7 @@ class _AnnotterState extends State<Annotter> {
     );
   }
 
-  Widget _buildCompactTool({
+  Widget _buildSegmentTool({
     required IconData icon,
     required String label,
     required AnnotterMode mode,
@@ -469,15 +470,24 @@ class _AnnotterState extends State<Annotter> {
     final activeColor = mode == AnnotterMode.navigate ? const Color(0xFF10B981) : const Color(0xFF0284C7);
 
     return InkWell(
-      borderRadius: BorderRadius.circular(6),
+      borderRadius: BorderRadius.circular(7),
       onTap: () => setState(() => _activeMode = mode),
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 2, vertical: 5),
-        padding: EdgeInsets.symmetric(horizontal: isSelected ? 10 : 7),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        height: 28,
+        padding: EdgeInsets.symmetric(horizontal: isSelected ? 10 : 8),
         decoration: BoxDecoration(
-          color: isSelected ? activeColor.withValues(alpha: 0.25) : Colors.transparent,
-          borderRadius: BorderRadius.circular(6),
-          border: isSelected ? Border.all(color: activeColor, width: 1.2) : null,
+          color: isSelected ? activeColor : Colors.transparent,
+          borderRadius: BorderRadius.circular(7),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: activeColor.withValues(alpha: 0.4),
+                    blurRadius: 6,
+                    offset: const Offset(0, 1),
+                  ),
+                ]
+              : null,
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -485,23 +495,73 @@ class _AnnotterState extends State<Annotter> {
           children: [
             Icon(
               icon,
-              size: 17,
-              color: isSelected ? activeColor : Colors.white60,
+              size: 15,
+              color: isSelected ? Colors.white : Colors.white60,
             ),
-            // Only show text label for the active tool to keep it ultra compact
             if (isSelected) ...[
-              const SizedBox(width: 4),
+              const SizedBox(width: 5),
               Text(
                 label,
-                style: TextStyle(
-                  color: isSelected ? Colors.white : Colors.white54,
+                style: const TextStyle(
+                  color: Colors.white,
                   fontSize: 11,
                   fontWeight: FontWeight.bold,
                   fontFamily: 'sans-serif',
-                  decoration: TextDecoration.none,
+                  letterSpacing: 0.1,
                 ),
               ),
             ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActionSquare({
+    required IconData icon,
+    required String tooltip,
+    required bool enabled,
+    VoidCallback? onTap,
+    Color? iconColor,
+    int? badgeCount,
+  }) {
+    final effectiveColor = enabled ? (iconColor ?? Colors.white70) : Colors.white24;
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(8),
+      onTap: onTap,
+      child: Container(
+        width: 34,
+        height: 34,
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: enabled ? 0.06 : 0.02),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        ),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            Icon(icon, size: 17, color: effectiveColor),
+            if (badgeCount != null)
+              Positioned(
+                top: 3,
+                right: 3,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF0284C7),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    '$badgeCount',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 8,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
           ],
         ),
       ),
