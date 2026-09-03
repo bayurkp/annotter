@@ -677,11 +677,7 @@ class _AnnotterState extends State<Annotter> {
     }
   }
 
-  void _copyNotes() async {
-    final size = MediaQuery.of(context).size;
-
-    // 1. Auto-capture current visible viewport screenshot
-    String? savedScreenshotPath;
+  Future<String?> _captureScreenshot(String filename) async {
     try {
       final boundary = _repaintBoundaryKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
       if (boundary != null) {
@@ -689,9 +685,6 @@ class _AnnotterState extends State<Annotter> {
         final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
         if (byteData != null) {
           final pngBytes = byteData.buffer.asUint8List();
-          final timestamp = DateTime.now().millisecondsSinceEpoch;
-          final filename = 'annotter_$timestamp.png';
-
           File? file;
           if (Platform.isAndroid) {
             final downloadDir = Directory('/sdcard/Download');
@@ -700,36 +693,151 @@ class _AnnotterState extends State<Annotter> {
             }
           }
           file ??= File('${Directory.systemTemp.path}/$filename');
-
           await file.writeAsBytes(pngBytes);
-          savedScreenshotPath = file.path;
+          return file.path;
         }
       }
     } catch (_) {}
+    return null;
+  }
 
-    final appBottomPadding = MediaQuery.of(context).padding.bottom;
+  void _copyNotes() async {
+    final mediaQuery = MediaQuery.of(context);
+    final size = mediaQuery.size;
+    final appBottomPadding = mediaQuery.viewPadding.bottom > 0
+        ? mediaQuery.viewPadding.bottom
+        : mediaQuery.padding.bottom;
     final canvasHeight = (appBottomPadding > 0) ? (size.height - appBottomPadding) : size.height;
 
-    // 2. Filter visible-only annotations on screen to match the screenshot
-    final visibleItems = _items.where((item) {
-      final dy = item.isScrollable ? (item.scrollOffsetAtCreation - _currentScrollOffset) : 0.0;
-      final displayRect = item.rect.translate(0, dy);
-      return displayRect.bottom > 0 && displayRect.top < canvasHeight;
-    }).toList();
+    final platformName = Platform.isAndroid
+        ? 'Android'
+        : Platform.isIOS
+            ? 'iOS'
+            : Platform.isWindows
+                ? 'Windows'
+                : Platform.isMacOS
+                    ? 'macOS'
+                    : Platform.isLinux
+                        ? 'Linux'
+                        : 'Web';
+    final themeName = mediaQuery.platformBrightness == Brightness.dark ? 'Dark Mode' : 'Light Mode';
+    final orientationName = mediaQuery.orientation == Orientation.portrait ? 'Portrait' : 'Landscape';
+    final dpr = mediaQuery.devicePixelRatio;
+    final textScale = '${(mediaQuery.textScaler.scale(10.0) / 10.0).toStringAsFixed(1)}x';
 
-    // 3. Export structured Markdown matching the visual screenshot
+    final environment = AnnotterEnvironment(
+      platform: platformName,
+      theme: themeName,
+      textScale: textScale,
+      orientation: orientationName,
+      devicePixelRatio: dpr,
+      route: _activeScreenName,
+    );
+
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final List<AnnotterViewSection> sections = [];
+
+    if (_items.isEmpty) {
+      final path = await _captureScreenshot('annotter_$timestamp.png');
+      sections.add(AnnotterViewSection(
+        title: _activeScreenName,
+        screenshotPath: path,
+        items: [],
+      ));
+    } else {
+      // Find scrollable position in app child if available
+      ScrollPosition? scrollPos;
+      final appCtx = _appChildKey.currentContext;
+      if (appCtx != null) {
+        void search(Element el) {
+          if (scrollPos != null) return;
+          if (el is StatefulElement && el.state is ScrollableState) {
+            scrollPos = (el.state as ScrollableState).position;
+            return;
+          }
+          el.visitChildren(search);
+        }
+        appCtx.visitChildElements(search);
+      }
+
+      // Group items by scroll cluster
+      final sortedItems = List<AnnotterItem>.from(_items)
+        ..sort((a, b) => a.scrollOffsetAtCreation.compareTo(b.scrollOffsetAtCreation));
+
+      final List<List<AnnotterItem>> clusters = [];
+      for (final item in sortedItems) {
+        if (clusters.isEmpty) {
+          clusters.add([item]);
+        } else {
+          final lastCluster = clusters.last;
+          final diff = (item.scrollOffsetAtCreation - lastCluster.first.scrollOffsetAtCreation).abs();
+          if (diff < canvasHeight * 0.75) {
+            lastCluster.add(item);
+          } else {
+            clusters.add([item]);
+          }
+        }
+      }
+
+      if (clusters.length <= 1 || scrollPos == null) {
+        // Single view capture
+        final filename = 'annotter_$timestamp.png';
+        final path = await _captureScreenshot(filename);
+        sections.add(AnnotterViewSection(
+          title: _activeScreenName,
+          screenshotPath: path,
+          items: _items,
+        ));
+      } else {
+        // Multi-view capture: smoothly snap to each cluster, capture, and restore
+        final originalOffset = _currentScrollOffset;
+
+        for (int i = 0; i < clusters.length; i++) {
+          final cluster = clusters[i];
+          final targetOffset = cluster.first.scrollOffsetAtCreation;
+
+          scrollPos?.jumpTo(targetOffset);
+          setState(() => _currentScrollOffset = targetOffset);
+          await Future.delayed(const Duration(milliseconds: 100));
+
+          final filename = 'annotter_view_${i + 1}_$timestamp.png';
+          final path = await _captureScreenshot(filename);
+
+          final sectionTitle = i == 0
+              ? '$_activeScreenName (Top)'
+              : '$_activeScreenName (Scrolled to ${targetOffset.toInt()}px)';
+
+          sections.add(AnnotterViewSection(
+            title: sectionTitle,
+            screenshotPath: path,
+            items: cluster,
+          ));
+        }
+
+        // Restore original scroll offset
+        scrollPos?.jumpTo(originalOffset);
+        setState(() => _currentScrollOffset = originalOffset);
+      }
+    }
+
+    // Export structured Markdown
     await AnnotterExporter.copyToClipboard(
-      items: visibleItems.isNotEmpty ? visibleItems : _items,
+      items: _items,
       routeName: _activeScreenName,
       viewportSize: Size(size.width, canvasHeight),
-      screenshotPath: savedScreenshotPath,
+      sections: sections,
+      environment: environment,
     );
 
     if (mounted) {
+      final viewsCount = sections.length;
+      final msg = viewsCount > 1
+          ? '✓ Copied Markdown & $viewsCount Screenshots!'
+          : '✓ Copied Markdown & Screenshot!';
       ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-        const SnackBar(
-          content: Text('✓ Copied Markdown & Screenshot!'),
-          duration: Duration(seconds: 2),
+        SnackBar(
+          content: Text(msg),
+          duration: const Duration(seconds: 2),
         ),
       );
     }

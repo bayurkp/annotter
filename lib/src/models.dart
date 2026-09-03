@@ -48,3 +48,35 @@ class AnnotterItem {
     );
   }
 }
+
+class AnnotterViewSection {
+  final String title;
+  final String? screenshotPath;
+  final List<AnnotterItem> items;
+
+  const AnnotterViewSection({
+    required this.title,
+    this.screenshotPath,
+    required this.items,
+  });
+}
+
+class AnnotterEnvironment {
+  final String platform;
+  final String theme;
+  final String textScale;
+  final String orientation;
+  final double devicePixelRatio;
+  final String? route;
+  final DateTime timestamp;
+
+  AnnotterEnvironment({
+    required this.platform,
+    required this.theme,
+    required this.textScale,
+    required this.orientation,
+    required this.devicePixelRatio,
+    this.route,
+    DateTime? timestamp,
+  }) : timestamp = timestamp ?? DateTime.now();
+}
