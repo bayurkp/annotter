@@ -12,7 +12,7 @@ void main() {
         widgetName: 'SubmitButton',
         hierarchy: ['SubmitButton', 'ActionRow', 'FormCard', 'DashboardPage'],
         note: 'Change button text to Save',
-        mode: AnnotterMode.inspect,
+        mode: AnnotterMode.widget,
         screenName: 'DashboardScreen',
       ),
       AnnotterItem(
@@ -22,7 +22,7 @@ void main() {
         widgetName: 'CustomHeader',
         hierarchy: ['CustomHeader', 'DashboardPage'],
         note: 'Padding is too small',
-        mode: AnnotterMode.rectangle,
+        mode: AnnotterMode.area,
         screenName: 'DashboardScreen',
       ),
     ];
@@ -36,10 +36,10 @@ void main() {
     expect(md, contains('## UI Revision Request (Total: 2 notes across 1 page)'));
     expect(md, contains('**Viewport:** 390x844'));
     expect(md, contains('### 📱 Page: DashboardScreen'));
-    expect(md, contains('1. [INSPECT] **SubmitButton**'));
+    expect(md, contains('1. [WIDGET] **SubmitButton**'));
     expect(md, contains('Change button text to Save'));
     expect(md, contains('<DashboardPage> <FormCard> <ActionRow> <SubmitButton>'));
-    expect(md, contains('2. [RECTANGLE] **CustomHeader**'));
+    expect(md, contains('2. [AREA] **CustomHeader**'));
     expect(md, contains('Padding is too small'));
   });
 }

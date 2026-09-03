@@ -31,7 +31,7 @@ class _AnnotterState extends State<Annotter> {
   final GlobalKey _appChildKey = GlobalKey();
 
   bool _isActive = false;
-  AnnotterMode _activeMode = AnnotterMode.inspect;
+  AnnotterMode _activeMode = AnnotterMode.widget;
   List<AnnotterItem> _items = [];
 
   // Undo / Redo History Stacks
@@ -141,7 +141,7 @@ class _AnnotterState extends State<Annotter> {
                                       height: canvasHeight,
                                       decoration: BoxDecoration(
                                         border: Border.all(
-                                          color: _activeMode == AnnotterMode.navigate
+                                          color: _activeMode == AnnotterMode.move
                                               ? const Color(0xFF10B981) // Green in Move
                                               : _activeMode == AnnotterMode.select
                                                   ? const Color(0xFF6366F1) // Indigo in Select
@@ -348,7 +348,7 @@ class _AnnotterState extends State<Annotter> {
                       _buildSegmentTool(
                         icon: Icons.pan_tool_outlined,
                         label: 'Move',
-                        mode: AnnotterMode.navigate,
+                        mode: AnnotterMode.move,
                       ),
                       const SizedBox(width: 2),
                       _buildSegmentTool(
@@ -358,21 +358,21 @@ class _AnnotterState extends State<Annotter> {
                       ),
                       const SizedBox(width: 2),
                       _buildSegmentTool(
-                        icon: Icons.touch_app_outlined,
-                        label: 'Inspect',
-                        mode: AnnotterMode.inspect,
+                        icon: Icons.widgets_outlined,
+                        label: 'Widget',
+                        mode: AnnotterMode.widget,
                       ),
                       const SizedBox(width: 2),
                       _buildSegmentTool(
                         icon: Icons.crop_square_rounded,
                         label: 'Area',
-                        mode: AnnotterMode.rectangle,
+                        mode: AnnotterMode.area,
                       ),
                       const SizedBox(width: 2),
                       _buildSegmentTool(
-                        icon: Icons.pin_drop_outlined,
-                        label: 'Pin',
-                        mode: AnnotterMode.pin,
+                        icon: Icons.adjust_rounded,
+                        label: 'Point',
+                        mode: AnnotterMode.point,
                       ),
                     ],
                   ),
@@ -479,7 +479,7 @@ class _AnnotterState extends State<Annotter> {
     required AnnotterMode mode,
   }) {
     final isSelected = _activeMode == mode;
-    final activeColor = mode == AnnotterMode.navigate
+    final activeColor = mode == AnnotterMode.move
         ? const Color(0xFF10B981)
         : mode == AnnotterMode.select
             ? const Color(0xFF6366F1)

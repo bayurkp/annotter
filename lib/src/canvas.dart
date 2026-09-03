@@ -29,7 +29,7 @@ class _AnnotterCanvasState extends State<AnnotterCanvas> {
 
   @override
   Widget build(BuildContext context) {
-    final isNavigating = widget.activeMode == AnnotterMode.navigate;
+    final isNavigating = widget.activeMode == AnnotterMode.move;
 
     return Positioned.fill(
       child: IgnorePointer(
@@ -42,9 +42,9 @@ class _AnnotterCanvasState extends State<AnnotterCanvas> {
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,
             onTapDown: _handleTapDown,
-            onPanStart: widget.activeMode == AnnotterMode.rectangle ? _handlePanStart : null,
-            onPanUpdate: widget.activeMode == AnnotterMode.rectangle ? _handlePanUpdate : null,
-            onPanEnd: widget.activeMode == AnnotterMode.rectangle ? _handlePanEnd : null,
+            onPanStart: widget.activeMode == AnnotterMode.area ? _handlePanStart : null,
+            onPanUpdate: widget.activeMode == AnnotterMode.area ? _handlePanUpdate : null,
+            onPanEnd: widget.activeMode == AnnotterMode.area ? _handlePanEnd : null,
             child: CustomPaint(
               painter: _AnnotterPainter(
                 items: widget.items,
@@ -61,7 +61,7 @@ class _AnnotterCanvasState extends State<AnnotterCanvas> {
   }
 
   void _updateHover(Offset localPos) {
-    if (widget.activeMode != AnnotterMode.inspect) {
+    if (widget.activeMode != AnnotterMode.widget) {
       if (_hoveredWidget != null) setState(() => _hoveredWidget = null);
       return;
     }
@@ -72,7 +72,7 @@ class _AnnotterCanvasState extends State<AnnotterCanvas> {
   }
 
   void _handleTapDown(TapDownDetails details) {
-    if (widget.activeMode == AnnotterMode.navigate) return;
+    if (widget.activeMode == AnnotterMode.move) return;
 
     // 1. Dedicated Select Mode: tap anywhere on annotation box or badge opens edit
     if (widget.activeMode == AnnotterMode.select) {
@@ -91,7 +91,7 @@ class _AnnotterCanvasState extends State<AnnotterCanvas> {
     }
 
     // 2. Create new annotation based on active tool
-    if (widget.activeMode == AnnotterMode.inspect) {
+    if (widget.activeMode == AnnotterMode.widget) {
       final info = WidgetInspectorHelper.inspectAt(context, details.localPosition);
       final newItem = AnnotterItem(
         id: DateTime.now().millisecondsSinceEpoch,
@@ -99,22 +99,22 @@ class _AnnotterCanvasState extends State<AnnotterCanvas> {
         rect: info.rect,
         widgetName: info.name,
         hierarchy: info.hierarchy,
-        mode: AnnotterMode.inspect,
+        mode: AnnotterMode.widget,
         isScrollable: info.isScrollable,
         scrollOffsetAtCreation: widget.currentScrollOffset,
       );
       setState(() => _hoveredWidget = null);
       widget.onRequestCreate(newItem, info.screenName);
-    } else if (widget.activeMode == AnnotterMode.pin) {
+    } else if (widget.activeMode == AnnotterMode.point) {
       final pos = details.localPosition;
       final info = WidgetInspectorHelper.inspectAt(context, pos);
       final newItem = AnnotterItem(
         id: DateTime.now().millisecondsSinceEpoch,
         number: widget.items.length + 1,
         rect: Rect.fromCenter(center: pos, width: 32, height: 32),
-        widgetName: info.name != 'CustomElement' ? info.name : 'PinLocation',
+        widgetName: info.name != 'CustomElement' ? info.name : 'PointLocation',
         hierarchy: info.hierarchy,
-        mode: AnnotterMode.pin,
+        mode: AnnotterMode.point,
         isScrollable: info.isScrollable,
         scrollOffsetAtCreation: widget.currentScrollOffset,
       );
@@ -148,7 +148,7 @@ class _AnnotterCanvasState extends State<AnnotterCanvas> {
             ? info.name
             : 'SelectionArea',
           hierarchy: info.hierarchy,
-          mode: AnnotterMode.rectangle,
+          mode: AnnotterMode.area,
           isScrollable: info.isScrollable,
           scrollOffsetAtCreation: widget.currentScrollOffset,
         );
@@ -166,7 +166,7 @@ class _AnnotterCanvasState extends State<AnnotterCanvas> {
       final dy = item.isScrollable ? (item.scrollOffsetAtCreation - widget.currentScrollOffset) : 0.0;
       final displayRect = item.rect.translate(0, dy);
 
-      final badgeCenter = item.mode == AnnotterMode.pin
+      final badgeCenter = item.mode == AnnotterMode.point
           ? displayRect.center
           : Offset(displayRect.left + 12, displayRect.top + 12);
 
@@ -261,7 +261,7 @@ class _AnnotterPainter extends CustomPainter {
 
       final color = _getColor(item.mode);
 
-      if (item.mode != AnnotterMode.pin) {
+      if (item.mode != AnnotterMode.point) {
         final rrect = RRect.fromRectAndRadius(displayRect, const Radius.circular(8));
         final fillPaint = Paint()
           ..color = color.withValues(alpha: 0.18)
@@ -275,7 +275,7 @@ class _AnnotterPainter extends CustomPainter {
         canvas.drawRRect(rrect, borderPaint);
       }
 
-      final badgeCenter = item.mode == AnnotterMode.pin
+      final badgeCenter = item.mode == AnnotterMode.point
           ? displayRect.center
           : Offset(displayRect.left + 12, displayRect.top + 12);
 
@@ -330,15 +330,15 @@ class _AnnotterPainter extends CustomPainter {
 
   Color _getColor(AnnotterMode mode) {
     switch (mode) {
-      case AnnotterMode.navigate:
+      case AnnotterMode.move:
         return const Color(0xFF10B981); // Emerald Green
       case AnnotterMode.select:
         return const Color(0xFF6366F1); // Indigo / Violet
-      case AnnotterMode.inspect:
+      case AnnotterMode.widget:
         return const Color(0xFF0284C7); // DevTools Cyan/Blue
-      case AnnotterMode.rectangle:
+      case AnnotterMode.area:
         return const Color(0xFF38BDF8); // Sky blue
-      case AnnotterMode.pin:
+      case AnnotterMode.point:
         return const Color(0xFFF59E0B); // Amber
     }
   }

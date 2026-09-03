@@ -133,7 +133,7 @@ class _AnnotationListSheetState extends State<AnnotationListSheet> {
               padding: EdgeInsets.symmetric(vertical: 36),
               child: Center(
                 child: Text(
-                  'No annotations recorded yet.\nUse Inspect, Area, or Pin to add notes.',
+                  'No annotations recorded yet.\nUse Widget, Area, or Point to add notes.',
                   textAlign: TextAlign.center,
                   style: TextStyle(color: Colors.white38, fontSize: 13, height: 1.5),
                 ),

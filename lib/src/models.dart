@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 
 enum AnnotterMode {
-  navigate,
+  move,
   select,
-  inspect,
-  rectangle,
-  pin,
+  widget,
+  area,
+  point,
 }
 
 class AnnotterItem {
@@ -27,7 +27,7 @@ class AnnotterItem {
     this.widgetName = 'Element',
     this.hierarchy = const [],
     this.note = '',
-    this.mode = AnnotterMode.inspect,
+    this.mode = AnnotterMode.widget,
     this.screenName = 'HomeScreen',
     this.isScrollable = false,
     this.scrollOffsetAtCreation = 0.0,
