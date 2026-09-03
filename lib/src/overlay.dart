@@ -110,7 +110,9 @@ class _AnnotterState extends State<Annotter> {
                 );
               }
 
-              final appBottomPadding = mediaQuery.padding.bottom;
+              final appBottomPadding = mediaQuery.viewPadding.bottom > 0
+                  ? mediaQuery.viewPadding.bottom
+                  : mediaQuery.padding.bottom;
               final canvasHeight = (appBottomPadding > 0) ? (size.height - appBottomPadding) : size.height;
 
               // Active: Full-width Ultra-Thin Bottom Dock Studio
@@ -124,56 +126,60 @@ class _AnnotterState extends State<Annotter> {
                     bottom: false,
                     child: Stack(
                       children: [
-                        Column(
-                          children: [
-                            // Proportional Scaled App Viewport
-                            Expanded(
-                              child: Center(
-                                child: FittedBox(
-                                  fit: BoxFit.contain,
-                                  child: Container(
-                                    width: size.width,
-                                    height: canvasHeight,
-                                    decoration: BoxDecoration(
-                                      border: Border.all(
-                                        color: _activeMode == AnnotterMode.navigate
-                                            ? const Color(0xFF10B981) // Green in Move
-                                            : _activeMode == AnnotterMode.select
-                                                ? const Color(0xFF6366F1) // Indigo in Select
-                                                : const Color(0xFF0284C7), // DevTools Blue in annotate
-                                        width: 2.0,
+                        // Studio Viewport + Toolbar (isolated from keyboard insets to prevent zoom)
+                        MediaQuery(
+                          data: mediaQuery.copyWith(viewInsets: EdgeInsets.zero),
+                          child: Column(
+                            children: [
+                              // Proportional Scaled App Viewport
+                              Expanded(
+                                child: Center(
+                                  child: FittedBox(
+                                    fit: BoxFit.contain,
+                                    child: Container(
+                                      width: size.width,
+                                      height: canvasHeight,
+                                      decoration: BoxDecoration(
+                                        border: Border.all(
+                                          color: _activeMode == AnnotterMode.navigate
+                                              ? const Color(0xFF10B981) // Green in Move
+                                              : _activeMode == AnnotterMode.select
+                                                  ? const Color(0xFF6366F1) // Indigo in Select
+                                                  : const Color(0xFF0284C7), // DevTools Blue in annotate
+                                          width: 2.0,
+                                        ),
                                       ),
-                                    ),
-                                    child: RepaintBoundary(
-                                      key: _repaintBoundaryKey,
-                                      child: Stack(
-                                        fit: StackFit.expand,
-                                        children: [
-                                          // Reactive Scroll & Navigation Listener + Inset override
-                                          NotificationListener<Notification>(
-                                            onNotification: (notification) {
-                                              if (notification is ScrollNotification) {
-                                                if (notification.metrics.axis == Axis.vertical) {
-                                                  setState(() {
-                                                    _currentScrollOffset = notification.metrics.pixels;
-                                                  });
+                                      child: RepaintBoundary(
+                                        key: _repaintBoundaryKey,
+                                        child: Stack(
+                                          fit: StackFit.expand,
+                                          children: [
+                                            // Reactive Scroll & Navigation Listener + Inset override
+                                            NotificationListener<Notification>(
+                                              onNotification: (notification) {
+                                                if (notification is ScrollNotification) {
+                                                  if (notification.metrics.axis == Axis.vertical) {
+                                                    setState(() {
+                                                      _currentScrollOffset = notification.metrics.pixels;
+                                                    });
+                                                  }
+                                                } else if (notification is NavigationNotification) {
+                                                  setState(() {});
                                                 }
-                                              } else if (notification is NavigationNotification) {
-                                                setState(() {});
-                                              }
-                                              return false;
-                                            },
-                                            child: MediaQuery(
-                                              data: mediaQuery.copyWith(
-                                                size: Size(size.width, canvasHeight),
-                                                padding: mediaQuery.padding.copyWith(bottom: 0),
-                                                viewPadding: mediaQuery.viewPadding.copyWith(bottom: 0),
+                                                return false;
+                                              },
+                                              child: MediaQuery(
+                                                data: mediaQuery.copyWith(
+                                                  size: Size(size.width, canvasHeight),
+                                                  padding: mediaQuery.padding.copyWith(bottom: 0),
+                                                  viewPadding: mediaQuery.viewPadding.copyWith(bottom: 0),
+                                                  viewInsets: EdgeInsets.zero,
+                                                ),
+                                                child: KeyedSubtree(key: _appChildKey, child: widget.child),
                                               ),
-                                              child: KeyedSubtree(key: _appChildKey, child: widget.child),
                                             ),
-                                          ),
 
-                                          AnnotterCanvas(
+                                            AnnotterCanvas(
                                             items: _items,
                                             activeMode: _activeMode,
                                             currentScrollOffset: _currentScrollOffset,
@@ -204,6 +210,7 @@ class _AnnotterState extends State<Annotter> {
                             _buildSlimBottomBar(context),
                           ],
                         ),
+                      ),
 
                         // Inline Modal Note Dialog
                         if (_activeDialogItem != null)
