@@ -3,12 +3,15 @@ import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/scheduler.dart';
+import 'colors.dart';
 import 'models.dart';
 import 'canvas.dart';
 import 'dialog.dart';
 import 'exporter.dart';
 import 'inspector.dart';
 import 'list_sheet.dart';
+import 'settings_dialog.dart';
 
 /// The root wrapper for Annotter.
 /// Wraps your application to provide in-app UI inspection and annotation.
@@ -34,6 +37,15 @@ class _AnnotterState extends State<Annotter> {
   AnnotterMode _activeMode = AnnotterMode.widget;
   List<AnnotterItem> _items = [];
 
+  // Settings state
+  String _detailLevel = 'detailed'; // 'compact', 'standard', 'detailed'
+  bool _includeTree = true;
+  Color _markerColor = AnnotterColors.markerPalette[3]; // Default Emerald
+  bool _clearOnCopy = false;
+  bool _blockInteractions = false;
+  bool _showSettings = false;
+  bool _isAnimationPaused = false;
+
   // Undo / Redo History Stacks
   final List<List<AnnotterItem>> _undoStack = [];
   final List<List<AnnotterItem>> _redoStack = [];
@@ -55,6 +67,13 @@ class _AnnotterState extends State<Annotter> {
       }
     }
     return _currentScreenName;
+  }
+
+  void _toggleAnimationPause() {
+    setState(() {
+      _isAnimationPaused = !_isAnimationPaused;
+      timeDilation = _isAnimationPaused ? 10000.0 : 1.0;
+    });
   }
 
   void _saveSnapshot() {
@@ -180,7 +199,10 @@ class _AnnotterState extends State<Annotter> {
                                                   viewPadding: EdgeInsets.zero,
                                                   viewInsets: EdgeInsets.zero,
                                                 ),
-                                                child: KeyedSubtree(key: _appChildKey, child: widget.child),
+                                                child: IgnorePointer(
+                                                  ignoring: _blockInteractions && _isActive,
+                                                  child: KeyedSubtree(key: _appChildKey, child: widget.child),
+                                                ),
                                               ),
                                             ),
 
@@ -188,6 +210,7 @@ class _AnnotterState extends State<Annotter> {
                                             items: _items,
                                             activeMode: _activeMode,
                                             currentScrollOffset: _currentScrollOffset,
+                                            markerColor: _markerColor,
                                             onRequestCreate: (item, screenName) {
                                               _saveSnapshot();
                                               setState(() {
@@ -234,10 +257,12 @@ class _AnnotterState extends State<Annotter> {
                                     _activeDialogItem = null;
                                   });
                                 },
-                                onSave: (note) {
+                                onSave: (note, intent, severity) {
                                   _saveSnapshot();
                                   setState(() {
                                     _activeDialogItem!.note = note;
+                                    _activeDialogItem!.intent = intent;
+                                    _activeDialogItem!.severity = severity;
                                     if (_isCreatingItem) _items.add(_activeDialogItem!);
                                     _activeDialogItem = null;
                                   });
@@ -284,6 +309,27 @@ class _AnnotterState extends State<Annotter> {
                                     setState(() => _items.clear());
                                   },
                                 ),
+                              ),
+                            ),
+                          ),
+
+                        // Inline Modal Settings Dialog
+                        if (_showSettings)
+                          _buildModalBackdrop(
+                            onDismiss: () => setState(() => _showSettings = false),
+                            child: SingleChildScrollView(
+                              child: AnnotterSettingsDialog(
+                                detailLevel: _detailLevel,
+                                includeTree: _includeTree,
+                                markerColor: _markerColor,
+                                clearOnCopy: _clearOnCopy,
+                                blockInteractions: _blockInteractions,
+                                onDetailLevelChanged: (lvl) => setState(() => _detailLevel = lvl),
+                                onIncludeTreeChanged: (val) => setState(() => _includeTree = val),
+                                onMarkerColorChanged: (col) => setState(() => _markerColor = col),
+                                onClearOnCopyChanged: (val) => setState(() => _clearOnCopy = val),
+                                onBlockInteractionsChanged: (val) => setState(() => _blockInteractions = val),
+                                onClose: () => setState(() => _showSettings = false),
                               ),
                             ),
                           ),
@@ -385,7 +431,7 @@ class _AnnotterState extends State<Annotter> {
 
                 const SizedBox(width: 8),
 
-                // 3. Action Buttons Group (Undo, Redo, List, Clear)
+                // 3. Action Buttons Group (Undo, Redo, Pause, List, Settings, Clear)
                 _buildActionSquare(
                   icon: Icons.undo_rounded,
                   tooltip: 'Undo',
@@ -402,12 +448,31 @@ class _AnnotterState extends State<Annotter> {
                 ),
                 const SizedBox(width: 4),
 
+                // Freeze Animation Button (timeDilation)
+                _buildActionSquare(
+                  icon: _isAnimationPaused ? Icons.play_arrow_rounded : Icons.pause_rounded,
+                  tooltip: _isAnimationPaused ? 'Resume Animation' : 'Freeze Animation',
+                  iconColor: _isAnimationPaused ? AnnotterColors.amber[400] : null,
+                  enabled: true,
+                  onTap: _toggleAnimationPause,
+                ),
+                const SizedBox(width: 4),
+
                 _buildActionSquare(
                   icon: Icons.format_list_numbered_rounded,
                   tooltip: 'Annotations List',
                   badgeCount: _items.isNotEmpty ? _items.length : null,
                   enabled: true,
                   onTap: () => setState(() => _showListSheet = true),
+                ),
+                const SizedBox(width: 4),
+
+                // Settings Gear Button
+                _buildActionSquare(
+                  icon: Icons.settings_outlined,
+                  tooltip: 'Settings',
+                  enabled: true,
+                  onTap: () => setState(() => _showSettings = true),
                 ),
                 const SizedBox(width: 4),
 
@@ -739,13 +804,22 @@ class _AnnotterState extends State<Annotter> {
     final dpr = mediaQuery.devicePixelRatio;
     final textScale = '${(mediaQuery.textScaler.scale(10.0) / 10.0).toStringAsFixed(1)}x';
 
+    // Dynamic real route resolution via ModalRoute or fallback
+    String dynamicRoute = _activeScreenName;
+    try {
+      final modalRoute = ModalRoute.of(context);
+      if (modalRoute != null && modalRoute.settings.name != null && modalRoute.settings.name!.isNotEmpty) {
+        dynamicRoute = '${modalRoute.settings.name} ($_activeScreenName)';
+      }
+    } catch (_) {}
+
     final environment = AnnotterEnvironment(
       platform: platformName,
       theme: themeName,
       textScale: textScale,
       orientation: orientationName,
       devicePixelRatio: dpr,
-      route: _activeScreenName,
+      route: dynamicRoute,
     );
 
     final timestamp = DateTime.now().millisecondsSinceEpoch;
@@ -834,14 +908,21 @@ class _AnnotterState extends State<Annotter> {
       }
     }
 
-    // Export structured Markdown
+    // Export structured Markdown with configured detail level and tree inclusion
     await AnnotterExporter.copyToClipboard(
       items: _items,
-      routeName: _activeScreenName,
+      routeName: dynamicRoute,
       viewportSize: Size(size.width, canvasHeight),
       sections: sections,
       environment: environment,
+      detailLevel: _detailLevel,
+      includeTree: _includeTree,
     );
+
+    if (_clearOnCopy) {
+      _saveSnapshot();
+      setState(() => _items.clear());
+    }
 
     if (mounted) {
       final viewsCount = sections.length;

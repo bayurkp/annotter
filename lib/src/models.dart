@@ -19,6 +19,9 @@ class AnnotterItem {
   String screenName;
   bool isScrollable;
   double scrollOffsetAtCreation;
+  String? intent; // 'fix', 'style', 'change', 'question'
+  String? severity; // 'blocking', 'important', 'suggestion'
+  String? selectedText; // Actual text content if clicked element is or contains Text
 
   AnnotterItem({
     required this.id,
@@ -31,6 +34,9 @@ class AnnotterItem {
     this.screenName = 'HomeScreen',
     this.isScrollable = false,
     this.scrollOffsetAtCreation = 0.0,
+    this.intent,
+    this.severity,
+    this.selectedText,
   });
 
   AnnotterItem copy() {
@@ -45,6 +51,9 @@ class AnnotterItem {
       screenName: screenName,
       isScrollable: isScrollable,
       scrollOffsetAtCreation: scrollOffsetAtCreation,
+      intent: intent,
+      severity: severity,
+      selectedText: selectedText,
     );
   }
 }

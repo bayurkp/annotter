@@ -8,6 +8,7 @@ class InspectedWidgetInfo {
   final Rect rect;
   final String? screenName;
   final bool isScrollable;
+  final String? selectedText;
 
   const InspectedWidgetInfo({
     required this.name,
@@ -15,6 +16,7 @@ class InspectedWidgetInfo {
     required this.rect,
     this.screenName,
     this.isScrollable = false,
+    this.selectedText,
   });
 }
 
@@ -247,12 +249,27 @@ class WidgetInspectorHelper {
     String foundWidgetName = 'Element';
     String? detectedScreen;
     List<String> bestHierarchy = [];
+    String? extractedText;
 
     // Pass 2: Inspect ONLY the single best RenderBox (0ms overhead)
     if (bestTarget != null && kDebugMode && bestTarget.debugCreator is DebugCreator) {
       final element = (bestTarget.debugCreator as DebugCreator).element;
       final List<String> chain = [];
       final List<_TargetCandidate> candidates = [];
+
+      void checkWidgetForText(Widget w) {
+        if (extractedText != null) return;
+        if (w is Text && w.data != null && w.data!.trim().isNotEmpty) {
+          extractedText = w.data!.trim();
+        } else if (w is SelectableText && w.data != null && w.data!.trim().isNotEmpty) {
+          extractedText = w.data!.trim();
+        } else if (w is RichText) {
+          final plain = w.text.toPlainText().trim();
+          if (plain.isNotEmpty) extractedText = plain;
+        }
+      }
+
+      checkWidgetForText(element.widget);
 
       if (_isComponentCandidate(element.widget)) {
         final rawType = cleanType(element.widget.runtimeType.toString());
@@ -262,6 +279,7 @@ class WidgetInspectorHelper {
 
       element.visitAncestorElements((ancestor) {
         final aw = ancestor.widget;
+        checkWidgetForText(aw);
         final type = cleanType(aw.runtimeType.toString());
 
         if (aw is Scrollable ||
@@ -294,6 +312,13 @@ class WidgetInspectorHelper {
         foundWidgetName = _resolveTarget(candidates);
         bestHierarchy = List.from(chain);
       }
+
+      if (extractedText != null) {
+        final truncated = extractedText!.length > 30 ? '${extractedText!.substring(0, 27)}...' : extractedText!;
+        if (foundWidgetName.endsWith('Text')) {
+          foundWidgetName = '$foundWidgetName ("$truncated")';
+        }
+      }
     }
 
     return InspectedWidgetInfo(
@@ -302,6 +327,7 @@ class WidgetInspectorHelper {
       rect: smallestRect ?? Rect.fromCenter(center: localOffset, width: 40, height: 40),
       screenName: detectedScreen,
       isScrollable: detectedScrollable,
+      selectedText: extractedText,
     );
   }
 

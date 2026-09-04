@@ -6,6 +6,7 @@ class AnnotterCanvas extends StatefulWidget {
   final List<AnnotterItem> items;
   final AnnotterMode activeMode;
   final double currentScrollOffset;
+  final Color? markerColor;
   final void Function(AnnotterItem item, String? screenName) onRequestCreate;
   final ValueChanged<AnnotterItem> onRequestEdit;
 
@@ -14,6 +15,7 @@ class AnnotterCanvas extends StatefulWidget {
     required this.items,
     required this.activeMode,
     this.currentScrollOffset = 0.0,
+    this.markerColor,
     required this.onRequestCreate,
     required this.onRequestEdit,
   });
@@ -52,6 +54,7 @@ class _AnnotterCanvasState extends State<AnnotterCanvas> {
                 dragCurrent: _dragCurrent,
                 hoveredWidget: _hoveredWidget,
                 currentScrollOffset: widget.currentScrollOffset,
+                markerColor: widget.markerColor,
               ),
             ),
           ),
@@ -102,6 +105,7 @@ class _AnnotterCanvasState extends State<AnnotterCanvas> {
         mode: AnnotterMode.widget,
         isScrollable: info.isScrollable,
         scrollOffsetAtCreation: widget.currentScrollOffset,
+        selectedText: info.selectedText,
       );
       setState(() => _hoveredWidget = null);
       widget.onRequestCreate(newItem, info.screenName);
@@ -117,6 +121,7 @@ class _AnnotterCanvasState extends State<AnnotterCanvas> {
         mode: AnnotterMode.point,
         isScrollable: info.isScrollable,
         scrollOffsetAtCreation: widget.currentScrollOffset,
+        selectedText: info.selectedText,
       );
       widget.onRequestCreate(newItem, info.screenName);
     }
@@ -151,6 +156,7 @@ class _AnnotterCanvasState extends State<AnnotterCanvas> {
           mode: AnnotterMode.area,
           isScrollable: info.isScrollable,
           scrollOffsetAtCreation: widget.currentScrollOffset,
+          selectedText: info.selectedText,
         );
         widget.onRequestCreate(newItem, info.screenName);
       }
@@ -190,6 +196,7 @@ class _AnnotterPainter extends CustomPainter {
   final Offset? dragCurrent;
   final InspectedWidgetInfo? hoveredWidget;
   final double currentScrollOffset;
+  final Color? markerColor;
 
   _AnnotterPainter({
     required this.items,
@@ -197,6 +204,7 @@ class _AnnotterPainter extends CustomPainter {
     this.dragCurrent,
     this.hoveredWidget,
     this.currentScrollOffset = 0.0,
+    this.markerColor,
   });
 
   @override
@@ -329,6 +337,7 @@ class _AnnotterPainter extends CustomPainter {
   }
 
   Color _getColor(AnnotterMode mode) {
+    if (markerColor != null) return markerColor!;
     switch (mode) {
       case AnnotterMode.move:
         return const Color(0xFF10B981); // Emerald Green

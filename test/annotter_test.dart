@@ -111,4 +111,40 @@ void main() {
     expect(md, contains('2. [AREA] **MissionCard**'));
     expect(md, contains('Note: Margin is too tight'));
   });
+
+  test('AnnotterExporter formats intent, severity, content, and detail levels', () {
+    final item = AnnotterItem(
+      id: 1,
+      number: 1,
+      rect: const Rect.fromLTWH(10, 20, 100, 40),
+      widgetName: 'AppButton > Text',
+      hierarchy: ['Text', 'AppButton', 'HomeScreen'],
+      note: 'Fix typo on button',
+      mode: AnnotterMode.widget,
+      intent: 'fix',
+      severity: 'blocking',
+      selectedText: 'Settigns',
+    );
+
+    // 1. Detailed export
+    final detailed = AnnotterExporter.toMarkdown(
+      items: [item],
+      detailLevel: 'detailed',
+    );
+    expect(detailed, contains('1. [WIDGET][FIX][BLOCKING] **AppButton > Text**'));
+    expect(detailed, contains('Tree: HomeScreen > AppButton > Text'));
+    expect(detailed, contains('Position: x:10, y:20'));
+    expect(detailed, contains('Content: "Settigns"'));
+    expect(detailed, contains('Note: Fix typo on button'));
+
+    // 2. Compact export
+    final compact = AnnotterExporter.toMarkdown(
+      items: [item],
+      detailLevel: 'compact',
+    );
+    expect(compact, contains('1. [WIDGET][FIX][BLOCKING] **AppButton > Text**'));
+    expect(compact, isNot(contains('Tree:')));
+    expect(compact, isNot(contains('Position:')));
+    expect(compact, contains('Note: Fix typo on button'));
+  });
 }

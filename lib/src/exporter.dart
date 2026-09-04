@@ -10,6 +10,8 @@ class AnnotterExporter {
     String? screenshotPath,
     List<AnnotterViewSection>? sections,
     AnnotterEnvironment? environment,
+    String detailLevel = 'detailed',
+    bool includeTree = true,
   }) {
     final buffer = StringBuffer();
 
@@ -18,11 +20,11 @@ class AnnotterExporter {
 
     buffer.writeln('## UI Revision Request (Total: $totalNotes notes across $totalViews ${totalViews == 1 ? "view" : "views"})');
 
-    if (environment != null) {
+    if (environment != null && detailLevel != 'compact') {
       buffer.writeln('**Environment:** ${environment.platform} • ${environment.theme} • Text Scale: ${environment.textScale} • ${environment.orientation}');
     }
 
-    if (viewportSize != null) {
+    if (viewportSize != null && detailLevel != 'compact') {
       final dprString = environment != null ? ' (DPR: ${environment.devicePixelRatio.toStringAsFixed(2)}x)' : '';
       buffer.writeln('**Viewport:** ${viewportSize.width.toInt()}x${viewportSize.height.toInt()}$dprString');
     }
@@ -59,7 +61,7 @@ class AnnotterExporter {
         buffer.writeln();
 
         for (final item in sec.items) {
-          _formatItem(buffer, item);
+          _formatItem(buffer, item, detailLevel: detailLevel, includeTree: includeTree);
         }
         if (i < sections.length - 1) {
           buffer.writeln('---');
@@ -88,7 +90,7 @@ class AnnotterExporter {
     for (final entry in grouped.entries) {
       buffer.writeln('### 📱 Page: ${entry.key}');
       for (final item in entry.value) {
-        _formatItem(buffer, item);
+        _formatItem(buffer, item, detailLevel: detailLevel, includeTree: includeTree);
       }
       buffer.writeln();
     }
@@ -96,13 +98,36 @@ class AnnotterExporter {
     return buffer.toString().trim();
   }
 
-  static void _formatItem(StringBuffer buffer, AnnotterItem item) {
-    buffer.writeln('${item.number}. [${item.mode.name.toUpperCase()}] **${item.widgetName}**');
-    if (item.hierarchy.isNotEmpty) {
+  static void _formatItem(
+    StringBuffer buffer,
+    AnnotterItem item, {
+    String detailLevel = 'detailed',
+    bool includeTree = true,
+  }) {
+    final tags = <String>[item.mode.name.toUpperCase()];
+    if (item.intent != null && item.intent!.isNotEmpty) {
+      tags.add(item.intent!.toUpperCase());
+    }
+    if (item.severity != null && item.severity!.isNotEmpty) {
+      tags.add(item.severity!.toUpperCase());
+    }
+
+    final tagString = tags.map((t) => '[$t]').join('');
+    buffer.writeln('${item.number}. $tagString **${item.widgetName}**');
+
+    if (includeTree && detailLevel != 'compact' && item.hierarchy.isNotEmpty) {
       final breadcrumb = item.hierarchy.reversed.join(' > ');
       buffer.writeln('   - Tree: $breadcrumb');
     }
-    buffer.writeln('   - Position: x:${item.rect.left.toInt()}, y:${item.rect.top.toInt()} (w:${item.rect.width.toInt()}, h:${item.rect.height.toInt()})');
+
+    if (detailLevel != 'compact') {
+      buffer.writeln('   - Position: x:${item.rect.left.toInt()}, y:${item.rect.top.toInt()} (w:${item.rect.width.toInt()}, h:${item.rect.height.toInt()})');
+    }
+
+    if (item.selectedText != null && item.selectedText!.isNotEmpty && detailLevel == 'detailed') {
+      buffer.writeln('   - Content: "${item.selectedText}"');
+    }
+
     buffer.writeln('   - Note: ${item.note.isEmpty ? "*(No note provided)*" : item.note}');
     buffer.writeln();
   }
@@ -115,6 +140,8 @@ class AnnotterExporter {
     String? screenshotPath,
     List<AnnotterViewSection>? sections,
     AnnotterEnvironment? environment,
+    String detailLevel = 'detailed',
+    bool includeTree = true,
   }) async {
     final markdown = toMarkdown(
       items: items,
@@ -123,6 +150,8 @@ class AnnotterExporter {
       screenshotPath: screenshotPath,
       sections: sections,
       environment: environment,
+      detailLevel: detailLevel,
+      includeTree: includeTree,
     );
     await Clipboard.setData(ClipboardData(text: markdown));
   }
