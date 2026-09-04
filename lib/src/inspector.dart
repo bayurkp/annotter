@@ -80,7 +80,7 @@ class WidgetInspectorHelper {
     // Layout primitives
     'Container', 'SizedBox', 'Padding', 'Center', 'Align',
     'Row', 'Column', 'Stack', 'Flex', 'Wrap',
-    'Expanded', 'Flexible', 'Spacer', 'SafeArea',
+    'Expanded', 'Flexible', 'Spacer', 'SafeArea', 'Scaffold',
     // Theme & canvas infrastructure
     'Material', 'Theme', 'CupertinoTheme', 'AnimatedTheme',
     'DefaultTextStyle', 'AnimatedDefaultTextStyle',
@@ -186,21 +186,6 @@ class WidgetInspectorHelper {
     return sorted.first.name;
   }
 
-  static void _findContentChild(Element element, void Function(Widget widget, String name) onFound) {
-    bool found = false;
-    void search(Element el, int depth) {
-      if (found || depth > 4) return;
-      final type = cleanType(el.widget.runtimeType.toString());
-      if (type == 'Icon' || type == 'Text' || type == 'Image') {
-        onFound(el.widget, type);
-        found = true;
-        return;
-      }
-      el.visitChildren((c) => search(c, depth + 1));
-    }
-    element.visitChildren((c) => search(c, 1));
-  }
-
   static String cleanType(String type) {
     final idx = type.indexOf('<');
     return idx != -1 ? type.substring(0, idx) : type;
@@ -268,12 +253,6 @@ class WidgetInspectorHelper {
       final element = (bestTarget.debugCreator as DebugCreator).element;
       final List<String> chain = [];
       final List<_TargetCandidate> candidates = [];
-
-      // Check if container has a content child (Icon/Text) so button padding taps still identify content
-      _findContentChild(element, (childWidget, childName) {
-        chain.add(childName);
-        candidates.add(_TargetCandidate(childWidget, childName, 80));
-      });
 
       if (_isComponentCandidate(element.widget)) {
         final rawType = cleanType(element.widget.runtimeType.toString());
