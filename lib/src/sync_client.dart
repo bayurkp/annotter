@@ -84,11 +84,14 @@ class AnnotterSyncClient {
   }
 
   /// Syncs multiple annotations in bulk to the MCP server (e.g. on Copy/Export)
+  /// If [replace] is true, replaces all existing annotations on server with these.
   Future<bool> syncAllAnnotations(List<AnnotterItem> items,
-      {String? route, String? screenshotPath}) async {
+      {String? route, String? screenshotPath, bool replace = false}) async {
     if (kIsWeb || items.isEmpty) return false;
     try {
-      final uri = _uri('/api/annotations');
+      final path =
+          replace ? '/api/annotations?replace=true' : '/api/annotations';
+      final uri = _uri(path);
       final request = await _httpClient.postUrl(uri);
       request.headers.contentType = ContentType.json;
 

@@ -47,6 +47,7 @@ class _AnnotterState extends State<Annotter> {
   Color _markerColor = AnnotterColors.markerPalette[3]; // Default Emerald
   bool _clearOnCopy = false;
   bool _blockInteractions = false;
+  bool _replaceMcpOnCopy = false;
   bool _showSettings = false;
   bool _isAnimationPaused = false;
 
@@ -433,6 +434,7 @@ class _AnnotterState extends State<Annotter> {
                                 markerColor: _markerColor,
                                 clearOnCopy: _clearOnCopy,
                                 blockInteractions: _blockInteractions,
+                                replaceMcpOnCopy: _replaceMcpOnCopy,
                                 isMcpConnected: _isMcpConnected,
                                 onDetailLevelChanged: (lvl) =>
                                     setState(() => _detailLevel = lvl),
@@ -444,6 +446,8 @@ class _AnnotterState extends State<Annotter> {
                                     setState(() => _clearOnCopy = val),
                                 onBlockInteractionsChanged: (val) =>
                                     setState(() => _blockInteractions = val),
+                                onReplaceMcpOnCopyChanged: (val) =>
+                                    setState(() => _replaceMcpOnCopy = val),
                                 onClose: () =>
                                     setState(() => _showSettings = false),
                               ),
@@ -1097,6 +1101,7 @@ class _AnnotterState extends State<Annotter> {
         _items,
         route: _activeScreenName,
         screenshotPath: mainScreenshot,
+        replace: _replaceMcpOnCopy,
       );
     }
 

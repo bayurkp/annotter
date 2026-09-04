@@ -77,6 +77,12 @@ const httpServer = http.createServer((req, res) => {
     req.on("data", (chunk) => (body += chunk));
     req.on("end", () => {
       try {
+        const shouldReplace = url.searchParams.get("replace") === "true";
+        if (shouldReplace) {
+          annotations.clear();
+          log("Cleared previous annotations (replace mode active)");
+        }
+
         const data = JSON.parse(body);
         if (Array.isArray(data)) {
           for (const item of data) {
@@ -84,9 +90,17 @@ const httpServer = http.createServer((req, res) => {
               annotations.set(item.id, item);
             }
           }
-          log(`Batch synced ${data.length} annotations`);
+          log(
+            `Batch synced ${data.length} annotations (replace: ${shouldReplace})`,
+          );
           res.writeHead(200, { "Content-Type": "application/json" });
-          res.end(JSON.stringify({ success: true, count: data.length }));
+          res.end(
+            JSON.stringify({
+              success: true,
+              count: data.length,
+              replaced: shouldReplace,
+            }),
+          );
           return;
         }
 

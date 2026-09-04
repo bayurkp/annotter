@@ -7,12 +7,14 @@ class AnnotterSettingsDialog extends StatelessWidget {
   final Color markerColor;
   final bool clearOnCopy;
   final bool blockInteractions;
+  final bool replaceMcpOnCopy;
   final bool? isMcpConnected;
   final ValueChanged<String> onDetailLevelChanged;
   final ValueChanged<bool> onIncludeTreeChanged;
   final ValueChanged<Color> onMarkerColorChanged;
   final ValueChanged<bool> onClearOnCopyChanged;
   final ValueChanged<bool> onBlockInteractionsChanged;
+  final ValueChanged<bool> onReplaceMcpOnCopyChanged;
   final VoidCallback onClose;
 
   const AnnotterSettingsDialog({
@@ -22,12 +24,14 @@ class AnnotterSettingsDialog extends StatelessWidget {
     required this.markerColor,
     required this.clearOnCopy,
     required this.blockInteractions,
+    this.replaceMcpOnCopy = false,
     this.isMcpConnected,
     required this.onDetailLevelChanged,
     required this.onIncludeTreeChanged,
     required this.onMarkerColorChanged,
     required this.onClearOnCopyChanged,
     required this.onBlockInteractionsChanged,
+    required this.onReplaceMcpOnCopyChanged,
     required this.onClose,
   });
 
@@ -206,7 +210,7 @@ class AnnotterSettingsDialog extends StatelessWidget {
                 Divider(color: AnnotterColors.slate[800], height: 1),
                 const SizedBox(height: 12),
 
-                // 5. Checkboxes: Clear on Copy & Block Interactions
+                // 5. Checkboxes: Clear on Copy, Block Interactions, Replace MCP on Copy
                 _buildCheckboxRow(
                   label: 'Clear on copy',
                   value: clearOnCopy,
@@ -217,6 +221,12 @@ class AnnotterSettingsDialog extends StatelessWidget {
                   label: 'Block page interactions',
                   value: blockInteractions,
                   onChanged: onBlockInteractionsChanged,
+                ),
+                const SizedBox(height: 8),
+                _buildCheckboxRow(
+                  label: 'Replace MCP notes on copy',
+                  value: replaceMcpOnCopy,
+                  onChanged: onReplaceMcpOnCopyChanged,
                 ),
 
                 const SizedBox(height: 14),
