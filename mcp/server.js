@@ -3,7 +3,7 @@
 /**
  * Annotter MCP Server & HTTP Bridge
  *
- * - Runs a lightweight HTTP server on port 4747 for Flutter to sync annotations.
+ * - Runs a lightweight HTTP server on port 1357 for Flutter to sync annotations.
  * - Connects via MCP STDIO JSON-RPC to Cursor, Claude Code, and Antigravity.
  * - Zero frameworks, native Node.js HTTP + @modelcontextprotocol/sdk.
  */
@@ -18,7 +18,7 @@ import {
 
 const HTTP_PORT = process.env.ANNOTTER_PORT
   ? parseInt(process.env.ANNOTTER_PORT, 10)
-  : 4747;
+  : 1357;
 
 // In-memory store of active annotations
 const annotations = new Map();
