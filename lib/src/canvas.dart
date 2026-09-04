@@ -287,8 +287,9 @@ class _AnnotterPainter extends CustomPainter {
           ? displayRect.center
           : Offset(displayRect.left + 12, displayRect.top + 12);
 
+      final isResolved = item.status == 'resolved';
       final badgePaint = Paint()
-        ..color = color
+        ..color = isResolved ? const Color(0xFF10B981) : color
         ..style = PaintingStyle.fill;
       canvas.drawCircle(badgeCenter, 14, badgePaint);
 
@@ -300,10 +301,10 @@ class _AnnotterPainter extends CustomPainter {
 
       final textPainter = TextPainter(
         text: TextSpan(
-          text: '${item.number}',
-          style: const TextStyle(
+          text: isResolved ? '✓' : '${item.number}',
+          style: TextStyle(
             color: Colors.white,
-            fontSize: 11,
+            fontSize: isResolved ? 13 : 11,
             fontWeight: FontWeight.bold,
             fontFamily: 'sans-serif',
             decoration: TextDecoration.none,

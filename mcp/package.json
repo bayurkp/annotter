@@ -1,0 +1,16 @@
+{
+  "name": "annotter-mcp",
+  "version": "0.2.0",
+  "description": "MCP server companion for Annotter Flutter visual feedback tool",
+  "main": "server.js",
+  "bin": {
+    "annotter-mcp": "./server.js"
+  },
+  "type": "module",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0"
+  },
+  "scripts": {
+    "start": "node server.js"
+  }
+}

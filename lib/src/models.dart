@@ -22,6 +22,7 @@ class AnnotterItem {
   String? intent; // 'fix', 'style', 'change', 'question'
   String? severity; // 'blocking', 'important', 'suggestion'
   String? selectedText; // Actual text content if clicked element is or contains Text
+  String status; // 'pending', 'resolved'
 
   AnnotterItem({
     required this.id,
@@ -37,6 +38,7 @@ class AnnotterItem {
     this.intent,
     this.severity,
     this.selectedText,
+    this.status = 'pending',
   });
 
   AnnotterItem copy() {
@@ -54,6 +56,7 @@ class AnnotterItem {
       intent: intent,
       severity: severity,
       selectedText: selectedText,
+      status: status,
     );
   }
 }

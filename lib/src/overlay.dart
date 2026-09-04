@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
@@ -12,17 +13,20 @@ import 'exporter.dart';
 import 'inspector.dart';
 import 'list_sheet.dart';
 import 'settings_dialog.dart';
+import 'sync_client.dart';
 
 /// The root wrapper for Annotter.
 /// Wraps your application to provide in-app UI inspection and annotation.
 class Annotter extends StatefulWidget {
   final Widget child;
   final bool enabled;
+  final String? serverUrl;
 
   const Annotter({
     super.key,
     required this.child,
     this.enabled = true,
+    this.serverUrl,
   });
 
   @override
@@ -45,6 +49,45 @@ class _AnnotterState extends State<Annotter> {
   bool _blockInteractions = false;
   bool _showSettings = false;
   bool _isAnimationPaused = false;
+
+  // Sync Client & Status Polling
+  AnnotterSyncClient? _syncClient;
+  Timer? _statusPollTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.serverUrl != null && widget.serverUrl!.isNotEmpty) {
+      _syncClient = AnnotterSyncClient(serverUrl: widget.serverUrl!);
+      _startStatusPolling();
+    }
+  }
+
+  @override
+  void dispose() {
+    _statusPollTimer?.cancel();
+    _syncClient?.dispose();
+    super.dispose();
+  }
+
+  void _startStatusPolling() {
+    _statusPollTimer?.cancel();
+    _statusPollTimer = Timer.periodic(const Duration(seconds: 2), (_) async {
+      if (_syncClient == null || !mounted || _items.isEmpty) return;
+      final statuses = await _syncClient!.fetchStatuses();
+      if (!mounted || statuses.isEmpty) return;
+
+      bool changed = false;
+      for (final item in _items) {
+        final key = 'ann_${item.id}';
+        if (statuses.containsKey(key) && item.status != statuses[key]) {
+          item.status = statuses[key]!;
+          changed = true;
+        }
+      }
+      if (changed) setState(() {});
+    });
+  }
 
   // Undo / Redo History Stacks
   final List<List<AnnotterItem>> _undoStack = [];
@@ -250,14 +293,19 @@ class _AnnotterState extends State<Annotter> {
                                 isNew: _isCreatingItem,
                                 onCancel: () => setState(() => _activeDialogItem = null),
                                 onDelete: () {
+                                  final deletedId = _activeDialogItem?.id;
                                   _saveSnapshot();
                                   setState(() {
                                     _items.removeWhere((i) => i.id == _activeDialogItem!.id);
                                     _renumberItems();
                                     _activeDialogItem = null;
                                   });
+                                  if (deletedId != null) {
+                                    _syncClient?.deleteAnnotation(deletedId);
+                                  }
                                 },
                                 onSave: (note, intent, severity) {
+                                  final currentItem = _activeDialogItem;
                                   _saveSnapshot();
                                   setState(() {
                                     _activeDialogItem!.note = note;
@@ -266,6 +314,9 @@ class _AnnotterState extends State<Annotter> {
                                     if (_isCreatingItem) _items.add(_activeDialogItem!);
                                     _activeDialogItem = null;
                                   });
+                                  if (currentItem != null) {
+                                    _syncClient?.syncAnnotation(currentItem, route: _activeScreenName);
+                                  }
                                 },
                               ),
                             ),
@@ -303,10 +354,12 @@ class _AnnotterState extends State<Annotter> {
                                       _items.removeWhere((i) => i.id == item.id);
                                       _renumberItems();
                                     });
+                                    _syncClient?.deleteAnnotation(item.id);
                                   },
                                   onClearAll: () {
                                     _saveSnapshot();
                                     setState(() => _items.clear());
+                                    _syncClient?.clearAll();
                                   },
                                 ),
                               ),

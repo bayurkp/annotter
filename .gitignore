@@ -8,3 +8,5 @@ build/
 *.iml
 .idea/
 .vscode/
+mcp/node_modules/
+node_modules/
