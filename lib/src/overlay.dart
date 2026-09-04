@@ -21,12 +21,14 @@ class Annotter extends StatefulWidget {
   final Widget child;
   final bool enabled;
   final String? serverUrl;
+  final String? screenshotDirectory;
 
   const Annotter({
     super.key,
     required this.child,
     this.enabled = true,
     this.serverUrl,
+    this.screenshotDirectory,
   });
 
   @override
@@ -49,6 +51,7 @@ class _AnnotterState extends State<Annotter> {
   bool _clearOnCopy = false;
   bool _blockInteractions = false;
   bool _replaceMcpOnCopy = false;
+  String? _customScreenshotDirectory;
   bool _showSettings = false;
   bool _isAnimationPaused = false;
 
@@ -71,6 +74,7 @@ class _AnnotterState extends State<Annotter> {
   @override
   void initState() {
     super.initState();
+    _customScreenshotDirectory = widget.screenshotDirectory;
     if (widget.serverUrl != null && widget.serverUrl!.isNotEmpty) {
       _syncClient = AnnotterSyncClient(serverUrl: widget.serverUrl!);
       _checkMcpConnection();
@@ -463,6 +467,7 @@ class _AnnotterState extends State<Annotter> {
                                 blockInteractions: _blockInteractions,
                                 replaceMcpOnCopy: _replaceMcpOnCopy,
                                 isMcpConnected: _isMcpConnected,
+                                screenshotDirectory: _customScreenshotDirectory,
                                 onDetailLevelChanged: (lvl) =>
                                     setState(() => _detailLevel = lvl),
                                 onIncludeTreeChanged: (val) =>
@@ -475,6 +480,8 @@ class _AnnotterState extends State<Annotter> {
                                     setState(() => _blockInteractions = val),
                                 onReplaceMcpOnCopyChanged: (val) =>
                                     setState(() => _replaceMcpOnCopy = val),
+                                onScreenshotDirectoryChanged: (dir) => setState(
+                                    () => _customScreenshotDirectory = dir),
                                 onClose: () =>
                                     setState(() => _showSettings = false),
                               ),
@@ -947,12 +954,47 @@ class _AnnotterState extends State<Annotter> {
           }
 
           File? file;
-          if (defaultTargetPlatform == TargetPlatform.android) {
-            final downloadDir = Directory('/sdcard/Download');
-            if (await downloadDir.exists()) {
-              file = File('${downloadDir.path}/$filename');
+
+          // 1. Check user custom directory from settings or widget parameter
+          if (_customScreenshotDirectory != null &&
+              _customScreenshotDirectory!.trim().isNotEmpty) {
+            try {
+              final customDir = Directory(_customScreenshotDirectory!.trim());
+              if (!await customDir.exists()) {
+                await customDir.create(recursive: true);
+              }
+              file = File('${customDir.path}/$filename');
+            } catch (_) {}
+          }
+
+          // 2. Platform default folders (Downloads folder preference)
+          if (file == null) {
+            if (defaultTargetPlatform == TargetPlatform.android) {
+              final downloadDir = Directory('/sdcard/Download');
+              if (await downloadDir.exists()) {
+                file = File('${downloadDir.path}/$filename');
+              }
+            } else if (defaultTargetPlatform == TargetPlatform.windows) {
+              final userProfile = Platform.environment['USERPROFILE'];
+              if (userProfile != null && userProfile.isNotEmpty) {
+                final winDownloads = Directory('$userProfile\\Downloads');
+                if (await winDownloads.exists()) {
+                  file = File('${winDownloads.path}\\$filename');
+                }
+              }
+            } else if (defaultTargetPlatform == TargetPlatform.macOS ||
+                defaultTargetPlatform == TargetPlatform.linux) {
+              final home = Platform.environment['HOME'];
+              if (home != null && home.isNotEmpty) {
+                final unixDownloads = Directory('$home/Downloads');
+                if (await unixDownloads.exists()) {
+                  file = File('${unixDownloads.path}/$filename');
+                }
+              }
             }
           }
+
+          // 3. Fallback to system temp directory
           file ??= File('${Directory.systemTemp.path}/$filename');
           await file.writeAsBytes(pngBytes);
           return file.path;
