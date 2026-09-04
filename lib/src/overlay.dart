@@ -53,13 +53,23 @@ class _AnnotterState extends State<Annotter> {
   // Sync Client & Status Polling
   AnnotterSyncClient? _syncClient;
   Timer? _statusPollTimer;
+  bool? _isMcpConnected;
 
   @override
   void initState() {
     super.initState();
     if (widget.serverUrl != null && widget.serverUrl!.isNotEmpty) {
       _syncClient = AnnotterSyncClient(serverUrl: widget.serverUrl!);
+      _checkMcpConnection();
       _startStatusPolling();
+    }
+  }
+
+  Future<void> _checkMcpConnection() async {
+    if (_syncClient == null || !mounted) return;
+    final isConnected = await _syncClient!.ping();
+    if (mounted && _isMcpConnected != isConnected) {
+      setState(() => _isMcpConnected = isConnected);
     }
   }
 
@@ -73,7 +83,11 @@ class _AnnotterState extends State<Annotter> {
   void _startStatusPolling() {
     _statusPollTimer?.cancel();
     _statusPollTimer = Timer.periodic(const Duration(seconds: 2), (_) async {
-      if (_syncClient == null || !mounted || _items.isEmpty) return;
+      if (_syncClient == null || !mounted) return;
+      if (_showSettings) {
+        _checkMcpConnection();
+      }
+      if (_items.isEmpty) return;
       final statuses = await _syncClient!.fetchStatuses();
       if (!mounted || statuses.isEmpty) return;
 
@@ -416,6 +430,7 @@ class _AnnotterState extends State<Annotter> {
                                 markerColor: _markerColor,
                                 clearOnCopy: _clearOnCopy,
                                 blockInteractions: _blockInteractions,
+                                isMcpConnected: _isMcpConnected,
                                 onDetailLevelChanged: (lvl) =>
                                     setState(() => _detailLevel = lvl),
                                 onIncludeTreeChanged: (val) =>
@@ -579,7 +594,10 @@ class _AnnotterState extends State<Annotter> {
                   icon: Icons.settings_outlined,
                   tooltip: 'Settings',
                   enabled: true,
-                  onTap: () => setState(() => _showSettings = true),
+                  onTap: () {
+                    _checkMcpConnection();
+                    setState(() => _showSettings = true);
+                  },
                 ),
                 const SizedBox(width: 4),
 

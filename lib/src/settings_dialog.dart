@@ -7,6 +7,7 @@ class AnnotterSettingsDialog extends StatelessWidget {
   final Color markerColor;
   final bool clearOnCopy;
   final bool blockInteractions;
+  final bool? isMcpConnected;
   final ValueChanged<String> onDetailLevelChanged;
   final ValueChanged<bool> onIncludeTreeChanged;
   final ValueChanged<Color> onMarkerColorChanged;
@@ -21,6 +22,7 @@ class AnnotterSettingsDialog extends StatelessWidget {
     required this.markerColor,
     required this.clearOnCopy,
     required this.blockInteractions,
+    this.isMcpConnected,
     required this.onDetailLevelChanged,
     required this.onIncludeTreeChanged,
     required this.onMarkerColorChanged,
@@ -230,6 +232,67 @@ class AnnotterSettingsDialog extends StatelessWidget {
                   label: 'Block page interactions',
                   value: blockInteractions,
                   onChanged: onBlockInteractionsChanged,
+                ),
+
+                const SizedBox(height: 14),
+                Divider(color: AnnotterColors.slate[800], height: 1),
+                const SizedBox(height: 10),
+
+                // 6. MCP Bridge Status Indicator
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'MCP Server Bridge',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: AnnotterColors.slate[300],
+                      ),
+                    ),
+                    Row(
+                      children: [
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: isMcpConnected == true
+                                ? AnnotterColors.emerald[400]
+                                : isMcpConnected == false
+                                    ? AnnotterColors.rose[400]
+                                    : AnnotterColors.slate[500],
+                            boxShadow: isMcpConnected == true
+                                ? [
+                                    BoxShadow(
+                                      color: AnnotterColors.emerald[400]!
+                                          .withValues(alpha: 0.6),
+                                      blurRadius: 4,
+                                    ),
+                                  ]
+                                : null,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          isMcpConnected == true
+                              ? 'Connected'
+                              : isMcpConnected == false
+                                  ? 'Disconnected'
+                                  : 'Not Configured',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: isMcpConnected == true
+                                ? AnnotterColors.emerald[400]
+                                : isMcpConnected == false
+                                    ? AnnotterColors.rose[400]
+                                    : AnnotterColors.slate[500],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ],
             ),

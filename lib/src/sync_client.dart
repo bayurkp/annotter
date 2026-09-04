@@ -22,6 +22,21 @@ class AnnotterSyncClient {
     return Uri.parse('$cleanBase$cleanPath');
   }
 
+  /// Pings the MCP server to verify if it is reachable and running
+  Future<bool> ping() async {
+    if (kIsWeb) return false;
+    try {
+      final uri = _uri('/api/ping');
+      final request = await _httpClient.getUrl(uri);
+      final response = await request.close();
+      if (response.statusCode == 200) {
+        final body = await response.transform(utf8.decoder).join();
+        return body.contains('"status":"ok"') || body.contains('"pong":true');
+      }
+    } catch (_) {}
+    return false;
+  }
+
   /// Sends a newly created or updated annotation to the MCP server
   Future<bool> syncAnnotation(AnnotterItem item,
       {String? route, String? screenshotPath}) async {

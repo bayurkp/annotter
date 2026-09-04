@@ -45,6 +45,24 @@ const httpServer = http.createServer((req, res) => {
   const url = new URL(req.url, `http://localhost:${HTTP_PORT}`);
   const pathname = url.pathname;
 
+  // GET /api/ping (Health / Connection check)
+  if (
+    req.method === "GET" &&
+    (pathname === "/api/ping" || pathname === "/ping")
+  ) {
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(
+      JSON.stringify({
+        status: "ok",
+        pong: true,
+        server: "annotter-mcp",
+        version: "0.2.0",
+        activeAnnotations: annotations.size,
+      }),
+    );
+    return;
+  }
+
   // GET /api/annotations
   if (req.method === "GET" && pathname === "/api/annotations") {
     const list = Array.from(annotations.values());
