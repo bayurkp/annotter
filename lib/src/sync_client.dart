@@ -23,7 +23,8 @@ class AnnotterSyncClient {
   }
 
   /// Sends a newly created or updated annotation to the MCP server
-  Future<bool> syncAnnotation(AnnotterItem item, {String? route}) async {
+  Future<bool> syncAnnotation(AnnotterItem item,
+      {String? route, String? screenshotPath}) async {
     if (kIsWeb) return false; // Native mobile & desktop sync first
     try {
       final uri = _uri('/api/annotations');
@@ -42,6 +43,7 @@ class AnnotterSyncClient {
         'status': 'pending',
         'mode': item.mode.name,
         'route': route ?? item.screenName,
+        'screenshotPath': screenshotPath,
         'timestamp': DateTime.now().millisecondsSinceEpoch,
         'rect': {
           'x': item.rect.left,

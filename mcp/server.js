@@ -194,6 +194,8 @@ mcpServer.setRequestHandler(CallToolRequestSchema, async (request) => {
         let out = `### #${item.number || 1} [${tags.join("][")}] ${item.widgetName}\n`;
         if (item.selectedText) out += `- Content: "${item.selectedText}"\n`;
         if (item.route) out += `- Screen/Route: ${item.route}\n`;
+        if (item.screenshotPath)
+          out += `- Screenshot: \`${item.screenshotPath}\`\n`;
         if (item.hierarchy && item.hierarchy.length > 0) {
           out += `- Tree: ${item.hierarchy.slice().reverse().join(" > ")}\n`;
         }

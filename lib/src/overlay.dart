@@ -341,8 +341,15 @@ class _AnnotterState extends State<Annotter> {
                                     _activeDialogItem = null;
                                   });
                                   if (currentItem != null) {
-                                    _syncClient?.syncAnnotation(currentItem,
-                                        route: _activeScreenName);
+                                    _captureScreenshot(
+                                            'annotter_${currentItem.id}.png')
+                                        .then((path) {
+                                      _syncClient?.syncAnnotation(
+                                        currentItem,
+                                        route: _activeScreenName,
+                                        screenshotPath: path,
+                                      );
+                                    });
                                   }
                                 },
                               ),
