@@ -16,17 +16,23 @@ class AnnotterExporter {
     final buffer = StringBuffer();
 
     final totalNotes = items.length;
-    final totalViews = (sections != null && sections.isNotEmpty) ? sections.length : 1;
+    final totalViews =
+        (sections != null && sections.isNotEmpty) ? sections.length : 1;
 
-    buffer.writeln('## UI Revision Request (Total: $totalNotes notes across $totalViews ${totalViews == 1 ? "view" : "views"})');
+    buffer.writeln(
+        '## UI Revision Request (Total: $totalNotes notes across $totalViews ${totalViews == 1 ? "view" : "views"})');
 
     if (environment != null && detailLevel != 'compact') {
-      buffer.writeln('**Environment:** ${environment.platform} • ${environment.theme} • Text Scale: ${environment.textScale} • ${environment.orientation}');
+      buffer.writeln(
+          '**Environment:** ${environment.platform} • ${environment.theme} • Text Scale: ${environment.textScale} • ${environment.orientation}');
     }
 
     if (viewportSize != null && detailLevel != 'compact') {
-      final dprString = environment != null ? ' (DPR: ${environment.devicePixelRatio.toStringAsFixed(2)}x)' : '';
-      buffer.writeln('**Viewport:** ${viewportSize.width.toInt()}x${viewportSize.height.toInt()}$dprString');
+      final dprString = environment != null
+          ? ' (DPR: ${environment.devicePixelRatio.toStringAsFixed(2)}x)'
+          : '';
+      buffer.writeln(
+          '**Viewport:** ${viewportSize.width.toInt()}x${viewportSize.height.toInt()}$dprString');
     }
 
     if (environment?.route != null && environment!.route!.isNotEmpty) {
@@ -34,8 +40,14 @@ class AnnotterExporter {
     }
 
     final dateStr = environment != null
-        ? environment.timestamp.toIso8601String().substring(0, 19).replaceFirst('T', ' ')
-        : DateTime.now().toIso8601String().substring(0, 19).replaceFirst('T', ' ');
+        ? environment.timestamp
+            .toIso8601String()
+            .substring(0, 19)
+            .replaceFirst('T', ' ')
+        : DateTime.now()
+            .toIso8601String()
+            .substring(0, 19)
+            .replaceFirst('T', ' ');
     buffer.writeln('**Generated:** $dateStr');
 
     buffer.writeln();
@@ -61,7 +73,8 @@ class AnnotterExporter {
         buffer.writeln();
 
         for (final item in sec.items) {
-          _formatItem(buffer, item, detailLevel: detailLevel, includeTree: includeTree);
+          _formatItem(buffer, item,
+              detailLevel: detailLevel, includeTree: includeTree);
         }
         if (i < sections.length - 1) {
           buffer.writeln('---');
@@ -74,11 +87,12 @@ class AnnotterExporter {
     // 2. Standard Screen Grouping (Fallback)
     final Map<String, List<AnnotterItem>> grouped = {};
     for (final item in items) {
-      final screen = (item.screenName.isNotEmpty && item.screenName != 'Current Screen')
-          ? item.screenName
-          : (routeName != null && routeName.isNotEmpty && routeName != '/'
-              ? routeName
-              : 'Current Screen');
+      final screen =
+          (item.screenName.isNotEmpty && item.screenName != 'Current Screen')
+              ? item.screenName
+              : (routeName != null && routeName.isNotEmpty && routeName != '/'
+                  ? routeName
+                  : 'Current Screen');
       grouped.putIfAbsent(screen, () => []).add(item);
     }
 
@@ -90,7 +104,8 @@ class AnnotterExporter {
     for (final entry in grouped.entries) {
       buffer.writeln('### 📱 Page: ${entry.key}');
       for (final item in entry.value) {
-        _formatItem(buffer, item, detailLevel: detailLevel, includeTree: includeTree);
+        _formatItem(buffer, item,
+            detailLevel: detailLevel, includeTree: includeTree);
       }
       buffer.writeln();
     }
@@ -121,14 +136,18 @@ class AnnotterExporter {
     }
 
     if (detailLevel != 'compact') {
-      buffer.writeln('   - Position: x:${item.rect.left.toInt()}, y:${item.rect.top.toInt()} (w:${item.rect.width.toInt()}, h:${item.rect.height.toInt()})');
+      buffer.writeln(
+          '   - Position: x:${item.rect.left.toInt()}, y:${item.rect.top.toInt()} (w:${item.rect.width.toInt()}, h:${item.rect.height.toInt()})');
     }
 
-    if (item.selectedText != null && item.selectedText!.isNotEmpty && detailLevel == 'detailed') {
+    if (item.selectedText != null &&
+        item.selectedText!.isNotEmpty &&
+        detailLevel == 'detailed') {
       buffer.writeln('   - Content: "${item.selectedText}"');
     }
 
-    buffer.writeln('   - Note: ${item.note.isEmpty ? "*(No note provided)*" : item.note}');
+    buffer.writeln(
+        '   - Note: ${item.note.isEmpty ? "*(No note provided)*" : item.note}');
     buffer.writeln();
   }
 

@@ -185,7 +185,8 @@ class _AnnotterState extends State<Annotter> {
               // Active: Full-width Ultra-Thin Bottom Dock Studio
               return Material(
                 color: Colors.transparent,
-                textStyle: const TextStyle(decoration: TextDecoration.none, fontFamily: 'sans-serif'),
+                textStyle: const TextStyle(
+                    decoration: TextDecoration.none, fontFamily: 'sans-serif'),
                 child: Container(
                   color: const Color(0xFF0B0F19), // Deep studio backdrop
                   child: SafeArea(
@@ -195,7 +196,8 @@ class _AnnotterState extends State<Annotter> {
                       children: [
                         // Studio Viewport + Toolbar (isolated from keyboard insets to prevent zoom)
                         MediaQuery(
-                          data: mediaQuery.copyWith(viewInsets: EdgeInsets.zero),
+                          data:
+                              mediaQuery.copyWith(viewInsets: EdgeInsets.zero),
                           child: Column(
                             children: [
                               // Proportional Scaled App Viewport
@@ -208,11 +210,16 @@ class _AnnotterState extends State<Annotter> {
                                       height: canvasHeight,
                                       decoration: BoxDecoration(
                                         border: Border.all(
-                                          color: _activeMode == AnnotterMode.move
-                                              ? const Color(0xFF10B981) // Green in Move
-                                              : _activeMode == AnnotterMode.select
-                                                  ? const Color(0xFF6366F1) // Indigo in Select
-                                                  : const Color(0xFF0284C7), // DevTools Blue in annotate
+                                          color: _activeMode ==
+                                                  AnnotterMode.move
+                                              ? const Color(
+                                                  0xFF10B981) // Green in Move
+                                              : _activeMode ==
+                                                      AnnotterMode.select
+                                                  ? const Color(
+                                                      0xFF6366F1) // Indigo in Select
+                                                  : const Color(
+                                                      0xFF0284C7), // DevTools Blue in annotate
                                           width: 2.0,
                                         ),
                                       ),
@@ -224,79 +231,97 @@ class _AnnotterState extends State<Annotter> {
                                             // Reactive Scroll & Navigation Listener + Inset override
                                             NotificationListener<Notification>(
                                               onNotification: (notification) {
-                                                if (notification is ScrollNotification) {
-                                                  if (notification.metrics.axis == Axis.vertical) {
+                                                if (notification
+                                                    is ScrollNotification) {
+                                                  if (notification
+                                                          .metrics.axis ==
+                                                      Axis.vertical) {
                                                     setState(() {
-                                                      _currentScrollOffset = notification.metrics.pixels;
+                                                      _currentScrollOffset =
+                                                          notification
+                                                              .metrics.pixels;
                                                     });
                                                   }
-                                                } else if (notification is NavigationNotification) {
+                                                } else if (notification
+                                                    is NavigationNotification) {
                                                   setState(() {});
                                                 }
                                                 return false;
                                               },
                                               child: MediaQuery(
                                                 data: mediaQuery.copyWith(
-                                                  size: Size(size.width, canvasHeight),
+                                                  size: Size(
+                                                      size.width, canvasHeight),
                                                   padding: EdgeInsets.zero,
                                                   viewPadding: EdgeInsets.zero,
                                                   viewInsets: EdgeInsets.zero,
                                                 ),
                                                 child: IgnorePointer(
-                                                  ignoring: _blockInteractions && _isActive,
-                                                  child: KeyedSubtree(key: _appChildKey, child: widget.child),
+                                                  ignoring:
+                                                      _blockInteractions &&
+                                                          _isActive,
+                                                  child: KeyedSubtree(
+                                                      key: _appChildKey,
+                                                      child: widget.child),
                                                 ),
                                               ),
                                             ),
 
                                             AnnotterCanvas(
-                                            items: _items,
-                                            activeMode: _activeMode,
-                                            currentScrollOffset: _currentScrollOffset,
-                                            markerColor: _markerColor,
-                                            onRequestCreate: (item, screenName) {
-                                              _saveSnapshot();
-                                              setState(() {
-                                                if (screenName != null) _currentScreenName = screenName;
-                                                _activeDialogItem = item;
-                                                _isCreatingItem = true;
-                                              });
-                                            },
-                                            onRequestEdit: (item) {
-                                              setState(() {
-                                                _activeDialogItem = item;
-                                                _isCreatingItem = false;
-                                              });
-                                            },
-                                          ),
-                                        ],
+                                              items: _items,
+                                              activeMode: _activeMode,
+                                              currentScrollOffset:
+                                                  _currentScrollOffset,
+                                              markerColor: _markerColor,
+                                              onRequestCreate:
+                                                  (item, screenName) {
+                                                _saveSnapshot();
+                                                setState(() {
+                                                  if (screenName != null)
+                                                    _currentScreenName =
+                                                        screenName;
+                                                  _activeDialogItem = item;
+                                                  _isCreatingItem = true;
+                                                });
+                                              },
+                                              onRequestEdit: (item) {
+                                                setState(() {
+                                                  _activeDialogItem = item;
+                                                  _isCreatingItem = false;
+                                                });
+                                              },
+                                            ),
+                                          ],
+                                        ),
                                       ),
                                     ),
                                   ),
                                 ),
                               ),
-                            ),
 
-                            // Ultra-Thin Full-Width Bottom Bar
-                            _buildSlimBottomBar(context),
-                          ],
+                              // Ultra-Thin Full-Width Bottom Bar
+                              _buildSlimBottomBar(context),
+                            ],
+                          ),
                         ),
-                      ),
 
                         // Inline Modal Note Dialog
                         if (_activeDialogItem != null)
                           _buildModalBackdrop(
-                            onDismiss: () => setState(() => _activeDialogItem = null),
+                            onDismiss: () =>
+                                setState(() => _activeDialogItem = null),
                             child: SingleChildScrollView(
                               child: AnnotationDialog(
                                 item: _activeDialogItem!,
                                 isNew: _isCreatingItem,
-                                onCancel: () => setState(() => _activeDialogItem = null),
+                                onCancel: () =>
+                                    setState(() => _activeDialogItem = null),
                                 onDelete: () {
                                   final deletedId = _activeDialogItem?.id;
                                   _saveSnapshot();
                                   setState(() {
-                                    _items.removeWhere((i) => i.id == _activeDialogItem!.id);
+                                    _items.removeWhere(
+                                        (i) => i.id == _activeDialogItem!.id);
                                     _renumberItems();
                                     _activeDialogItem = null;
                                   });
@@ -311,11 +336,13 @@ class _AnnotterState extends State<Annotter> {
                                     _activeDialogItem!.note = note;
                                     _activeDialogItem!.intent = intent;
                                     _activeDialogItem!.severity = severity;
-                                    if (_isCreatingItem) _items.add(_activeDialogItem!);
+                                    if (_isCreatingItem)
+                                      _items.add(_activeDialogItem!);
                                     _activeDialogItem = null;
                                   });
                                   if (currentItem != null) {
-                                    _syncClient?.syncAnnotation(currentItem, route: _activeScreenName);
+                                    _syncClient?.syncAnnotation(currentItem,
+                                        route: _activeScreenName);
                                   }
                                 },
                               ),
@@ -325,15 +352,18 @@ class _AnnotterState extends State<Annotter> {
                         // Inline Modal Annotation List Sheet
                         if (_showListSheet)
                           _buildModalBackdrop(
-                            onDismiss: () => setState(() => _showListSheet = false),
+                            onDismiss: () =>
+                                setState(() => _showListSheet = false),
                             alignment: Alignment.bottomCenter,
                             child: SafeArea(
                               bottom: true,
                               child: Padding(
-                                padding: const EdgeInsets.fromLTRB(10, 0, 10, 10),
+                                padding:
+                                    const EdgeInsets.fromLTRB(10, 0, 10, 10),
                                 child: AnnotationListSheet(
                                   items: _items,
-                                  onClose: () => setState(() => _showListSheet = false),
+                                  onClose: () =>
+                                      setState(() => _showListSheet = false),
                                   onReorder: (newItems) {
                                     _saveSnapshot();
                                     setState(() {
@@ -351,7 +381,8 @@ class _AnnotterState extends State<Annotter> {
                                   onDelete: (item) {
                                     _saveSnapshot();
                                     setState(() {
-                                      _items.removeWhere((i) => i.id == item.id);
+                                      _items
+                                          .removeWhere((i) => i.id == item.id);
                                       _renumberItems();
                                     });
                                     _syncClient?.deleteAnnotation(item.id);
@@ -369,7 +400,8 @@ class _AnnotterState extends State<Annotter> {
                         // Inline Modal Settings Dialog
                         if (_showSettings)
                           _buildModalBackdrop(
-                            onDismiss: () => setState(() => _showSettings = false),
+                            onDismiss: () =>
+                                setState(() => _showSettings = false),
                             child: SingleChildScrollView(
                               child: AnnotterSettingsDialog(
                                 detailLevel: _detailLevel,
@@ -377,12 +409,18 @@ class _AnnotterState extends State<Annotter> {
                                 markerColor: _markerColor,
                                 clearOnCopy: _clearOnCopy,
                                 blockInteractions: _blockInteractions,
-                                onDetailLevelChanged: (lvl) => setState(() => _detailLevel = lvl),
-                                onIncludeTreeChanged: (val) => setState(() => _includeTree = val),
-                                onMarkerColorChanged: (col) => setState(() => _markerColor = col),
-                                onClearOnCopyChanged: (val) => setState(() => _clearOnCopy = val),
-                                onBlockInteractionsChanged: (val) => setState(() => _blockInteractions = val),
-                                onClose: () => setState(() => _showSettings = false),
+                                onDetailLevelChanged: (lvl) =>
+                                    setState(() => _detailLevel = lvl),
+                                onIncludeTreeChanged: (val) =>
+                                    setState(() => _includeTree = val),
+                                onMarkerColorChanged: (col) =>
+                                    setState(() => _markerColor = col),
+                                onClearOnCopyChanged: (val) =>
+                                    setState(() => _clearOnCopy = val),
+                                onBlockInteractionsChanged: (val) =>
+                                    setState(() => _blockInteractions = val),
+                                onClose: () =>
+                                    setState(() => _showSettings = false),
                               ),
                             ),
                           ),
@@ -411,7 +449,8 @@ class _AnnotterState extends State<Annotter> {
           decoration: BoxDecoration(
             color: const Color(0xFF0F172A), // Slate 900
             border: Border(
-              top: BorderSide(color: Colors.white.withValues(alpha: 0.12), width: 1.0),
+              top: BorderSide(
+                  color: Colors.white.withValues(alpha: 0.12), width: 1.0),
             ),
           ),
           child: SingleChildScrollView(
@@ -430,9 +469,11 @@ class _AnnotterState extends State<Annotter> {
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.06),
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                      border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.08)),
                     ),
-                    child: const Icon(Icons.close_rounded, color: Colors.white70, size: 18),
+                    child: const Icon(Icons.close_rounded,
+                        color: Colors.white70, size: 18),
                   ),
                 ),
 
@@ -444,7 +485,8 @@ class _AnnotterState extends State<Annotter> {
                   decoration: BoxDecoration(
                     color: const Color(0xFF1E293B),
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                    border:
+                        Border.all(color: Colors.white.withValues(alpha: 0.08)),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -503,9 +545,14 @@ class _AnnotterState extends State<Annotter> {
 
                 // Freeze Animation Button (timeDilation)
                 _buildActionSquare(
-                  icon: _isAnimationPaused ? Icons.play_arrow_rounded : Icons.pause_rounded,
-                  tooltip: _isAnimationPaused ? 'Resume Animation' : 'Freeze Animation',
-                  iconColor: _isAnimationPaused ? AnnotterColors.amber[400] : null,
+                  icon: _isAnimationPaused
+                      ? Icons.play_arrow_rounded
+                      : Icons.pause_rounded,
+                  tooltip: _isAnimationPaused
+                      ? 'Resume Animation'
+                      : 'Freeze Animation',
+                  iconColor:
+                      _isAnimationPaused ? AnnotterColors.amber[400] : null,
                   enabled: true,
                   onTap: _toggleAnimationPause,
                 ),
@@ -559,10 +606,12 @@ class _AnnotterState extends State<Annotter> {
                         end: Alignment.bottomRight,
                       ),
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: const Color(0x6638BDF8), width: 0.8),
+                      border: Border.all(
+                          color: const Color(0x6638BDF8), width: 0.8),
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFF0284C7).withValues(alpha: 0.35),
+                          color:
+                              const Color(0xFF0284C7).withValues(alpha: 0.35),
                           blurRadius: 8,
                           offset: const Offset(0, 2),
                         ),
@@ -571,7 +620,8 @@ class _AnnotterState extends State<Annotter> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.copy_rounded, color: Colors.white, size: 15),
+                        const Icon(Icons.copy_rounded,
+                            color: Colors.white, size: 15),
                         const SizedBox(width: 5),
                         Text(
                           _items.isEmpty ? 'Copy' : 'Copy (${_items.length})',
@@ -664,7 +714,8 @@ class _AnnotterState extends State<Annotter> {
     Color? iconColor,
     int? badgeCount,
   }) {
-    final effectiveColor = enabled ? (iconColor ?? Colors.white70) : Colors.white24;
+    final effectiveColor =
+        enabled ? (iconColor ?? Colors.white70) : Colors.white24;
 
     return InkWell(
       borderRadius: BorderRadius.circular(8),
@@ -686,7 +737,8 @@ class _AnnotterState extends State<Annotter> {
                 top: 3,
                 right: 3,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
                   decoration: BoxDecoration(
                     color: const Color(0xFF0284C7),
                     borderRadius: BorderRadius.circular(10),
@@ -743,7 +795,8 @@ class _AnnotterState extends State<Annotter> {
               _fabPosition += details.delta;
               _fabPosition = Offset(
                 _fabPosition.dx.clamp(10.0, size.width - 60.0),
-                _fabPosition.dy.clamp(mediaQuery.padding.top + 10, size.height - 70.0),
+                _fabPosition.dy
+                    .clamp(mediaQuery.padding.top + 10, size.height - 70.0),
               );
             });
           },
@@ -802,7 +855,8 @@ class _AnnotterState extends State<Annotter> {
 
   Future<String?> _captureScreenshot(String filename) async {
     try {
-      final boundary = _repaintBoundaryKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      final boundary = _repaintBoundaryKey.currentContext?.findRenderObject()
+          as RenderRepaintBoundary?;
       if (boundary != null) {
         final image = await boundary.toImage(pixelRatio: 2.0);
         final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
@@ -852,16 +906,23 @@ class _AnnotterState extends State<Annotter> {
             TargetPlatform.linux => 'Linux',
             TargetPlatform.fuchsia => 'Fuchsia',
           };
-    final themeName = mediaQuery.platformBrightness == Brightness.dark ? 'Dark Mode' : 'Light Mode';
-    final orientationName = mediaQuery.orientation == Orientation.portrait ? 'Portrait' : 'Landscape';
+    final themeName = mediaQuery.platformBrightness == Brightness.dark
+        ? 'Dark Mode'
+        : 'Light Mode';
+    final orientationName = mediaQuery.orientation == Orientation.portrait
+        ? 'Portrait'
+        : 'Landscape';
     final dpr = mediaQuery.devicePixelRatio;
-    final textScale = '${(mediaQuery.textScaler.scale(10.0) / 10.0).toStringAsFixed(1)}x';
+    final textScale =
+        '${(mediaQuery.textScaler.scale(10.0) / 10.0).toStringAsFixed(1)}x';
 
     // Dynamic real route resolution via ModalRoute or fallback
     String dynamicRoute = _activeScreenName;
     try {
       final modalRoute = ModalRoute.of(context);
-      if (modalRoute != null && modalRoute.settings.name != null && modalRoute.settings.name!.isNotEmpty) {
+      if (modalRoute != null &&
+          modalRoute.settings.name != null &&
+          modalRoute.settings.name!.isNotEmpty) {
         dynamicRoute = '${modalRoute.settings.name} ($_activeScreenName)';
       }
     } catch (_) {}
@@ -898,12 +959,14 @@ class _AnnotterState extends State<Annotter> {
           }
           el.visitChildren(search);
         }
+
         appCtx.visitChildElements(search);
       }
 
       // Group items by scroll cluster
       final sortedItems = List<AnnotterItem>.from(_items)
-        ..sort((a, b) => a.scrollOffsetAtCreation.compareTo(b.scrollOffsetAtCreation));
+        ..sort((a, b) =>
+            a.scrollOffsetAtCreation.compareTo(b.scrollOffsetAtCreation));
 
       final List<List<AnnotterItem>> clusters = [];
       for (final item in sortedItems) {
@@ -911,7 +974,9 @@ class _AnnotterState extends State<Annotter> {
           clusters.add([item]);
         } else {
           final lastCluster = clusters.last;
-          final diff = (item.scrollOffsetAtCreation - lastCluster.first.scrollOffsetAtCreation).abs();
+          final diff = (item.scrollOffsetAtCreation -
+                  lastCluster.first.scrollOffsetAtCreation)
+              .abs();
           if (diff < canvasHeight * 0.75) {
             lastCluster.add(item);
           } else {

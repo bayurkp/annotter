@@ -33,9 +33,19 @@ class WidgetInspectorHelper {
   /// HTML's <div>, <span>, <section>. Never a semantic component name.
   /// Stable since Flutter 1.0, will never change.
   static const _layoutPrimitives = {
-    'Container', 'SizedBox', 'Padding', 'Center', 'Align',
-    'Row', 'Column', 'Stack', 'Flex', 'Wrap',
-    'Expanded', 'Flexible', 'Spacer',
+    'Container',
+    'SizedBox',
+    'Padding',
+    'Center',
+    'Align',
+    'Row',
+    'Column',
+    'Stack',
+    'Flex',
+    'Wrap',
+    'Expanded',
+    'Flexible',
+    'Spacer',
   };
 
   /// Determines whether a widget is a component-level candidate for the
@@ -119,12 +129,18 @@ class WidgetInspectorHelper {
     }
 
     // 3. Screen / Page containers (should not override child components)
-    if (name.endsWith('Screen') || name.endsWith('Page') || name.endsWith('View')) {
+    if (name.endsWith('Screen') ||
+        name.endsWith('Page') ||
+        name.endsWith('View')) {
       return 50;
     }
 
     // 4. Semantic Content
-    if (name == 'Icon' || name == 'Text' || name == 'Image' || name == 'RichText' || name == 'CircleAvatar') {
+    if (name == 'Icon' ||
+        name == 'Text' ||
+        name == 'Image' ||
+        name == 'RichText' ||
+        name == 'CircleAvatar') {
       return 80;
     }
 
@@ -172,7 +188,9 @@ class WidgetInspectorHelper {
     }
 
     // 3. Composite logic:
-    if (outerComponent != null && innerElement != null && outerComponent != innerElement) {
+    if (outerComponent != null &&
+        innerElement != null &&
+        outerComponent != innerElement) {
       return '$outerComponent > $innerElement';
     }
 
@@ -184,7 +202,8 @@ class WidgetInspectorHelper {
       return innerElement;
     }
 
-    final sorted = List.of(candidates)..sort((a, b) => b.priority.compareTo(a.priority));
+    final sorted = List.of(candidates)
+      ..sort((a, b) => b.priority.compareTo(a.priority));
     return sorted.first.name;
   }
 
@@ -194,7 +213,8 @@ class WidgetInspectorHelper {
   }
 
   // ponytail: Hit-tests the app sibling RenderBox directly using local coordinates.
-  static InspectedWidgetInfo inspectAt(BuildContext context, Offset localOffset) {
+  static InspectedWidgetInfo inspectAt(
+      BuildContext context, Offset localOffset) {
     final canvasBox = context.findRenderObject() as RenderBox?;
     final parent = canvasBox?.parent;
 
@@ -221,22 +241,29 @@ class WidgetInspectorHelper {
       final target = entry.target;
 
       final targetType = target.runtimeType.toString();
-      if (target is RenderSliver || targetType.contains('Sliver') || targetType.contains('Viewport')) {
+      if (target is RenderSliver ||
+          targetType.contains('Sliver') ||
+          targetType.contains('Viewport')) {
         detectedScrollable = true;
       }
 
       if (target is RenderBox && target.hasSize && canvasBox != null) {
         try {
           final globalTopLeft = target.localToGlobal(Offset.zero);
-          final globalBottomRight = target.localToGlobal(Offset(target.size.width, target.size.height));
+          final globalBottomRight = target
+              .localToGlobal(Offset(target.size.width, target.size.height));
           final targetLocalTopLeft = canvasBox.globalToLocal(globalTopLeft);
-          final targetLocalBottomRight = canvasBox.globalToLocal(globalBottomRight);
+          final targetLocalBottomRight =
+              canvasBox.globalToLocal(globalBottomRight);
 
           if (targetLocalTopLeft.isFinite && targetLocalBottomRight.isFinite) {
-            final boxRect = Rect.fromPoints(targetLocalTopLeft, targetLocalBottomRight);
+            final boxRect =
+                Rect.fromPoints(targetLocalTopLeft, targetLocalBottomRight);
             final area = boxRect.width * boxRect.height;
 
-            if (boxRect.width >= 4 && boxRect.height >= 4 && area < smallestArea) {
+            if (boxRect.width >= 4 &&
+                boxRect.height >= 4 &&
+                area < smallestArea) {
               smallestArea = area;
               smallestRect = boxRect;
               bestTarget = target;
@@ -252,7 +279,9 @@ class WidgetInspectorHelper {
     String? extractedText;
 
     // Pass 2: Inspect ONLY the single best RenderBox (0ms overhead)
-    if (bestTarget != null && kDebugMode && bestTarget.debugCreator is DebugCreator) {
+    if (bestTarget != null &&
+        kDebugMode &&
+        bestTarget.debugCreator is DebugCreator) {
       final element = (bestTarget.debugCreator as DebugCreator).element;
       final List<String> chain = [];
       final List<_TargetCandidate> candidates = [];
@@ -261,7 +290,9 @@ class WidgetInspectorHelper {
         if (extractedText != null) return;
         if (w is Text && w.data != null && w.data!.trim().isNotEmpty) {
           extractedText = w.data!.trim();
-        } else if (w is SelectableText && w.data != null && w.data!.trim().isNotEmpty) {
+        } else if (w is SelectableText &&
+            w.data != null &&
+            w.data!.trim().isNotEmpty) {
           extractedText = w.data!.trim();
         } else if (w is RichText) {
           final plain = w.text.toPlainText().trim();
@@ -274,7 +305,8 @@ class WidgetInspectorHelper {
       if (_isComponentCandidate(element.widget)) {
         final rawType = cleanType(element.widget.runtimeType.toString());
         chain.add(rawType);
-        candidates.add(_TargetCandidate(element.widget, rawType, _calculatePriority(element.widget, rawType)));
+        candidates.add(_TargetCandidate(element.widget, rawType,
+            _calculatePriority(element.widget, rawType)));
       }
 
       element.visitAncestorElements((ancestor) {
@@ -301,7 +333,8 @@ class WidgetInspectorHelper {
         if (_isComponentCandidate(aw)) {
           if (chain.isEmpty || chain.last != type) {
             chain.add(type);
-            candidates.add(_TargetCandidate(aw, type, _calculatePriority(aw, type)));
+            candidates
+                .add(_TargetCandidate(aw, type, _calculatePriority(aw, type)));
           }
         }
 
@@ -314,7 +347,9 @@ class WidgetInspectorHelper {
       }
 
       if (extractedText != null) {
-        final truncated = extractedText!.length > 30 ? '${extractedText!.substring(0, 27)}...' : extractedText!;
+        final truncated = extractedText!.length > 30
+            ? '${extractedText!.substring(0, 27)}...'
+            : extractedText!;
         if (foundWidgetName.endsWith('Text')) {
           foundWidgetName = '$foundWidgetName ("$truncated")';
         }
@@ -324,7 +359,8 @@ class WidgetInspectorHelper {
     return InspectedWidgetInfo(
       name: foundWidgetName,
       hierarchy: bestHierarchy,
-      rect: smallestRect ?? Rect.fromCenter(center: localOffset, width: 40, height: 40),
+      rect: smallestRect ??
+          Rect.fromCenter(center: localOffset, width: 40, height: 40),
       screenName: detectedScreen,
       isScrollable: detectedScrollable,
       selectedText: extractedText,

@@ -11,6 +11,12 @@
     "@modelcontextprotocol/sdk": "^1.0.0"
   },
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "format": "prettier --write \"**/*.js\"",
+    "lint": "eslint server.js"
+  },
+  "devDependencies": {
+    "eslint": "^10.9.1",
+    "prettier": "^3.9.6"
   }
 }

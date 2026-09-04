@@ -21,7 +21,8 @@ class AnnotterItem {
   double scrollOffsetAtCreation;
   String? intent; // 'fix', 'style', 'change', 'question'
   String? severity; // 'blocking', 'important', 'suggestion'
-  String? selectedText; // Actual text content if clicked element is or contains Text
+  String?
+      selectedText; // Actual text content if clicked element is or contains Text
   String status; // 'pending', 'resolved'
 
   AnnotterItem({

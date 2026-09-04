@@ -2,7 +2,7 @@
 
 /**
  * Annotter MCP Server & HTTP Bridge
- * 
+ *
  * - Runs a lightweight HTTP server on port 4747 for Flutter to sync annotations.
  * - Connects via MCP STDIO JSON-RPC to Cursor, Claude Code, and Antigravity.
  * - Zero frameworks, native Node.js HTTP + @modelcontextprotocol/sdk.
@@ -16,7 +16,9 @@ import {
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 
-const HTTP_PORT = process.env.ANNOTTER_PORT ? parseInt(process.env.ANNOTTER_PORT, 10) : 4747;
+const HTTP_PORT = process.env.ANNOTTER_PORT
+  ? parseInt(process.env.ANNOTTER_PORT, 10)
+  : 4747;
 
 // In-memory store of active annotations
 const annotations = new Map();
@@ -64,7 +66,9 @@ const httpServer = http.createServer((req, res) => {
           return;
         }
         annotations.set(item.id, item);
-        log(`Synced annotation #${item.number || item.id}: [${item.widgetName}] - ${item.note || ""}`);
+        log(
+          `Synced annotation #${item.number || item.id}: [${item.widgetName}] - ${item.note || ""}`,
+        );
         res.writeHead(200, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ success: true, item }));
       } catch (err) {
@@ -116,7 +120,7 @@ const mcpServer = new Server(
     capabilities: {
       tools: {},
     },
-  }
+  },
 );
 
 mcpServer.setRequestHandler(ListToolsRequestSchema, async () => {
@@ -124,7 +128,8 @@ mcpServer.setRequestHandler(ListToolsRequestSchema, async () => {
     tools: [
       {
         name: "annotter_get_pending_annotations",
-        description: "Get all pending UI feedback and annotations submitted by the user from the running Flutter app.",
+        description:
+          "Get all pending UI feedback and annotations submitted by the user from the running Flutter app.",
         inputSchema: {
           type: "object",
           properties: {},
@@ -132,13 +137,15 @@ mcpServer.setRequestHandler(ListToolsRequestSchema, async () => {
       },
       {
         name: "annotter_resolve_annotation",
-        description: "Mark an annotation as resolved once you have fixed the code. This turns the marker on the user's Flutter screen into a green checkmark.",
+        description:
+          "Mark an annotation as resolved once you have fixed the code. This turns the marker on the user's Flutter screen into a green checkmark.",
         inputSchema: {
           type: "object",
           properties: {
             id: {
               type: "string",
-              description: "The ID of the annotation to resolve (e.g., 'ann_1788489123' or '1')",
+              description:
+                "The ID of the annotation to resolve (e.g., 'ann_1788489123' or '1')",
             },
             message: {
               type: "string",
@@ -164,7 +171,9 @@ mcpServer.setRequestHandler(CallToolRequestSchema, async (request) => {
   const { name, arguments: args } = request.params;
 
   if (name === "annotter_get_pending_annotations") {
-    const pending = Array.from(annotations.values()).filter((a) => a.status !== "resolved");
+    const pending = Array.from(annotations.values()).filter(
+      (a) => a.status !== "resolved",
+    );
     if (pending.length === 0) {
       return {
         content: [
@@ -176,21 +185,23 @@ mcpServer.setRequestHandler(CallToolRequestSchema, async (request) => {
       };
     }
 
-    const formatted = pending.map((item) => {
-      const tags = [item.mode?.toUpperCase() || "WIDGET"];
-      if (item.intent) tags.push(item.intent.toUpperCase());
-      if (item.severity) tags.push(item.severity.toUpperCase());
-      
-      let out = `### #${item.number || 1} [${tags.join("][")}] ${item.widgetName}\n`;
-      if (item.selectedText) out += `- Content: "${item.selectedText}"\n`;
-      if (item.route) out += `- Screen/Route: ${item.route}\n`;
-      if (item.hierarchy && item.hierarchy.length > 0) {
-        out += `- Tree: ${item.hierarchy.slice().reverse().join(" > ")}\n`;
-      }
-      out += `- Note: ${item.note || "No note provided"}\n`;
-      out += `- ID: ${item.id}\n`;
-      return out;
-    }).join("\n---\n\n");
+    const formatted = pending
+      .map((item) => {
+        const tags = [item.mode?.toUpperCase() || "WIDGET"];
+        if (item.intent) tags.push(item.intent.toUpperCase());
+        if (item.severity) tags.push(item.severity.toUpperCase());
+
+        let out = `### #${item.number || 1} [${tags.join("][")}] ${item.widgetName}\n`;
+        if (item.selectedText) out += `- Content: "${item.selectedText}"\n`;
+        if (item.route) out += `- Screen/Route: ${item.route}\n`;
+        if (item.hierarchy && item.hierarchy.length > 0) {
+          out += `- Tree: ${item.hierarchy.slice().reverse().join(" > ")}\n`;
+        }
+        out += `- Note: ${item.note || "No note provided"}\n`;
+        out += `- ID: ${item.id}\n`;
+        return out;
+      })
+      .join("\n---\n\n");
 
     return {
       content: [

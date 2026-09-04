@@ -79,7 +79,8 @@ class AnnotterSettingsDialog extends StatelessWidget {
                         ),
                         const SizedBox(width: 8),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
                             color: AnnotterColors.slate[800],
                             borderRadius: BorderRadius.circular(4),
@@ -100,7 +101,8 @@ class AnnotterSettingsDialog extends StatelessWidget {
                       onTap: onClose,
                       child: Padding(
                         padding: const EdgeInsets.all(4),
-                        child: Icon(Icons.close_rounded, size: 18, color: AnnotterColors.slate[400]),
+                        child: Icon(Icons.close_rounded,
+                            size: 18, color: AnnotterColors.slate[400]),
                       ),
                     ),
                   ],
@@ -183,7 +185,8 @@ class AnnotterSettingsDialog extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: AnnotterColors.markerPalette.map((color) {
-                    final isSelected = markerColor.toARGB32() == color.toARGB32();
+                    final isSelected =
+                        markerColor.toARGB32() == color.toARGB32();
                     return InkWell(
                       borderRadius: BorderRadius.circular(16),
                       onTap: () => onMarkerColorChanged(color),
@@ -194,8 +197,10 @@ class AnnotterSettingsDialog extends StatelessWidget {
                           shape: BoxShape.circle,
                           color: color,
                           border: isSelected
-                              ? Border.all(color: AnnotterColors.white, width: 2.5)
-                              : Border.all(color: AnnotterColors.slate[700]!, width: 1),
+                              ? Border.all(
+                                  color: AnnotterColors.white, width: 2.5)
+                              : Border.all(
+                                  color: AnnotterColors.slate[700]!, width: 1),
                           boxShadow: isSelected
                               ? [
                                   BoxShadow(
@@ -252,7 +257,8 @@ class AnnotterSettingsDialog extends StatelessWidget {
             style: TextStyle(
               fontSize: 11,
               fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              color: isSelected ? AnnotterColors.white : AnnotterColors.slate[400],
+              color:
+                  isSelected ? AnnotterColors.white : AnnotterColors.slate[400],
             ),
           ),
         ),
@@ -260,7 +266,8 @@ class AnnotterSettingsDialog extends StatelessWidget {
     );
   }
 
-  Widget _buildCustomSwitch({required bool value, required ValueChanged<bool> onChanged}) {
+  Widget _buildCustomSwitch(
+      {required bool value, required ValueChanged<bool> onChanged}) {
     return InkWell(
       borderRadius: BorderRadius.circular(12),
       onTap: () => onChanged(!value),
@@ -273,7 +280,8 @@ class AnnotterSettingsDialog extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
           color: value ? AnnotterColors.sky[600] : AnnotterColors.slate[800],
           border: Border.all(
-            color: value ? AnnotterColors.sky[400]! : AnnotterColors.slate[700]!,
+            color:
+                value ? AnnotterColors.sky[400]! : AnnotterColors.slate[700]!,
             width: 1,
           ),
         ),
@@ -309,14 +317,18 @@ class AnnotterSettingsDialog extends StatelessWidget {
               height: 16,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(4),
-                color: value ? AnnotterColors.sky[600] : AnnotterColors.slate[950],
+                color:
+                    value ? AnnotterColors.sky[600] : AnnotterColors.slate[950],
                 border: Border.all(
-                  color: value ? AnnotterColors.sky[400]! : AnnotterColors.slate[700]!,
+                  color: value
+                      ? AnnotterColors.sky[400]!
+                      : AnnotterColors.slate[700]!,
                   width: 1.2,
                 ),
               ),
               child: value
-                  ? const Icon(Icons.check, size: 12, color: AnnotterColors.white)
+                  ? const Icon(Icons.check,
+                      size: 12, color: AnnotterColors.white)
                   : null,
             ),
             const SizedBox(width: 8),

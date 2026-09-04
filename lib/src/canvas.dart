@@ -44,9 +44,13 @@ class _AnnotterCanvasState extends State<AnnotterCanvas> {
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,
             onTapDown: _handleTapDown,
-            onPanStart: widget.activeMode == AnnotterMode.area ? _handlePanStart : null,
-            onPanUpdate: widget.activeMode == AnnotterMode.area ? _handlePanUpdate : null,
-            onPanEnd: widget.activeMode == AnnotterMode.area ? _handlePanEnd : null,
+            onPanStart:
+                widget.activeMode == AnnotterMode.area ? _handlePanStart : null,
+            onPanUpdate: widget.activeMode == AnnotterMode.area
+                ? _handlePanUpdate
+                : null,
+            onPanEnd:
+                widget.activeMode == AnnotterMode.area ? _handlePanEnd : null,
             child: CustomPaint(
               painter: _AnnotterPainter(
                 items: widget.items,
@@ -69,7 +73,8 @@ class _AnnotterCanvasState extends State<AnnotterCanvas> {
       return;
     }
     final info = WidgetInspectorHelper.inspectAt(context, localPos);
-    if (_hoveredWidget?.rect != info.rect || _hoveredWidget?.name != info.name) {
+    if (_hoveredWidget?.rect != info.rect ||
+        _hoveredWidget?.name != info.name) {
       setState(() => _hoveredWidget = info);
     }
   }
@@ -79,7 +84,8 @@ class _AnnotterCanvasState extends State<AnnotterCanvas> {
 
     // 1. Dedicated Select Mode: tap anywhere on annotation box or badge opens edit
     if (widget.activeMode == AnnotterMode.select) {
-      final selectedItem = _findItemAt(details.localPosition, allowEntireRect: true);
+      final selectedItem =
+          _findItemAt(details.localPosition, allowEntireRect: true);
       if (selectedItem != null) {
         widget.onRequestEdit(selectedItem);
       }
@@ -87,7 +93,8 @@ class _AnnotterCanvasState extends State<AnnotterCanvas> {
     }
 
     // 2. In other modes: direct tap on numbered badge edits the item
-    final tappedItem = _findItemAt(details.localPosition, allowEntireRect: false);
+    final tappedItem =
+        _findItemAt(details.localPosition, allowEntireRect: false);
     if (tappedItem != null) {
       widget.onRequestEdit(tappedItem);
       return;
@@ -95,7 +102,8 @@ class _AnnotterCanvasState extends State<AnnotterCanvas> {
 
     // 2. Create new annotation based on active tool
     if (widget.activeMode == AnnotterMode.widget) {
-      final info = WidgetInspectorHelper.inspectAt(context, details.localPosition);
+      final info =
+          WidgetInspectorHelper.inspectAt(context, details.localPosition);
       final newItem = AnnotterItem(
         id: DateTime.now().millisecondsSinceEpoch,
         number: widget.items.length + 1,
@@ -149,9 +157,11 @@ class _AnnotterCanvasState extends State<AnnotterCanvas> {
           id: DateTime.now().millisecondsSinceEpoch,
           number: widget.items.length + 1,
           rect: rect,
-          widgetName: (info.name != 'Element' && !info.name.contains('Gesture') && !info.name.contains('Detector'))
-            ? info.name
-            : 'SelectionArea',
+          widgetName: (info.name != 'Element' &&
+                  !info.name.contains('Gesture') &&
+                  !info.name.contains('Detector'))
+              ? info.name
+              : 'SelectionArea',
           hierarchy: info.hierarchy,
           mode: AnnotterMode.area,
           isScrollable: info.isScrollable,
@@ -169,7 +179,9 @@ class _AnnotterCanvasState extends State<AnnotterCanvas> {
 
   AnnotterItem? _findItemAt(Offset pos, {bool allowEntireRect = false}) {
     for (final item in widget.items.reversed) {
-      final dy = item.isScrollable ? (item.scrollOffsetAtCreation - widget.currentScrollOffset) : 0.0;
+      final dy = item.isScrollable
+          ? (item.scrollOffsetAtCreation - widget.currentScrollOffset)
+          : 0.0;
       final displayRect = item.rect.translate(0, dy);
 
       final badgeCenter = item.mode == AnnotterMode.point
@@ -228,7 +240,8 @@ class _AnnotterPainter extends CustomPainter {
       canvas.drawRRect(rrect, hoverBorder);
 
       // Floating DevTools Tag Banner
-      final labelText = '${hoveredWidget!.name} ${rect.width.toInt()}×${rect.height.toInt()}';
+      final labelText =
+          '${hoveredWidget!.name} ${rect.width.toInt()}×${rect.height.toInt()}';
       final textPainter = TextPainter(
         text: TextSpan(
           text: labelText,
@@ -245,11 +258,18 @@ class _AnnotterPainter extends CustomPainter {
 
       final tagWidth = textPainter.width + 12;
       final tagHeight = 18.0;
-      final tagTop = (rect.top - tagHeight >= 4) ? (rect.top - tagHeight) : rect.bottom + 2;
-      final tagRect = Rect.fromLTWH(rect.left.clamp(4.0, size.width - tagWidth - 4), tagTop, tagWidth, tagHeight);
+      final tagTop = (rect.top - tagHeight >= 4)
+          ? (rect.top - tagHeight)
+          : rect.bottom + 2;
+      final tagRect = Rect.fromLTWH(
+          rect.left.clamp(4.0, size.width - tagWidth - 4),
+          tagTop,
+          tagWidth,
+          tagHeight);
 
       final tagPaint = Paint()..color = const Color(0xFF0284C7);
-      canvas.drawRRect(RRect.fromRectAndRadius(tagRect, const Radius.circular(4)), tagPaint);
+      canvas.drawRRect(
+          RRect.fromRectAndRadius(tagRect, const Radius.circular(4)), tagPaint);
 
       textPainter.paint(
         canvas,
@@ -259,7 +279,9 @@ class _AnnotterPainter extends CustomPainter {
 
     // 2. Existing Annotations (Transformed by Scroll Offset)
     for (final item in items) {
-      final dy = item.isScrollable ? (item.scrollOffsetAtCreation - currentScrollOffset) : 0.0;
+      final dy = item.isScrollable
+          ? (item.scrollOffsetAtCreation - currentScrollOffset)
+          : 0.0;
       final displayRect = item.rect.translate(0, dy);
 
       // Skip painting if scrolled completely off-screen
@@ -270,7 +292,8 @@ class _AnnotterPainter extends CustomPainter {
       final color = _getColor(item.mode);
 
       if (item.mode != AnnotterMode.point) {
-        final rrect = RRect.fromRectAndRadius(displayRect, const Radius.circular(8));
+        final rrect =
+            RRect.fromRectAndRadius(displayRect, const Radius.circular(8));
         final fillPaint = Paint()
           ..color = color.withValues(alpha: 0.18)
           ..style = PaintingStyle.fill;

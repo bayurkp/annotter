@@ -33,18 +33,21 @@ void main() {
       viewportSize: const Size(390, 844),
     );
 
-    expect(md, contains('## UI Revision Request (Total: 2 notes across 1 view)'));
+    expect(
+        md, contains('## UI Revision Request (Total: 2 notes across 1 view)'));
     expect(md, contains('**Viewport:** 390x844'));
     expect(md, contains('### 📱 Page: DashboardScreen'));
     expect(md, contains('1. [WIDGET] **SubmitButton**'));
-    expect(md, contains('Tree: DashboardPage > FormCard > ActionRow > SubmitButton'));
+    expect(md,
+        contains('Tree: DashboardPage > FormCard > ActionRow > SubmitButton'));
     expect(md, contains('Position: x:20, y:100 (w:200, h:50)'));
     expect(md, contains('Note: Change button text to Save'));
     expect(md, contains('2. [AREA] **CustomHeader**'));
     expect(md, contains('Note: Padding is too small'));
   });
 
-  test('AnnotterExporter formats multi-view sections and environment correctly', () {
+  test('AnnotterExporter formats multi-view sections and environment correctly',
+      () {
     final item1 = AnnotterItem(
       id: 1,
       number: 1,
@@ -60,7 +63,12 @@ void main() {
       number: 2,
       rect: const Rect.fromLTWH(20, 210, 344, 115),
       widgetName: 'MissionCard',
-      hierarchy: ['MissionCard', 'MissionSection', 'CustomScrollView', 'HomeScreen'],
+      hierarchy: [
+        'MissionCard',
+        'MissionSection',
+        'CustomScrollView',
+        'HomeScreen'
+      ],
       note: 'Margin is too tight',
       mode: AnnotterMode.area,
       screenName: 'HomeScreen',
@@ -96,23 +104,30 @@ void main() {
       environment: env,
     );
 
-    expect(md, contains('## UI Revision Request (Total: 2 notes across 2 views)'));
-    expect(md, contains('**Environment:** Android • Dark Mode • Text Scale: 1.0x • Portrait'));
+    expect(
+        md, contains('## UI Revision Request (Total: 2 notes across 2 views)'));
+    expect(
+        md,
+        contains(
+            '**Environment:** Android • Dark Mode • Text Scale: 1.0x • Portrait'));
     expect(md, contains('**Viewport:** 384x805 (DPR: 2.75x)'));
     expect(md, contains('**Route:** /home'));
     expect(md, contains('**Generated:** 2026-09-03 20:10:42'));
     expect(md, contains('### 📸 View 1: HomeScreen (Top)'));
-    expect(md, contains('**Screenshot:** `/sdcard/Download/annotter_view_1.png`'));
+    expect(
+        md, contains('**Screenshot:** `/sdcard/Download/annotter_view_1.png`'));
     expect(md, contains('1. [WIDGET] **HomeSearchBar**'));
     expect(md, contains('Tree: HomeScreen > CustomScrollView > HomeSearchBar'));
     expect(md, contains('Note: Change placeholder'));
     expect(md, contains('### 📸 View 2: HomeScreen (Scrolled to 650px)'));
-    expect(md, contains('**Screenshot:** `/sdcard/Download/annotter_view_2.png`'));
+    expect(
+        md, contains('**Screenshot:** `/sdcard/Download/annotter_view_2.png`'));
     expect(md, contains('2. [AREA] **MissionCard**'));
     expect(md, contains('Note: Margin is too tight'));
   });
 
-  test('AnnotterExporter formats intent, severity, content, and detail levels', () {
+  test('AnnotterExporter formats intent, severity, content, and detail levels',
+      () {
     final item = AnnotterItem(
       id: 1,
       number: 1,
@@ -131,7 +146,8 @@ void main() {
       items: [item],
       detailLevel: 'detailed',
     );
-    expect(detailed, contains('1. [WIDGET][FIX][BLOCKING] **AppButton > Text**'));
+    expect(
+        detailed, contains('1. [WIDGET][FIX][BLOCKING] **AppButton > Text**'));
     expect(detailed, contains('Tree: HomeScreen > AppButton > Text'));
     expect(detailed, contains('Position: x:10, y:20'));
     expect(detailed, contains('Content: "Settigns"'));
@@ -142,7 +158,8 @@ void main() {
       items: [item],
       detailLevel: 'compact',
     );
-    expect(compact, contains('1. [WIDGET][FIX][BLOCKING] **AppButton > Text**'));
+    expect(
+        compact, contains('1. [WIDGET][FIX][BLOCKING] **AppButton > Text**'));
     expect(compact, isNot(contains('Tree:')));
     expect(compact, isNot(contains('Position:')));
     expect(compact, contains('Note: Fix typo on button'));

@@ -116,7 +116,8 @@ class _AnnotationDialogState extends State<AnnotationDialog> {
                     ),
                     if (!widget.isNew)
                       IconButton(
-                        icon: Icon(Icons.delete_outline, color: AnnotterColors.rose[400], size: 20),
+                        icon: Icon(Icons.delete_outline,
+                            color: AnnotterColors.rose[400], size: 20),
                         onPressed: widget.onDelete,
                       ),
                   ],
@@ -124,7 +125,10 @@ class _AnnotationDialogState extends State<AnnotationDialog> {
                 if (widget.item.hierarchy.isNotEmpty) ...[
                   const SizedBox(height: 6),
                   Text(
-                    widget.item.hierarchy.reversed.take(3).map((w) => '<$w>').join(' '),
+                    widget.item.hierarchy.reversed
+                        .take(3)
+                        .map((w) => '<$w>')
+                        .join(' '),
                     style: TextStyle(
                       fontSize: 11,
                       fontFamily: 'monospace',
@@ -150,12 +154,17 @@ class _AnnotationDialogState extends State<AnnotationDialog> {
                         });
                       },
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: isSelected ? intent.$3[600] : AnnotterColors.slate[800],
+                          color: isSelected
+                              ? intent.$3[600]
+                              : AnnotterColors.slate[800],
                           borderRadius: BorderRadius.circular(6),
                           border: Border.all(
-                            color: isSelected ? intent.$3[400]! : AnnotterColors.slate[700]!,
+                            color: isSelected
+                                ? intent.$3[400]!
+                                : AnnotterColors.slate[700]!,
                             width: 1,
                           ),
                         ),
@@ -163,8 +172,11 @@ class _AnnotationDialogState extends State<AnnotationDialog> {
                           intent.$2,
                           style: TextStyle(
                             fontSize: 11,
-                            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                            color: isSelected ? AnnotterColors.white : AnnotterColors.slate[300],
+                            fontWeight:
+                                isSelected ? FontWeight.bold : FontWeight.w500,
+                            color: isSelected
+                                ? AnnotterColors.white
+                                : AnnotterColors.slate[300],
                           ),
                         ),
                       ),
@@ -188,12 +200,17 @@ class _AnnotationDialogState extends State<AnnotationDialog> {
                         });
                       },
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
-                          color: isSelected ? sev.$3[600] : AnnotterColors.slate[800],
+                          color: isSelected
+                              ? sev.$3[600]
+                              : AnnotterColors.slate[800],
                           borderRadius: BorderRadius.circular(6),
                           border: Border.all(
-                            color: isSelected ? sev.$3[400]! : AnnotterColors.slate[700]!,
+                            color: isSelected
+                                ? sev.$3[400]!
+                                : AnnotterColors.slate[700]!,
                             width: 1,
                           ),
                         ),
@@ -201,8 +218,12 @@ class _AnnotationDialogState extends State<AnnotationDialog> {
                           sev.$2,
                           style: TextStyle(
                             fontSize: 10.5,
-                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                            color: isSelected ? AnnotterColors.white : AnnotterColors.slate[400],
+                            fontWeight: isSelected
+                                ? FontWeight.bold
+                                : FontWeight.normal,
+                            color: isSelected
+                                ? AnnotterColors.white
+                                : AnnotterColors.slate[400],
                           ),
                         ),
                       ),
@@ -215,10 +236,16 @@ class _AnnotationDialogState extends State<AnnotationDialog> {
                   controller: _controller,
                   autofocus: true,
                   maxLines: 3,
-                  style: const TextStyle(fontSize: 13, color: AnnotterColors.white, fontFamily: 'sans-serif'),
+                  style: const TextStyle(
+                      fontSize: 13,
+                      color: AnnotterColors.white,
+                      fontFamily: 'sans-serif'),
                   decoration: InputDecoration(
                     hintText: 'What needs to be fixed here?',
-                    hintStyle: TextStyle(fontSize: 12, color: AnnotterColors.slate[500], fontFamily: 'sans-serif'),
+                    hintStyle: TextStyle(
+                        fontSize: 12,
+                        color: AnnotterColors.slate[500],
+                        fontFamily: 'sans-serif'),
                     filled: true,
                     fillColor: AnnotterColors.slate[950],
                     contentPadding: const EdgeInsets.all(12),
@@ -228,7 +255,8 @@ class _AnnotationDialogState extends State<AnnotationDialog> {
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(color: AnnotterColors.sky[500]!, width: 1.5),
+                      borderSide: BorderSide(
+                          color: AnnotterColors.sky[500]!, width: 1.5),
                     ),
                   ),
                 ),
@@ -239,16 +267,24 @@ class _AnnotationDialogState extends State<AnnotationDialog> {
                     OutlinedButton(
                       style: OutlinedButton.styleFrom(
                         foregroundColor: AnnotterColors.slate[300],
-                        backgroundColor: AnnotterColors.white.withValues(alpha: 0.06),
-                        side: BorderSide(color: AnnotterColors.white.withValues(alpha: 0.12)),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        backgroundColor:
+                            AnnotterColors.white.withValues(alpha: 0.06),
+                        side: BorderSide(
+                            color:
+                                AnnotterColors.white.withValues(alpha: 0.12)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8)),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 10),
                         minimumSize: const Size(0, 36),
                       ),
                       onPressed: widget.onCancel,
                       child: const Text(
                         'Cancel',
-                        style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, fontFamily: 'sans-serif'),
+                        style: TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w600,
+                            fontFamily: 'sans-serif'),
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -258,17 +294,23 @@ class _AnnotationDialogState extends State<AnnotationDialog> {
                         foregroundColor: AnnotterColors.white,
                         elevation: 0,
                         side: BorderSide(color: AnnotterColors.sky[400]!),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8)),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 10),
                         minimumSize: const Size(0, 36),
                       ),
                       icon: const Icon(Icons.check, size: 16),
                       label: const Text(
                         'Save Note',
-                        style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, fontFamily: 'sans-serif'),
+                        style: TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'sans-serif'),
                       ),
                       onPressed: () {
-                        widget.onSave(_controller.text.trim(), _selectedIntent, _selectedSeverity);
+                        widget.onSave(_controller.text.trim(), _selectedIntent,
+                            _selectedSeverity);
                       },
                     ),
                   ],

@@ -17,7 +17,9 @@ class _AnnotterExampleAppState extends State<AnnotterExampleApp> {
 
   void _toggleTheme() {
     setState(() {
-      _themeMode = _themeMode == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark;
+      _themeMode = _themeMode == ThemeMode.dark
+          ? ThemeMode.light
+          : ThemeMode.dark;
     });
   }
 
@@ -100,7 +102,11 @@ class _DemoHomeScreenState extends State<DemoHomeScreen> {
                 Row(
                   children: [
                     IconButton(
-                      icon: Icon(widget.isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded),
+                      icon: Icon(
+                        widget.isDark
+                            ? Icons.light_mode_rounded
+                            : Icons.dark_mode_rounded,
+                      ),
                       onPressed: widget.onToggleTheme,
                       tooltip: 'Toggle Dark/Light Mode',
                     ),
@@ -113,7 +119,9 @@ class _DemoHomeScreenState extends State<DemoHomeScreen> {
             const SizedBox(height: 16),
 
             // 2. Search Bar Component
-            const AppSearchBar(hintText: 'Search tasks, components, metrics...'),
+            const AppSearchBar(
+              hintText: 'Search tasks, components, metrics...',
+            ),
             const SizedBox(height: 16),
 
             // 3. Stats Row
@@ -152,10 +160,7 @@ class _DemoHomeScreenState extends State<DemoHomeScreen> {
             // 4. Section title
             const Text(
               'Active Tasks',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
 
@@ -252,10 +257,7 @@ class AppSearchBar extends StatelessWidget {
           Expanded(
             child: Text(
               hintText,
-              style: TextStyle(
-                color: Colors.grey.shade500,
-                fontSize: 13,
-              ),
+              style: TextStyle(color: Colors.grey.shade500, fontSize: 13),
               overflow: TextOverflow.ellipsis,
             ),
           ),
@@ -314,10 +316,7 @@ class MetricStatCard extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             value,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 2),
           Text(
@@ -390,20 +389,14 @@ class TaskActionCard extends StatelessWidget {
                 const SizedBox(height: 3),
                 Text(
                   subtitle,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey.shade500,
-                  ),
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
                   overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
           ),
           const SizedBox(width: 10),
-          CustomActionButton(
-            text: buttonText,
-            onPressed: onPressed,
-          ),
+          CustomActionButton(text: buttonText, onPressed: onPressed),
         ],
       ),
     );
