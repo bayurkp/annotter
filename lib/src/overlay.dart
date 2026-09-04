@@ -36,6 +36,7 @@ class Annotter extends StatefulWidget {
 class _AnnotterState extends State<Annotter> {
   final GlobalKey _repaintBoundaryKey = GlobalKey();
   final GlobalKey _appChildKey = GlobalKey();
+  Key _appSubtreeKey = UniqueKey();
 
   bool _isActive = false;
   AnnotterMode _activeMode = AnnotterMode.widget;
@@ -57,6 +58,15 @@ class _AnnotterState extends State<Annotter> {
   bool? _isMcpConnected;
   bool _isCopiedFeedback = false;
   Timer? _copiedTimer;
+
+  void _handleHotReload() {
+    try {
+      WidgetsBinding.instance.reassembleApplication();
+    } catch (_) {}
+    setState(() {
+      _appSubtreeKey = UniqueKey();
+    });
+  }
 
   @override
   void initState() {
@@ -184,7 +194,13 @@ class _AnnotterState extends State<Annotter> {
                 return Stack(
                   fit: StackFit.expand,
                   children: [
-                    KeyedSubtree(key: _appChildKey, child: widget.child),
+                    KeyedSubtree(
+                      key: _appChildKey,
+                      child: KeyedSubtree(
+                        key: _appSubtreeKey,
+                        child: widget.child,
+                      ),
+                    ),
                     _buildIdleFab(mediaQuery, size),
                   ],
                 );
@@ -279,8 +295,12 @@ class _AnnotterState extends State<Annotter> {
                                                       _blockInteractions &&
                                                           _isActive,
                                                   child: KeyedSubtree(
-                                                      key: _appChildKey,
-                                                      child: widget.child),
+                                                    key: _appChildKey,
+                                                    child: KeyedSubtree(
+                                                      key: _appSubtreeKey,
+                                                      child: widget.child,
+                                                    ),
+                                                  ),
                                                 ),
                                               ),
                                             ),
@@ -328,48 +348,55 @@ class _AnnotterState extends State<Annotter> {
                           _buildModalBackdrop(
                             onDismiss: () =>
                                 setState(() => _activeDialogItem = null),
-                            child: SingleChildScrollView(
-                              child: AnnotationDialog(
-                                item: _activeDialogItem!,
-                                isNew: _isCreatingItem,
-                                onCancel: () =>
-                                    setState(() => _activeDialogItem = null),
-                                onDelete: () {
-                                  final deletedId = _activeDialogItem?.id;
-                                  _saveSnapshot();
-                                  setState(() {
-                                    _items.removeWhere(
-                                        (i) => i.id == _activeDialogItem!.id);
-                                    _renumberItems();
-                                    _activeDialogItem = null;
-                                  });
-                                  if (deletedId != null) {
-                                    _syncClient?.deleteAnnotation(deletedId);
-                                  }
-                                },
-                                onSave: (note, intent, severity) {
-                                  final currentItem = _activeDialogItem;
-                                  _saveSnapshot();
-                                  setState(() {
-                                    _activeDialogItem!.note = note;
-                                    _activeDialogItem!.intent = intent;
-                                    _activeDialogItem!.severity = severity;
-                                    if (_isCreatingItem)
-                                      _items.add(_activeDialogItem!);
-                                    _activeDialogItem = null;
-                                  });
-                                  if (currentItem != null) {
-                                    _captureScreenshot(
-                                            'annotter_${currentItem.id}.png')
-                                        .then((path) {
-                                      _syncClient?.syncAnnotation(
-                                        currentItem,
-                                        route: _activeScreenName,
-                                        screenshotPath: path,
-                                      );
+                            child: AnimatedPadding(
+                              duration: const Duration(milliseconds: 180),
+                              curve: Curves.easeOutCubic,
+                              padding: EdgeInsets.only(
+                                bottom: mediaQuery.viewInsets.bottom,
+                              ),
+                              child: SingleChildScrollView(
+                                child: AnnotationDialog(
+                                  item: _activeDialogItem!,
+                                  isNew: _isCreatingItem,
+                                  onCancel: () =>
+                                      setState(() => _activeDialogItem = null),
+                                  onDelete: () {
+                                    final deletedId = _activeDialogItem?.id;
+                                    _saveSnapshot();
+                                    setState(() {
+                                      _items.removeWhere(
+                                          (i) => i.id == _activeDialogItem!.id);
+                                      _renumberItems();
+                                      _activeDialogItem = null;
                                     });
-                                  }
-                                },
+                                    if (deletedId != null) {
+                                      _syncClient?.deleteAnnotation(deletedId);
+                                    }
+                                  },
+                                  onSave: (note, intent, severity) {
+                                    final currentItem = _activeDialogItem;
+                                    _saveSnapshot();
+                                    setState(() {
+                                      _activeDialogItem!.note = note;
+                                      _activeDialogItem!.intent = intent;
+                                      _activeDialogItem!.severity = severity;
+                                      if (_isCreatingItem)
+                                        _items.add(_activeDialogItem!);
+                                      _activeDialogItem = null;
+                                    });
+                                    if (currentItem != null) {
+                                      _captureScreenshot(
+                                              'annotter_${currentItem.id}.png')
+                                          .then((path) {
+                                        _syncClient?.syncAnnotation(
+                                          currentItem,
+                                          route: _activeScreenName,
+                                          screenshotPath: path,
+                                        );
+                                      });
+                                    }
+                                  },
+                                ),
                               ),
                             ),
                           ),
@@ -553,9 +580,81 @@ class _AnnotterState extends State<Annotter> {
                   ),
                 ),
 
-                const SizedBox(width: 8),
+                const SizedBox(width: 6),
 
-                // 3. Action Buttons Group (Undo, Redo, Pause, List, Settings, Clear)
+                // 3. Copy / Sent CTA Button (Placed prominently before Undo for quick access)
+                InkWell(
+                  borderRadius: BorderRadius.circular(8),
+                  onTap: _copyNotes,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    height: 34,
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    decoration: BoxDecoration(
+                      gradient: _isCopiedFeedback
+                          ? const LinearGradient(
+                              colors: [Color(0xFF059669), Color(0xFF047857)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            )
+                          : const LinearGradient(
+                              colors: [Color(0xFF0284C7), Color(0xFF0369A1)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: _isCopiedFeedback
+                            ? const Color(0x6634D399)
+                            : const Color(0x6638BDF8),
+                        width: 0.8,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: (_isCopiedFeedback
+                                  ? const Color(0xFF059669)
+                                  : const Color(0xFF0284C7))
+                              .withValues(alpha: 0.35),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          _isCopiedFeedback
+                              ? Icons.check_rounded
+                              : Icons.copy_rounded,
+                          color: Colors.white,
+                          size: 15,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          _isCopiedFeedback
+                              ? (_syncClient != null
+                                  ? 'Sent & Copied'
+                                  : 'Copied!')
+                              : (_items.isEmpty
+                                  ? 'Copy'
+                                  : 'Copy (${_items.length})'),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'sans-serif',
+                            letterSpacing: 0.2,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                const SizedBox(width: 6),
+
+                // 4. Action Buttons Group (Undo, Redo, Hot Reload, Pause, List, Settings, Clear)
                 _buildActionSquare(
                   icon: Icons.undo_rounded,
                   tooltip: 'Undo',
@@ -569,6 +668,15 @@ class _AnnotterState extends State<Annotter> {
                   tooltip: 'Redo',
                   enabled: _redoStack.isNotEmpty,
                   onTap: _redoStack.isEmpty ? null : _redo,
+                ),
+                const SizedBox(width: 4),
+
+                // Hot Reload & Re-render Button
+                _buildActionSquare(
+                  icon: Icons.refresh_rounded,
+                  tooltip: 'Hot Reload & Refresh',
+                  enabled: true,
+                  onTap: _handleHotReload,
                 ),
                 const SizedBox(width: 4),
 
@@ -623,76 +731,6 @@ class _AnnotterState extends State<Annotter> {
                 ],
 
                 const SizedBox(width: 4),
-
-                // 4. Copy CTA Button (High-contrast DevTools Blue or Emerald Copied state)
-                InkWell(
-                  borderRadius: BorderRadius.circular(8),
-                  onTap: _copyNotes,
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    height: 34,
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    decoration: BoxDecoration(
-                      gradient: _isCopiedFeedback
-                          ? const LinearGradient(
-                              colors: [Color(0xFF059669), Color(0xFF047857)],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            )
-                          : const LinearGradient(
-                              colors: [Color(0xFF0284C7), Color(0xFF0369A1)],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: _isCopiedFeedback
-                            ? const Color(0x6634D399)
-                            : const Color(0x6638BDF8),
-                        width: 0.8,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: (_isCopiedFeedback
-                                  ? const Color(0xFF059669)
-                                  : const Color(0xFF0284C7))
-                              .withValues(alpha: 0.35),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          _isCopiedFeedback
-                              ? Icons.check_rounded
-                              : Icons.copy_rounded,
-                          color: Colors.white,
-                          size: 15,
-                        ),
-                        const SizedBox(width: 5),
-                        Text(
-                          _isCopiedFeedback
-                              ? (_syncClient != null
-                                  ? 'Sent & Copied'
-                                  : 'Copied!')
-                              : (_items.isEmpty
-                                  ? 'Copy'
-                                  : 'Copy (${_items.length})'),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            fontFamily: 'sans-serif',
-                            letterSpacing: 0.2,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
                 const SizedBox(width: 6),
               ],
             ),
@@ -714,49 +752,34 @@ class _AnnotterState extends State<Annotter> {
             ? const Color(0xFF6366F1)
             : const Color(0xFF0284C7);
 
-    return InkWell(
-      borderRadius: BorderRadius.circular(7),
-      onTap: () => setState(() => _activeMode = mode),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        height: 28,
-        padding: EdgeInsets.symmetric(horizontal: isSelected ? 10 : 8),
-        decoration: BoxDecoration(
-          color: isSelected ? activeColor : Colors.transparent,
-          borderRadius: BorderRadius.circular(7),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: activeColor.withValues(alpha: 0.4),
-                    blurRadius: 6,
-                    offset: const Offset(0, 1),
-                  ),
-                ]
-              : null,
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              icon,
-              size: 15,
-              color: isSelected ? Colors.white : Colors.white60,
-            ),
-            if (isSelected) ...[
-              const SizedBox(width: 5),
-              Text(
-                label,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                  fontFamily: 'sans-serif',
-                  letterSpacing: 0.1,
-                ),
-              ),
-            ],
-          ],
+    return Tooltip(
+      message: label,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(7),
+        onTap: () => setState(() => _activeMode = mode),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          width: 28,
+          height: 28,
+          decoration: BoxDecoration(
+            color: isSelected ? activeColor : Colors.transparent,
+            borderRadius: BorderRadius.circular(7),
+            boxShadow: isSelected
+                ? [
+                    BoxShadow(
+                      color: activeColor.withValues(alpha: 0.4),
+                      blurRadius: 6,
+                      offset: const Offset(0, 1),
+                    ),
+                  ]
+                : null,
+          ),
+          alignment: Alignment.center,
+          child: Icon(
+            icon,
+            size: 16,
+            color: isSelected ? Colors.white : Colors.white60,
+          ),
         ),
       ),
     );
