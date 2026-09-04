@@ -75,10 +75,27 @@ class WidgetInspectorHelper {
     return true;
   }
 
+  /// Framework plumbing and theme wrappers that should never be selected as the main target
+  static const _frameworkPlumbing = {
+    // Layout primitives
+    'Container', 'SizedBox', 'Padding', 'Center', 'Align',
+    'Row', 'Column', 'Stack', 'Flex', 'Wrap',
+    'Expanded', 'Flexible', 'Spacer', 'SafeArea',
+    // Theme & canvas infrastructure
+    'Material', 'Theme', 'CupertinoTheme', 'AnimatedTheme',
+    'DefaultTextStyle', 'AnimatedDefaultTextStyle',
+    'AnimatedPhysicalModel', 'ScrollNotificationObserver',
+    'KeyedSubtree', 'AutomaticKeepAlive', 'StretchEffect',
+    'StretchingOverscrollIndicator', 'RefreshIndicator',
+  };
+
   /// Priority scoring for target resolution:
-  ///   >= 80: Semantic Target (Developer component, button, icon, text)
-  ///      30: Layout primitive (Container, Padding, etc.)
-  ///      10: Behavioral wrapper (RawGestureDetector, Focus, Builder, InkResponse, etc.)
+  ///   100: Developer Custom Component (AppButton, HomeActivityStatsCard, HomeMenuSearchBar, etc.)
+  ///    90: Semantic Interactive (ElevatedButton, TextField, etc.)
+  ///    80: Semantic Content (Icon, Text, Image)
+  ///    50: Screen / Page container (HomeScreen, etc.)
+  ///    30: Layout primitive / Framework plumbing (SafeArea, Material, Theme, etc.)
+  ///    10: Behavioral wrapper (RawGestureDetector, Focus, Builder, InkResponse, etc.)
   static int _calculatePriority(Widget widget, String name) {
     // 1. Behavioral wrappers (plumbing)
     if (widget is RawGestureDetector ||
@@ -94,12 +111,12 @@ class WidgetInspectorHelper {
       return 10;
     }
 
-    // 2. Layout primitives
-    if (_layoutPrimitives.contains(name)) {
+    // 2. Framework plumbing & layout primitives
+    if (_frameworkPlumbing.contains(name) || _layoutPrimitives.contains(name)) {
       return 30;
     }
 
-    // 3. Screen / Page containers (should not override child widgets)
+    // 3. Screen / Page containers (should not override child components)
     if (name.endsWith('Screen') || name.endsWith('Page') || name.endsWith('View')) {
       return 50;
     }
@@ -129,15 +146,40 @@ class WidgetInspectorHelper {
   }
 
   /// Resolves the primary semantic target name from the candidate chain.
-  /// Walks bottom-up and stops at the first true semantic target (priority >= 80).
-  /// Falls back to highest priority candidate if none >= 80.
+  /// Uses the composite format: [OuterComponent > InnerElement]
+  /// e.g. AppButton > Text, AppBottomNavigationBar > Icon, HomeActivityStatsCard > Text.
   static String _resolveTarget(List<_TargetCandidate> candidates) {
     if (candidates.isEmpty) return 'Element';
 
+    // 1. Find the innermost semantic element (priority 80 or 90) climbing bottom-up
+    String? innerElement;
     for (final c in candidates) {
-      if (c.priority >= 80) {
-        return c.name;
+      if (c.priority == 80 || c.priority == 90) {
+        innerElement = c.name;
+        break;
       }
+    }
+
+    // 2. Find the nearest enclosing developer custom component (priority 100)
+    String? outerComponent;
+    for (final c in candidates) {
+      if (c.priority == 100) {
+        outerComponent = c.name;
+        break;
+      }
+    }
+
+    // 3. Composite logic:
+    if (outerComponent != null && innerElement != null && outerComponent != innerElement) {
+      return '$outerComponent > $innerElement';
+    }
+
+    if (outerComponent != null) {
+      return outerComponent;
+    }
+
+    if (innerElement != null) {
+      return innerElement;
     }
 
     final sorted = List.of(candidates)..sort((a, b) => b.priority.compareTo(a.priority));
@@ -147,7 +189,7 @@ class WidgetInspectorHelper {
   static void _findContentChild(Element element, void Function(Widget widget, String name) onFound) {
     bool found = false;
     void search(Element el, int depth) {
-      if (found || depth > 3) return;
+      if (found || depth > 4) return;
       final type = cleanType(el.widget.runtimeType.toString());
       if (type == 'Icon' || type == 'Text' || type == 'Image') {
         onFound(el.widget, type);
@@ -227,7 +269,7 @@ class WidgetInspectorHelper {
       final List<String> chain = [];
       final List<_TargetCandidate> candidates = [];
 
-      // Check if button has a content child (Icon/Text)
+      // Check if container has a content child (Icon/Text) so button padding taps still identify content
       _findContentChild(element, (childWidget, childName) {
         chain.add(childName);
         candidates.add(_TargetCandidate(childWidget, childName, 80));
@@ -235,10 +277,8 @@ class WidgetInspectorHelper {
 
       if (_isComponentCandidate(element.widget)) {
         final rawType = cleanType(element.widget.runtimeType.toString());
-        if (chain.isEmpty || chain.last != rawType) {
-          chain.add(rawType);
-          candidates.add(_TargetCandidate(element.widget, rawType, _calculatePriority(element.widget, rawType)));
-        }
+        chain.add(rawType);
+        candidates.add(_TargetCandidate(element.widget, rawType, _calculatePriority(element.widget, rawType)));
       }
 
       element.visitAncestorElements((ancestor) {
