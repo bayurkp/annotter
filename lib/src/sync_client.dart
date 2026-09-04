@@ -37,6 +37,32 @@ class AnnotterSyncClient {
     return false;
   }
 
+  /// Serializes an AnnotterItem into JSON map for MCP server
+  Map<String, dynamic> _itemToJson(AnnotterItem item,
+      {String? route, String? screenshotPath}) {
+    return {
+      'id': 'ann_${item.id}',
+      'number': item.number,
+      'widgetName': item.widgetName,
+      'selectedText': item.selectedText,
+      'hierarchy': item.hierarchy,
+      'note': item.note,
+      'intent': item.intent ?? 'fix',
+      'severity': item.severity ?? 'important',
+      'status': 'pending',
+      'mode': item.mode.name,
+      'route': route ?? item.screenName,
+      'screenshotPath': screenshotPath,
+      'timestamp': DateTime.now().millisecondsSinceEpoch,
+      'rect': {
+        'x': item.rect.left,
+        'y': item.rect.top,
+        'width': item.rect.width,
+        'height': item.rect.height,
+      },
+    };
+  }
+
   /// Sends a newly created or updated annotation to the MCP server
   Future<bool> syncAnnotation(AnnotterItem item,
       {String? route, String? screenshotPath}) async {
@@ -46,27 +72,30 @@ class AnnotterSyncClient {
       final request = await _httpClient.postUrl(uri);
       request.headers.contentType = ContentType.json;
 
-      final payload = jsonEncode({
-        'id': 'ann_${item.id}',
-        'number': item.number,
-        'widgetName': item.widgetName,
-        'selectedText': item.selectedText,
-        'hierarchy': item.hierarchy,
-        'note': item.note,
-        'intent': item.intent ?? 'fix',
-        'severity': item.severity ?? 'important',
-        'status': 'pending',
-        'mode': item.mode.name,
-        'route': route ?? item.screenName,
-        'screenshotPath': screenshotPath,
-        'timestamp': DateTime.now().millisecondsSinceEpoch,
-        'rect': {
-          'x': item.rect.left,
-          'y': item.rect.top,
-          'width': item.rect.width,
-          'height': item.rect.height,
-        },
-      });
+      final payload = jsonEncode(
+          _itemToJson(item, route: route, screenshotPath: screenshotPath));
+
+      request.write(payload);
+      final response = await request.close();
+      return response.statusCode >= 200 && response.statusCode < 300;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Syncs multiple annotations in bulk to the MCP server (e.g. on Copy/Export)
+  Future<bool> syncAllAnnotations(List<AnnotterItem> items,
+      {String? route, String? screenshotPath}) async {
+    if (kIsWeb || items.isEmpty) return false;
+    try {
+      final uri = _uri('/api/annotations');
+      final request = await _httpClient.postUrl(uri);
+      request.headers.contentType = ContentType.json;
+
+      final payload = jsonEncode(items
+          .map((item) =>
+              _itemToJson(item, route: route, screenshotPath: screenshotPath))
+          .toList());
 
       request.write(payload);
       final response = await request.close();

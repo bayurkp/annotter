@@ -77,7 +77,20 @@ const httpServer = http.createServer((req, res) => {
     req.on("data", (chunk) => (body += chunk));
     req.on("end", () => {
       try {
-        const item = JSON.parse(body);
+        const data = JSON.parse(body);
+        if (Array.isArray(data)) {
+          for (const item of data) {
+            if (item && item.id) {
+              annotations.set(item.id, item);
+            }
+          }
+          log(`Batch synced ${data.length} annotations`);
+          res.writeHead(200, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ success: true, count: data.length }));
+          return;
+        }
+
+        const item = data;
         if (!item.id) {
           res.writeHead(400, { "Content-Type": "application/json" });
           res.end(JSON.stringify({ error: "Missing item id" }));

@@ -54,6 +54,8 @@ class _AnnotterState extends State<Annotter> {
   AnnotterSyncClient? _syncClient;
   Timer? _statusPollTimer;
   bool? _isMcpConnected;
+  bool _isCopiedFeedback = false;
+  Timer? _copiedTimer;
 
   @override
   void initState() {
@@ -75,6 +77,7 @@ class _AnnotterState extends State<Annotter> {
 
   @override
   void dispose() {
+    _copiedTimer?.cancel();
     _statusPollTimer?.cancel();
     _syncClient?.dispose();
     super.dispose();
@@ -617,26 +620,39 @@ class _AnnotterState extends State<Annotter> {
 
                 const SizedBox(width: 4),
 
-                // 4. Copy CTA Button (High-contrast DevTools Blue Gradient)
+                // 4. Copy CTA Button (High-contrast DevTools Blue or Emerald Copied state)
                 InkWell(
                   borderRadius: BorderRadius.circular(8),
                   onTap: _copyNotes,
-                  child: Container(
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
                     height: 34,
                     padding: const EdgeInsets.symmetric(horizontal: 12),
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF0284C7), Color(0xFF0369A1)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
+                      gradient: _isCopiedFeedback
+                          ? const LinearGradient(
+                              colors: [Color(0xFF059669), Color(0xFF047857)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            )
+                          : const LinearGradient(
+                              colors: [Color(0xFF0284C7), Color(0xFF0369A1)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
-                          color: const Color(0x6638BDF8), width: 0.8),
+                        color: _isCopiedFeedback
+                            ? const Color(0x6634D399)
+                            : const Color(0x6638BDF8),
+                        width: 0.8,
+                      ),
                       boxShadow: [
                         BoxShadow(
-                          color:
-                              const Color(0xFF0284C7).withValues(alpha: 0.35),
+                          color: (_isCopiedFeedback
+                                  ? const Color(0xFF059669)
+                                  : const Color(0xFF0284C7))
+                              .withValues(alpha: 0.35),
                           blurRadius: 8,
                           offset: const Offset(0, 2),
                         ),
@@ -645,11 +661,22 @@ class _AnnotterState extends State<Annotter> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.copy_rounded,
-                            color: Colors.white, size: 15),
+                        Icon(
+                          _isCopiedFeedback
+                              ? Icons.check_rounded
+                              : Icons.copy_rounded,
+                          color: Colors.white,
+                          size: 15,
+                        ),
                         const SizedBox(width: 5),
                         Text(
-                          _items.isEmpty ? 'Copy' : 'Copy (${_items.length})',
+                          _isCopiedFeedback
+                              ? (_syncClient != null
+                                  ? 'Sent & Copied'
+                                  : 'Copied!')
+                              : (_items.isEmpty
+                                  ? 'Copy'
+                                  : 'Copy (${_items.length})'),
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 11,
@@ -1051,7 +1078,7 @@ class _AnnotterState extends State<Annotter> {
       }
     }
 
-    // Export structured Markdown with configured detail level and tree inclusion
+    // 1. Export structured Markdown to clipboard
     await AnnotterExporter.copyToClipboard(
       items: _items,
       routeName: dynamicRoute,
@@ -1062,22 +1089,31 @@ class _AnnotterState extends State<Annotter> {
       includeTree: _includeTree,
     );
 
+    // 2. Automatically sync all annotations to MCP server if connected
+    if (_syncClient != null && _items.isNotEmpty) {
+      final mainScreenshot =
+          sections.isNotEmpty ? sections.first.screenshotPath : null;
+      _syncClient!.syncAllAnnotations(
+        _items,
+        route: _activeScreenName,
+        screenshotPath: mainScreenshot,
+      );
+    }
+
     if (_clearOnCopy) {
       _saveSnapshot();
       setState(() => _items.clear());
     }
 
+    // 3. Smooth in-place visual feedback on the button (2s green checkmark, no intrusive snackbar)
     if (mounted) {
-      final viewsCount = sections.length;
-      final msg = viewsCount > 1
-          ? '✓ Copied Markdown & $viewsCount Screenshots!'
-          : '✓ Copied Markdown & Screenshot!';
-      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-        SnackBar(
-          content: Text(msg),
-          duration: const Duration(seconds: 2),
-        ),
-      );
+      _copiedTimer?.cancel();
+      setState(() => _isCopiedFeedback = true);
+      _copiedTimer = Timer(const Duration(seconds: 2), () {
+        if (mounted) {
+          setState(() => _isCopiedFeedback = false);
+        }
+      });
     }
   }
 }
