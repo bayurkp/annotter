@@ -9,14 +9,14 @@ class AnnotterSettingsDialog extends StatelessWidget {
   final bool blockInteractions;
   final bool replaceMcpOnCopy;
   final bool? isMcpConnected;
-  final String? screenshotDirectory;
+  final String? savePath;
   final ValueChanged<String> onDetailLevelChanged;
   final ValueChanged<bool> onIncludeTreeChanged;
   final ValueChanged<Color> onMarkerColorChanged;
   final ValueChanged<bool> onClearOnCopyChanged;
   final ValueChanged<bool> onBlockInteractionsChanged;
   final ValueChanged<bool> onReplaceMcpOnCopyChanged;
-  final ValueChanged<String?>? onScreenshotDirectoryChanged;
+  final ValueChanged<String?>? onSavePathChanged;
   final VoidCallback onClose;
 
   const AnnotterSettingsDialog({
@@ -28,14 +28,14 @@ class AnnotterSettingsDialog extends StatelessWidget {
     required this.blockInteractions,
     this.replaceMcpOnCopy = false,
     this.isMcpConnected,
-    this.screenshotDirectory,
+    this.savePath,
     required this.onDetailLevelChanged,
     required this.onIncludeTreeChanged,
     required this.onMarkerColorChanged,
     required this.onClearOnCopyChanged,
     required this.onBlockInteractionsChanged,
     required this.onReplaceMcpOnCopyChanged,
-    this.onScreenshotDirectoryChanged,
+    this.onSavePathChanged,
     required this.onClose,
   });
 
@@ -237,12 +237,12 @@ class AnnotterSettingsDialog extends StatelessWidget {
                 Divider(color: AnnotterColors.slate[800], height: 1),
                 const SizedBox(height: 12),
 
-                // Screenshot Directory setting
+                // Save Path setting
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'Save Directory',
+                      'Save Path',
                       style: TextStyle(
                         fontSize: 12.5,
                         fontWeight: FontWeight.w600,
@@ -250,8 +250,7 @@ class AnnotterSettingsDialog extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      screenshotDirectory == null ||
-                              screenshotDirectory!.trim().isEmpty
+                      savePath == null || savePath!.trim().isEmpty
                           ? 'Default (Downloads)'
                           : 'Custom',
                       style: TextStyle(
@@ -272,7 +271,7 @@ class AnnotterSettingsDialog extends StatelessWidget {
                     border: Border.all(color: AnnotterColors.slate[800]!),
                   ),
                   child: TextFormField(
-                    initialValue: screenshotDirectory ?? '',
+                    initialValue: savePath ?? '',
                     style: const TextStyle(
                       fontSize: 11.5,
                       color: AnnotterColors.white,
@@ -288,25 +287,23 @@ class AnnotterSettingsDialog extends StatelessWidget {
                       border: InputBorder.none,
                       isDense: true,
                       contentPadding: const EdgeInsets.symmetric(vertical: 8),
-                      suffixIcon: (screenshotDirectory != null &&
-                              screenshotDirectory!.trim().isNotEmpty)
-                          ? InkWell(
-                              onTap: () =>
-                                  onScreenshotDirectoryChanged?.call(null),
-                              child: Icon(
-                                Icons.clear_rounded,
-                                size: 14,
-                                color: AnnotterColors.slate[400],
-                              ),
-                            )
-                          : null,
+                      suffixIcon:
+                          (savePath != null && savePath!.trim().isNotEmpty)
+                              ? InkWell(
+                                  onTap: () => onSavePathChanged?.call(null),
+                                  child: Icon(
+                                    Icons.clear_rounded,
+                                    size: 14,
+                                    color: AnnotterColors.slate[400],
+                                  ),
+                                )
+                              : null,
                       suffixIconConstraints:
                           const BoxConstraints(minWidth: 20, minHeight: 20),
                     ),
                     onChanged: (val) {
                       final trimmed = val.trim();
-                      onScreenshotDirectoryChanged
-                          ?.call(trimmed.isEmpty ? null : trimmed);
+                      onSavePathChanged?.call(trimmed.isEmpty ? null : trimmed);
                     },
                   ),
                 ),

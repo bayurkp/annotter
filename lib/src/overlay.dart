@@ -21,14 +21,14 @@ class Annotter extends StatefulWidget {
   final Widget child;
   final bool enabled;
   final String? serverUrl;
-  final String? screenshotDirectory;
+  final String? savePath;
 
   const Annotter({
     super.key,
     required this.child,
     this.enabled = true,
     this.serverUrl,
-    this.screenshotDirectory,
+    this.savePath,
   });
 
   @override
@@ -51,7 +51,7 @@ class _AnnotterState extends State<Annotter> {
   bool _clearOnCopy = false;
   bool _blockInteractions = false;
   bool _replaceMcpOnCopy = false;
-  String? _customScreenshotDirectory;
+  String? _customSavePath;
   bool _showSettings = false;
   bool _isAnimationPaused = false;
 
@@ -74,7 +74,7 @@ class _AnnotterState extends State<Annotter> {
   @override
   void initState() {
     super.initState();
-    _customScreenshotDirectory = widget.screenshotDirectory;
+    _customSavePath = widget.savePath;
     if (widget.serverUrl != null && widget.serverUrl!.isNotEmpty) {
       _syncClient = AnnotterSyncClient(serverUrl: widget.serverUrl!);
       _checkMcpConnection();
@@ -467,7 +467,7 @@ class _AnnotterState extends State<Annotter> {
                                 blockInteractions: _blockInteractions,
                                 replaceMcpOnCopy: _replaceMcpOnCopy,
                                 isMcpConnected: _isMcpConnected,
-                                screenshotDirectory: _customScreenshotDirectory,
+                                savePath: _customSavePath,
                                 onDetailLevelChanged: (lvl) =>
                                     setState(() => _detailLevel = lvl),
                                 onIncludeTreeChanged: (val) =>
@@ -480,8 +480,8 @@ class _AnnotterState extends State<Annotter> {
                                     setState(() => _blockInteractions = val),
                                 onReplaceMcpOnCopyChanged: (val) =>
                                     setState(() => _replaceMcpOnCopy = val),
-                                onScreenshotDirectoryChanged: (dir) => setState(
-                                    () => _customScreenshotDirectory = dir),
+                                onSavePathChanged: (dir) =>
+                                    setState(() => _customSavePath = dir),
                                 onClose: () =>
                                     setState(() => _showSettings = false),
                               ),
@@ -956,10 +956,9 @@ class _AnnotterState extends State<Annotter> {
           File? file;
 
           // 1. Check user custom directory from settings or widget parameter
-          if (_customScreenshotDirectory != null &&
-              _customScreenshotDirectory!.trim().isNotEmpty) {
+          if (_customSavePath != null && _customSavePath!.trim().isNotEmpty) {
             try {
-              final customDir = Directory(_customScreenshotDirectory!.trim());
+              final customDir = Directory(_customSavePath!.trim());
               if (!await customDir.exists()) {
                 await customDir.create(recursive: true);
               }
