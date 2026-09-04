@@ -250,14 +250,14 @@ class _AnnotterState extends State<Annotter> {
                                         border: Border.all(
                                           color: _activeMode ==
                                                   AnnotterMode.move
-                                              ? const Color(
-                                                  0xFF10B981) // Green in Move
+                                              ? AnnotterColors.emerald[
+                                                  500]! // Green in Move
                                               : _activeMode ==
                                                       AnnotterMode.select
-                                                  ? const Color(
-                                                      0xFF6366F1) // Indigo in Select
-                                                  : const Color(
-                                                      0xFF0284C7), // DevTools Blue in annotate
+                                                  ? AnnotterColors.indigo[
+                                                      500]! // Indigo in Select
+                                                  : AnnotterColors.blue[
+                                                      600]!, // Blue in annotate
                                           width: 2.0,
                                         ),
                                       ),
@@ -599,28 +599,35 @@ class _AnnotterState extends State<Annotter> {
                     padding: const EdgeInsets.symmetric(horizontal: 10),
                     decoration: BoxDecoration(
                       gradient: _isCopiedFeedback
-                          ? const LinearGradient(
-                              colors: [Color(0xFF059669), Color(0xFF047857)],
+                          ? LinearGradient(
+                              colors: [
+                                AnnotterColors.emerald[600]!,
+                                AnnotterColors.emerald[700]!,
+                              ],
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                             )
-                          : const LinearGradient(
-                              colors: [Color(0xFF0284C7), Color(0xFF0369A1)],
+                          : LinearGradient(
+                              colors: [
+                                AnnotterColors.blue[600]!,
+                                AnnotterColors.blue[700]!,
+                              ],
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                             ),
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
                         color: _isCopiedFeedback
-                            ? const Color(0x6634D399)
-                            : const Color(0x6638BDF8),
+                            ? AnnotterColors.emerald[400]!
+                                .withValues(alpha: 0.4)
+                            : AnnotterColors.blue[400]!.withValues(alpha: 0.4),
                         width: 0.8,
                       ),
                       boxShadow: [
                         BoxShadow(
                           color: (_isCopiedFeedback
-                                  ? const Color(0xFF059669)
-                                  : const Color(0xFF0284C7))
+                                  ? AnnotterColors.emerald[600]!
+                                  : AnnotterColors.blue[600]!)
                               .withValues(alpha: 0.35),
                           blurRadius: 8,
                           offset: const Offset(0, 2),
@@ -754,10 +761,10 @@ class _AnnotterState extends State<Annotter> {
   }) {
     final isSelected = _activeMode == mode;
     final activeColor = mode == AnnotterMode.move
-        ? const Color(0xFF10B981)
+        ? AnnotterColors.emerald[500]!
         : mode == AnnotterMode.select
-            ? const Color(0xFF6366F1)
-            : const Color(0xFF0284C7);
+            ? AnnotterColors.indigo[500]!
+            : AnnotterColors.blue[600]!;
 
     return Tooltip(
       message: label,
@@ -826,7 +833,7 @@ class _AnnotterState extends State<Annotter> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF0284C7),
+                    color: AnnotterColors.blue[600],
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Text(
@@ -889,7 +896,7 @@ class _AnnotterState extends State<Annotter> {
           child: Material(
             elevation: 8,
             shape: const CircleBorder(),
-            color: const Color(0xFF0284C7), // DevTools Blue
+            color: AnnotterColors.blue[600], // Royal Blue
             child: InkWell(
               customBorder: const CircleBorder(),
               onTap: () => setState(() => _isActive = true),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'colors.dart';
 import 'models.dart';
 
 class AnnotationListSheet extends StatefulWidget {
@@ -96,8 +97,8 @@ class _AnnotationListSheetState extends State<AnnotationListSheet> {
                 children: [
                   Row(
                     children: [
-                      const Icon(Icons.format_list_numbered,
-                          color: Color(0xFF0284C7), size: 20),
+                      Icon(Icons.format_list_numbered,
+                          color: AnnotterColors.blue[400], size: 20),
                       const SizedBox(width: 8),
                       Text(
                         'Annotations (${_localItems.length})',
@@ -188,7 +189,7 @@ class _AnnotationListSheetState extends State<AnnotationListSheet> {
                             // Number badge
                             CircleAvatar(
                               radius: 12,
-                              backgroundColor: const Color(0xFF0284C7),
+                              backgroundColor: AnnotterColors.blue[600],
                               child: Text(
                                 '${item.number}',
                                 style: const TextStyle(

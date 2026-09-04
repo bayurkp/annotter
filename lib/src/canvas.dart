@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'colors.dart';
 import 'models.dart';
 import 'inspector.dart';
 
@@ -228,13 +229,13 @@ class _AnnotterPainter extends CustomPainter {
 
       // Translucent Blue Fill
       final hoverFill = Paint()
-        ..color = const Color(0x330284C7)
+        ..color = AnnotterColors.blue[600]!.withValues(alpha: 0.2)
         ..style = PaintingStyle.fill;
       canvas.drawRRect(rrect, hoverFill);
 
-      // Cyan Border
+      // Blue Border
       final hoverBorder = Paint()
-        ..color = const Color(0xFF0284C7)
+        ..color = AnnotterColors.blue[500]!
         ..strokeWidth = 2.0
         ..style = PaintingStyle.stroke;
       canvas.drawRRect(rrect, hoverBorder);
@@ -267,7 +268,7 @@ class _AnnotterPainter extends CustomPainter {
           tagWidth,
           tagHeight);
 
-      final tagPaint = Paint()..color = const Color(0xFF0284C7);
+      final tagPaint = Paint()..color = AnnotterColors.blue[600]!;
       canvas.drawRRect(
           RRect.fromRectAndRadius(tagRect, const Radius.circular(4)), tagPaint);
 
@@ -348,12 +349,12 @@ class _AnnotterPainter extends CustomPainter {
       final rrect = RRect.fromRectAndRadius(rect, const Radius.circular(8));
 
       final activeFill = Paint()
-        ..color = const Color(0xFF0284C7).withValues(alpha: 0.2)
+        ..color = AnnotterColors.blue[600]!.withValues(alpha: 0.2)
         ..style = PaintingStyle.fill;
       canvas.drawRRect(rrect, activeFill);
 
       final activeBorder = Paint()
-        ..color = const Color(0xFF38BDF8)
+        ..color = AnnotterColors.blue[400]!
         ..strokeWidth = 2.0
         ..style = PaintingStyle.stroke;
       canvas.drawRRect(rrect, activeBorder);
@@ -364,15 +365,15 @@ class _AnnotterPainter extends CustomPainter {
     if (markerColor != null) return markerColor!;
     switch (mode) {
       case AnnotterMode.move:
-        return const Color(0xFF10B981); // Emerald Green
+        return AnnotterColors.emerald[500]!; // Emerald Green
       case AnnotterMode.select:
-        return const Color(0xFF6366F1); // Indigo / Violet
+        return AnnotterColors.indigo[500]!; // Indigo / Violet
       case AnnotterMode.widget:
-        return const Color(0xFF0284C7); // DevTools Cyan/Blue
+        return AnnotterColors.blue[600]!; // True Blue
       case AnnotterMode.area:
-        return const Color(0xFF38BDF8); // Sky blue
+        return AnnotterColors.blue[400]!; // Light Blue
       case AnnotterMode.point:
-        return const Color(0xFFF59E0B); // Amber
+        return AnnotterColors.amber[500]!; // Amber
     }
   }
 

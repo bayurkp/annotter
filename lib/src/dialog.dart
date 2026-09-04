@@ -78,7 +78,7 @@ class _AnnotationDialogState extends State<AnnotationDialog> {
                 ),
               ],
               border: Border.all(
-                color: AnnotterColors.sky[600]!.withValues(alpha: 0.4),
+                color: AnnotterColors.blue[600]!.withValues(alpha: 0.4),
                 width: 1.5,
               ),
             ),
@@ -90,7 +90,7 @@ class _AnnotationDialogState extends State<AnnotationDialog> {
                   children: [
                     CircleAvatar(
                       radius: 13,
-                      backgroundColor: AnnotterColors.sky[600],
+                      backgroundColor: AnnotterColors.blue[600],
                       child: Text(
                         '${widget.item.number}',
                         style: const TextStyle(
@@ -256,7 +256,7 @@ class _AnnotationDialogState extends State<AnnotationDialog> {
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
                       borderSide: BorderSide(
-                          color: AnnotterColors.sky[500]!, width: 1.5),
+                          color: AnnotterColors.blue[500]!, width: 1.5),
                     ),
                   ),
                 ),
@@ -290,10 +290,10 @@ class _AnnotationDialogState extends State<AnnotationDialog> {
                     const SizedBox(width: 8),
                     ElevatedButton.icon(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AnnotterColors.sky[600],
+                        backgroundColor: AnnotterColors.blue[600],
                         foregroundColor: AnnotterColors.white,
                         elevation: 0,
-                        side: BorderSide(color: AnnotterColors.sky[400]!),
+                        side: BorderSide(color: AnnotterColors.blue[400]!),
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(8)),
                         padding: const EdgeInsets.symmetric(

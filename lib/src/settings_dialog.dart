@@ -78,7 +78,7 @@ class AnnotterSettingsDialog extends StatelessWidget {
                     Row(
                       children: [
                         Icon(Icons.tune_rounded,
-                            size: 18, color: AnnotterColors.sky[400]),
+                            size: 18, color: AnnotterColors.blue[400]),
                         const SizedBox(width: 8),
                         Text(
                           'Annotter Settings',
@@ -121,7 +121,7 @@ class AnnotterSettingsDialog extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 11.5,
                         fontWeight: FontWeight.bold,
-                        color: AnnotterColors.sky[400],
+                        color: AnnotterColors.blue[400],
                       ),
                     ),
                   ],
@@ -256,7 +256,7 @@ class AnnotterSettingsDialog extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.bold,
-                        color: AnnotterColors.sky[400],
+                        color: AnnotterColors.blue[400],
                       ),
                     ),
                   ],
@@ -415,10 +415,10 @@ class AnnotterSettingsDialog extends StatelessWidget {
         padding: const EdgeInsets.all(2),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
-          color: value ? AnnotterColors.sky[600] : AnnotterColors.slate[800],
+          color: value ? AnnotterColors.blue[600] : AnnotterColors.slate[800],
           border: Border.all(
             color:
-                value ? AnnotterColors.sky[400]! : AnnotterColors.slate[700]!,
+                value ? AnnotterColors.blue[400]! : AnnotterColors.slate[700]!,
             width: 1,
           ),
         ),
@@ -454,11 +454,12 @@ class AnnotterSettingsDialog extends StatelessWidget {
               height: 16,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(4),
-                color:
-                    value ? AnnotterColors.sky[600] : AnnotterColors.slate[950],
+                color: value
+                    ? AnnotterColors.blue[600]
+                    : AnnotterColors.slate[950],
                 border: Border.all(
                   color: value
-                      ? AnnotterColors.sky[400]!
+                      ? AnnotterColors.blue[400]!
                       : AnnotterColors.slate[700]!,
                   width: 1.2,
                 ),
