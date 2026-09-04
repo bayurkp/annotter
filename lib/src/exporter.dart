@@ -74,7 +74,9 @@ class AnnotterExporter {
 
         for (final item in sec.items) {
           _formatItem(buffer, item,
-              detailLevel: detailLevel, includeTree: includeTree);
+              detailLevel: detailLevel,
+              includeTree: includeTree,
+              viewportSize: viewportSize);
         }
         if (i < sections.length - 1) {
           buffer.writeln('---');
@@ -105,7 +107,9 @@ class AnnotterExporter {
       buffer.writeln('### 📱 Page: ${entry.key}');
       for (final item in entry.value) {
         _formatItem(buffer, item,
-            detailLevel: detailLevel, includeTree: includeTree);
+            detailLevel: detailLevel,
+            includeTree: includeTree,
+            viewportSize: viewportSize);
       }
       buffer.writeln();
     }
@@ -118,6 +122,7 @@ class AnnotterExporter {
     AnnotterItem item, {
     String detailLevel = 'detailed',
     bool includeTree = true,
+    Size? viewportSize,
   }) {
     final tags = <String>[item.mode.name.toUpperCase()];
     if (item.intent != null && item.intent!.isNotEmpty) {
@@ -128,24 +133,89 @@ class AnnotterExporter {
     }
 
     final tagString = tags.map((t) => '[$t]').join('');
-    buffer.writeln('${item.number}. $tagString **${item.widgetName}**');
 
-    if (includeTree && detailLevel != 'compact' && item.hierarchy.isNotEmpty) {
+    // --- 1. FORENSIC TIER ---
+    if (detailLevel == 'forensic') {
+      buffer.writeln('${item.number}. $tagString **${item.widgetName}**');
+      if (includeTree && item.hierarchy.isNotEmpty) {
+        final breadcrumb = item.hierarchy.reversed.join(' > ');
+        buffer.writeln('   - Tree: $breadcrumb');
+      }
+      buffer.writeln(
+          '   - Position: x:${item.rect.left.toInt()}, y:${item.rect.top.toInt()} (w:${item.rect.width.toInt()}, h:${item.rect.height.toInt()})');
+
+      if (viewportSize != null &&
+          viewportSize.width > 0 &&
+          viewportSize.height > 0) {
+        final pctLeft =
+            ((item.rect.left / viewportSize.width) * 100).toStringAsFixed(1);
+        final pctTop =
+            ((item.rect.top / viewportSize.height) * 100).toStringAsFixed(1);
+        buffer.writeln('   - Relative: $pctLeft% from left, $pctTop% from top');
+      }
+
+      if (item.selectedText != null && item.selectedText!.isNotEmpty) {
+        buffer.writeln('   - Content: "${item.selectedText}"');
+      }
+
+      final primarySearchWidget = item.widgetName.contains(' > ')
+          ? item.widgetName.split(' > ').first
+          : item.widgetName;
+      buffer.writeln(
+          '   - Search tips: Try `grep -r "$primarySearchWidget" lib/`');
+
+      buffer.writeln(
+          '   - Note: ${item.note.isEmpty ? "*(No note provided)*" : item.note}');
+      buffer.writeln();
+      return;
+    }
+
+    // --- 2. DETAILED TIER (Default) ---
+    if (detailLevel == 'detailed') {
+      buffer.writeln('${item.number}. $tagString **${item.widgetName}**');
+      if (includeTree && item.hierarchy.isNotEmpty) {
+        final breadcrumb = item.hierarchy.reversed.join(' > ');
+        buffer.writeln('   - Tree: $breadcrumb');
+      }
+      buffer.writeln(
+          '   - Position: x:${item.rect.left.toInt()}, y:${item.rect.top.toInt()} (w:${item.rect.width.toInt()}, h:${item.rect.height.toInt()})');
+
+      if (item.selectedText != null && item.selectedText!.isNotEmpty) {
+        buffer.writeln('   - Content: "${item.selectedText}"');
+      }
+
+      buffer.writeln(
+          '   - Note: ${item.note.isEmpty ? "*(No note provided)*" : item.note}');
+      buffer.writeln();
+      return;
+    }
+
+    // --- 3. STANDARD TIER ---
+    if (detailLevel == 'standard') {
+      buffer.writeln('${item.number}. $tagString **${item.widgetName}**');
+      if (includeTree && item.hierarchy.isNotEmpty) {
+        final breadcrumb = item.hierarchy.reversed.join(' > ');
+        buffer.writeln('   - Tree: $breadcrumb');
+      }
+      buffer.writeln(
+          '   - Position: x:${item.rect.left.toInt()}, y:${item.rect.top.toInt()} (w:${item.rect.width.toInt()}, h:${item.rect.height.toInt()})');
+
+      if (item.selectedText != null && item.selectedText!.isNotEmpty) {
+        buffer.writeln('   - Selected: "${item.selectedText}"');
+      }
+
+      buffer.writeln(
+          '   - Note: ${item.note.isEmpty ? "*(No note provided)*" : item.note}');
+      buffer.writeln();
+      return;
+    }
+
+    // --- 4. COMPACT TIER (One-liner summary) ---
+    buffer.writeln('${item.number}. $tagString **${item.widgetName}**');
+    if (includeTree && item.hierarchy.isNotEmpty) {
       final breadcrumb = item.hierarchy.reversed.join(' > ');
       buffer.writeln('   - Tree: $breadcrumb');
     }
-
-    if (detailLevel != 'compact') {
-      buffer.writeln(
-          '   - Position: x:${item.rect.left.toInt()}, y:${item.rect.top.toInt()} (w:${item.rect.width.toInt()}, h:${item.rect.height.toInt()})');
-    }
-
-    if (item.selectedText != null &&
-        item.selectedText!.isNotEmpty &&
-        detailLevel == 'detailed') {
-      buffer.writeln('   - Content: "${item.selectedText}"');
-    }
-
     buffer.writeln(
         '   - Note: ${item.note.isEmpty ? "*(No note provided)*" : item.note}');
     buffer.writeln();

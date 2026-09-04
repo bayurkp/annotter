@@ -41,8 +41,8 @@ class AnnotterSettingsDialog extends StatelessWidget {
         color: Colors.transparent,
         child: Center(
           child: Container(
-            width: 320,
-            margin: const EdgeInsets.symmetric(horizontal: 24),
+            width: 330,
+            margin: const EdgeInsets.symmetric(horizontal: 20),
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
               color: AnnotterColors.slate[900],
@@ -63,37 +63,21 @@ class AnnotterSettingsDialog extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // 1. Header: Logo, version, close icon
+                // 1. Header with Close Button
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Row(
                       children: [
-                        Text(
-                          'Annotter',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w800,
-                            color: AnnotterColors.white,
-                            letterSpacing: -0.2,
-                            fontFamily: 'sans-serif',
-                          ),
-                        ),
+                        Icon(Icons.tune_rounded,
+                            size: 18, color: AnnotterColors.sky[400]),
                         const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: AnnotterColors.slate[800],
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            'v0.2.0',
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontFamily: 'monospace',
-                              color: AnnotterColors.slate[400],
-                            ),
+                        Text(
+                          'Annotter Settings',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: AnnotterColors.white,
                           ),
                         ),
                       ],
@@ -147,6 +131,7 @@ class AnnotterSettingsDialog extends StatelessWidget {
                       _buildDetailOption('compact', 'Compact'),
                       _buildDetailOption('standard', 'Standard'),
                       _buildDetailOption('detailed', 'Detailed'),
+                      _buildDetailOption('forensic', 'Forensic'),
                     ],
                   ),
                 ),

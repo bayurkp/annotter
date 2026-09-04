@@ -153,15 +153,42 @@ void main() {
     expect(detailed, contains('Content: "Settigns"'));
     expect(detailed, contains('Note: Fix typo on button'));
 
-    // 2. Compact export
+    // 2. Standard export
+    final standard = AnnotterExporter.toMarkdown(
+      items: [item],
+      detailLevel: 'standard',
+    );
+    expect(
+        standard, contains('1. [WIDGET][FIX][BLOCKING] **AppButton > Text**'));
+    expect(standard, contains('Tree: HomeScreen > AppButton > Text'));
+    expect(standard, contains('Position: x:10, y:20'));
+    expect(standard, contains('Selected: "Settigns"'));
+    expect(standard, contains('Note: Fix typo on button'));
+
+    // 3. Compact export
     final compact = AnnotterExporter.toMarkdown(
       items: [item],
       detailLevel: 'compact',
     );
     expect(
         compact, contains('1. [WIDGET][FIX][BLOCKING] **AppButton > Text**'));
-    expect(compact, isNot(contains('Tree:')));
+    expect(compact, contains('Tree: HomeScreen > AppButton > Text'));
     expect(compact, isNot(contains('Position:')));
     expect(compact, contains('Note: Fix typo on button'));
+
+    // 4. Forensic export
+    final forensic = AnnotterExporter.toMarkdown(
+      items: [item],
+      viewportSize: const Size(400, 800),
+      detailLevel: 'forensic',
+    );
+    expect(
+        forensic, contains('1. [WIDGET][FIX][BLOCKING] **AppButton > Text**'));
+    expect(forensic, contains('Tree: HomeScreen > AppButton > Text'));
+    expect(forensic, contains('Position: x:10, y:20'));
+    expect(forensic, contains('Relative: 2.5% from left, 2.5% from top'));
+    expect(forensic, contains('Content: "Settigns"'));
+    expect(forensic, contains('Search tips: Try `grep -r "AppButton" lib/`'));
+    expect(forensic, contains('Note: Fix typo on button'));
   });
 }
