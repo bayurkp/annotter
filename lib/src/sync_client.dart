@@ -176,6 +176,20 @@ class AnnotterSyncClient {
     }
   }
 
+  /// Clears all stored snapshot image files on the MCP server
+  Future<bool> clearSnapshots() async {
+    if (kIsWeb || !_isConnected) return false;
+    try {
+      final uri = _uri('/api/snapshots');
+      final request = await _httpClient.deleteUrl(uri).timeout(const Duration(seconds: 1));
+      final response = await request.close().timeout(const Duration(seconds: 1));
+      return response.statusCode >= 200 && response.statusCode < 300;
+    } catch (_) {
+      _isConnected = false;
+      return false;
+    }
+  }
+
   /// Polls server for resolved status updates from AI agent
   Future<Map<String, String>> fetchStatuses() async {
     if (kIsWeb || !_isConnected) return {};

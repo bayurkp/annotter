@@ -9,14 +9,15 @@ class AnnotterSettingsDialog extends StatelessWidget {
   final bool blockInteractions;
   final bool replaceMcpOnCopy;
   final bool? isMcpConnected;
-  final String? savePath;
+  final String? snapshotDirectory;
   final ValueChanged<String> onDetailLevelChanged;
   final ValueChanged<bool> onIncludeTreeChanged;
   final ValueChanged<Color> onMarkerColorChanged;
   final ValueChanged<bool> onClearOnCopyChanged;
   final ValueChanged<bool> onBlockInteractionsChanged;
   final ValueChanged<bool> onReplaceMcpOnCopyChanged;
-  final ValueChanged<String?>? onSavePathChanged;
+  final ValueChanged<String?>? onSnapshotDirectoryChanged;
+  final VoidCallback? onClearAllSnapshots;
   final VoidCallback onClose;
 
   const AnnotterSettingsDialog({
@@ -28,14 +29,15 @@ class AnnotterSettingsDialog extends StatelessWidget {
     required this.blockInteractions,
     this.replaceMcpOnCopy = false,
     this.isMcpConnected,
-    this.savePath,
+    this.snapshotDirectory,
     required this.onDetailLevelChanged,
     required this.onIncludeTreeChanged,
     required this.onMarkerColorChanged,
     required this.onClearOnCopyChanged,
     required this.onBlockInteractionsChanged,
     required this.onReplaceMcpOnCopyChanged,
-    this.onSavePathChanged,
+    this.onSnapshotDirectoryChanged,
+    this.onClearAllSnapshots,
     required this.onClose,
   });
 
@@ -237,12 +239,12 @@ class AnnotterSettingsDialog extends StatelessWidget {
                 Divider(color: AnnotterColors.slate[800], height: 1),
                 const SizedBox(height: 12),
 
-                // Save Path setting
+                // Snapshot Directory setting
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'Save Path',
+                      'Snapshot Folder',
                       style: TextStyle(
                         fontSize: 12.5,
                         fontWeight: FontWeight.w600,
@@ -250,7 +252,7 @@ class AnnotterSettingsDialog extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      savePath == null || savePath!.trim().isEmpty
+                      snapshotDirectory == null || snapshotDirectory!.trim().isEmpty
                           ? 'Default (Downloads)'
                           : 'Custom',
                       style: TextStyle(
@@ -271,14 +273,14 @@ class AnnotterSettingsDialog extends StatelessWidget {
                     border: Border.all(color: AnnotterColors.slate[800]!),
                   ),
                   child: TextFormField(
-                    initialValue: savePath ?? '',
+                    initialValue: snapshotDirectory ?? '',
                     style: const TextStyle(
                       fontSize: 11.5,
                       color: AnnotterColors.white,
                       fontFamily: 'monospace',
                     ),
                     decoration: InputDecoration(
-                      hintText: 'e.g. D:/Projects/screenshots',
+                      hintText: 'e.g. D:/Projects/snapshots',
                       hintStyle: TextStyle(
                         fontSize: 11,
                         color: AnnotterColors.slate[500],
@@ -288,9 +290,9 @@ class AnnotterSettingsDialog extends StatelessWidget {
                       isDense: true,
                       contentPadding: const EdgeInsets.symmetric(vertical: 8),
                       suffixIcon:
-                          (savePath != null && savePath!.trim().isNotEmpty)
+                          (snapshotDirectory != null && snapshotDirectory!.trim().isNotEmpty)
                               ? InkWell(
-                                  onTap: () => onSavePathChanged?.call(null),
+                                  onTap: () => onSnapshotDirectoryChanged?.call(null),
                                   child: Icon(
                                     Icons.clear_rounded,
                                     size: 14,
@@ -303,10 +305,48 @@ class AnnotterSettingsDialog extends StatelessWidget {
                     ),
                     onChanged: (val) {
                       final trimmed = val.trim();
-                      onSavePathChanged?.call(trimmed.isEmpty ? null : trimmed);
+                      onSnapshotDirectoryChanged?.call(trimmed.isEmpty ? null : trimmed);
                     },
                   ),
                 ),
+
+                if (onClearAllSnapshots != null) ...[
+                  const SizedBox(height: 8),
+                  InkWell(
+                    borderRadius: BorderRadius.circular(6),
+                    onTap: onClearAllSnapshots,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: AnnotterColors.rose[950]!.withValues(alpha: 0.3),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                          color: AnnotterColors.rose[800]!.withValues(alpha: 0.4),
+                          width: 1,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.delete_sweep_outlined,
+                            size: 14,
+                            color: AnnotterColors.rose[300],
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Clear All Snapshots (Device & Server)',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: AnnotterColors.rose[300],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
 
                 const SizedBox(height: 14),
                 Divider(color: AnnotterColors.slate[800], height: 1),

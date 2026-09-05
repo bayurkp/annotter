@@ -6,3 +6,5 @@ export 'src/overlay.dart';
 export 'src/exporter.dart';
 export 'src/inspector.dart';
 export 'src/settings_dialog.dart';
+export 'src/snapshot_helper.dart';
+export 'src/sync_client.dart';

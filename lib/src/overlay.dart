@@ -22,14 +22,14 @@ class Annotter extends StatefulWidget {
   final Widget child;
   final bool enabled;
   final String? serverUrl;
-  final String? savePath;
+  final String? snapshotDirectory;
 
   const Annotter({
     super.key,
     required this.child,
     this.enabled = true,
     this.serverUrl,
-    this.savePath,
+    this.snapshotDirectory,
   });
 
   @override
@@ -52,7 +52,7 @@ class _AnnotterState extends State<Annotter> {
   bool _clearOnCopy = false;
   bool _blockInteractions = false;
   bool _replaceMcpOnCopy = false;
-  String? _customSavePath;
+  String? _customSnapshotDirectory;
   bool _showSettings = false;
   bool _isAnimationPaused = false;
 
@@ -79,7 +79,7 @@ class _AnnotterState extends State<Annotter> {
   @override
   void initState() {
     super.initState();
-    _customSavePath = widget.savePath;
+    _customSnapshotDirectory = widget.snapshotDirectory;
     if (widget.serverUrl != null && widget.serverUrl!.isNotEmpty) {
       _syncClient = AnnotterSyncClient(serverUrl: widget.serverUrl!);
       // Passive initial check: does not block UI, fast 1s timeout
@@ -524,7 +524,7 @@ class _AnnotterState extends State<Annotter> {
                                 blockInteractions: _blockInteractions,
                                 replaceMcpOnCopy: _replaceMcpOnCopy,
                                 isMcpConnected: _isMcpConnected,
-                                savePath: _customSavePath,
+                                snapshotDirectory: _customSnapshotDirectory,
                                 onDetailLevelChanged: (lvl) =>
                                     setState(() => _detailLevel = lvl),
                                 onIncludeTreeChanged: (val) =>
@@ -537,8 +537,22 @@ class _AnnotterState extends State<Annotter> {
                                     setState(() => _blockInteractions = val),
                                 onReplaceMcpOnCopyChanged: (val) =>
                                     setState(() => _replaceMcpOnCopy = val),
-                                onSavePathChanged: (dir) =>
-                                    setState(() => _customSavePath = dir),
+                                onSnapshotDirectoryChanged: (dir) =>
+                                    setState(() => _customSnapshotDirectory = dir),
+                                onClearAllSnapshots: () async {
+                                  final count = await AnnotterSnapshotHelper.clearSnapshots(
+                                    snapshotDirectory: _customSnapshotDirectory,
+                                    syncClient: _syncClient,
+                                  );
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+                                      SnackBar(
+                                        content: Text('Cleared $count local snapshot(s) & synced with server.'),
+                                        duration: const Duration(seconds: 2),
+                                      ),
+                                    );
+                                  }
+                                },
                                 onClose: () =>
                                     setState(() => _showSettings = false),
                               ),
@@ -591,7 +605,7 @@ class _AnnotterState extends State<Annotter> {
     return AnnotterSnapshotHelper.capture(
       boundary: boundary,
       filename: filename,
-      customSavePath: _customSavePath,
+      snapshotDirectory: _customSnapshotDirectory,
       syncClient: _syncClient,
     );
   }

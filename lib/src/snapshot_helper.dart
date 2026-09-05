@@ -8,13 +8,39 @@ import 'sync_client.dart';
 /// saving them to platform-appropriate download/storage folders,
 /// or streaming them directly to the Annotter MCP host server.
 class AnnotterSnapshotHelper {
+  /// Resolves the effective snapshot directory on the current platform
+  static Directory? resolveDirectory([String? customDirectory]) {
+    if (kIsWeb) return null;
+    if (customDirectory != null && customDirectory.trim().isNotEmpty) {
+      return Directory(customDirectory.trim());
+    }
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      final downloadDir = Directory('/sdcard/Download');
+      if (downloadDir.existsSync()) return downloadDir;
+    } else if (defaultTargetPlatform == TargetPlatform.windows) {
+      final userProfile = Platform.environment['USERPROFILE'];
+      if (userProfile != null && userProfile.isNotEmpty) {
+        final winDownloads = Directory('$userProfile\\Downloads');
+        if (winDownloads.existsSync()) return winDownloads;
+      }
+    } else if (defaultTargetPlatform == TargetPlatform.macOS ||
+        defaultTargetPlatform == TargetPlatform.linux) {
+      final home = Platform.environment['HOME'];
+      if (home != null && home.isNotEmpty) {
+        final unixDownloads = Directory('$home/Downloads');
+        if (unixDownloads.existsSync()) return unixDownloads;
+      }
+    }
+    return Directory.systemTemp;
+  }
+
   /// Captures a snapshot from the provided [RepaintBoundary] render object.
   /// If [_syncClient] is connected, directly uploads to host and returns local host path.
-  /// Otherwise, saves locally to [customSavePath] or platform default Downloads folder.
+  /// Otherwise, saves locally to [snapshotDirectory] or platform default Downloads folder.
   static Future<String?> capture({
     required RenderRepaintBoundary? boundary,
     required String filename,
-    String? customSavePath,
+    String? snapshotDirectory,
     AnnotterSyncClient? syncClient,
     double pixelRatio = 2.0,
   }) async {
@@ -34,9 +60,9 @@ class AnnotterSnapshotHelper {
       File? file;
 
       // 1. User custom directory
-      if (customSavePath != null && customSavePath.trim().isNotEmpty) {
+      if (snapshotDirectory != null && snapshotDirectory.trim().isNotEmpty) {
         try {
-          final customDir = Directory(customSavePath.trim());
+          final customDir = Directory(snapshotDirectory.trim());
           if (!await customDir.exists()) {
             await customDir.create(recursive: true);
           }
@@ -46,28 +72,9 @@ class AnnotterSnapshotHelper {
 
       // 2. Platform default folders (Downloads folder preference)
       if (file == null) {
-        if (defaultTargetPlatform == TargetPlatform.android) {
-          final downloadDir = Directory('/sdcard/Download');
-          if (await downloadDir.exists()) {
-            file = File('${downloadDir.path}/$filename');
-          }
-        } else if (defaultTargetPlatform == TargetPlatform.windows) {
-          final userProfile = Platform.environment['USERPROFILE'];
-          if (userProfile != null && userProfile.isNotEmpty) {
-            final winDownloads = Directory('$userProfile\\Downloads');
-            if (await winDownloads.exists()) {
-              file = File('${winDownloads.path}\\$filename');
-            }
-          }
-        } else if (defaultTargetPlatform == TargetPlatform.macOS ||
-            defaultTargetPlatform == TargetPlatform.linux) {
-          final home = Platform.environment['HOME'];
-          if (home != null && home.isNotEmpty) {
-            final unixDownloads = Directory('$home/Downloads');
-            if (await unixDownloads.exists()) {
-              file = File('${unixDownloads.path}/$filename');
-            }
-          }
+        final dir = resolveDirectory();
+        if (dir != null && await dir.exists()) {
+          file = File('${dir.path}/$filename');
         }
       }
 
@@ -90,5 +97,42 @@ class AnnotterSnapshotHelper {
     } catch (_) {
       return null;
     }
+  }
+
+  /// Deletes all annotter snapshot PNG files locally and on MCP server.
+  /// Returns the number of local files deleted.
+  static Future<int> clearSnapshots({
+    String? snapshotDirectory,
+    AnnotterSyncClient? syncClient,
+  }) async {
+    int deletedCount = 0;
+    if (!kIsWeb) {
+      try {
+        final targetDir = resolveDirectory(snapshotDirectory);
+        if (targetDir != null && await targetDir.exists()) {
+          final entities = targetDir.listSync();
+          for (final entity in entities) {
+            if (entity is File) {
+              final name = entity.uri.pathSegments.last;
+              if (name.startsWith('annotter_') && name.endsWith('.png')) {
+                try {
+                  await entity.delete();
+                  deletedCount++;
+                } catch (_) {}
+              }
+            }
+          }
+        }
+      } catch (_) {}
+    }
+
+    // Sync clear on MCP server if connected
+    if (syncClient != null && syncClient.isConnected) {
+      try {
+        await syncClient.clearSnapshots();
+      } catch (_) {}
+    }
+
+    return deletedCount;
   }
 }

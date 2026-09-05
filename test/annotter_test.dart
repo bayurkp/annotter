@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:annotter/annotter.dart';
@@ -235,4 +236,31 @@ void main() {
     );
     expect(standard, contains('- Source: `lib/src/widgets/app_button.dart:42`'));
   });
+
+  test('AnnotterSnapshotHelper clears snapshots correctly', () async {
+    final tempDir = Directory.systemTemp.createTempSync('annotter_test_snapshots_');
+    try {
+      final file1 = File('${tempDir.path}/annotter_1.png')..writeAsStringSync('dummy1');
+      final file2 = File('${tempDir.path}/annotter_view_2.png')..writeAsStringSync('dummy2');
+      final other = File('${tempDir.path}/other_image.png')..writeAsStringSync('keep me');
+
+      expect(file1.existsSync(), isTrue);
+      expect(file2.existsSync(), isTrue);
+      expect(other.existsSync(), isTrue);
+
+      final deleted = await AnnotterSnapshotHelper.clearSnapshots(
+        snapshotDirectory: tempDir.path,
+      );
+
+      expect(deleted, equals(2));
+      expect(file1.existsSync(), isFalse);
+      expect(file2.existsSync(), isFalse);
+      expect(other.existsSync(), isTrue); // should preserve non-annotter files
+    } finally {
+      try {
+        tempDir.deleteSync(recursive: true);
+      } catch (_) {}
+    }
+  });
 }
+
