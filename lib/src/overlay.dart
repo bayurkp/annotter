@@ -42,7 +42,7 @@ class _AnnotterState extends State<Annotter> {
   Key _appSubtreeKey = UniqueKey();
 
   bool _isActive = false;
-  AnnotterMode _activeMode = AnnotterMode.widget;
+  AnnotterMode _mode = AnnotterMode.widget;
   List<AnnotterItem> _items = [];
 
   // Settings state
@@ -51,16 +51,16 @@ class _AnnotterState extends State<Annotter> {
   Color _markerColor = AnnotterColors.markerPalette[3]; // Default Emerald
   bool _clearOnCopy = false;
   bool _blockInteractions = false;
-  bool _replaceMcpOnCopy = false;
-  String? _customSnapshotDirectory;
+  bool _replaceServerOnCopy = false;
+  String? _snapshotDirectory;
   bool _showSettings = false;
   bool _isAnimationPaused = false;
 
   // Sync Client & Status Polling
   AnnotterSyncClient? _syncClient;
   Timer? _statusPollTimer;
-  bool? _isMcpConnected;
-  bool _isCopiedFeedback = false;
+  bool? _isServerConnected;
+  bool _isCopied = false;
   Timer? _copiedTimer;
 
   void _handleHotReload() {
@@ -79,20 +79,20 @@ class _AnnotterState extends State<Annotter> {
   @override
   void initState() {
     super.initState();
-    _customSnapshotDirectory = widget.snapshotDirectory;
+    _snapshotDirectory = widget.snapshotDirectory;
     if (widget.serverUrl != null && widget.serverUrl!.isNotEmpty) {
       _syncClient = AnnotterSyncClient(serverUrl: widget.serverUrl!);
       // Passive initial check: does not block UI, fast 1s timeout
-      _checkMcpConnection();
+      _checkServerConnection();
     }
   }
 
-  Future<void> _checkMcpConnection() async {
+  Future<void> _checkServerConnection() async {
     if (_syncClient == null || !mounted) return;
     final isConnected = await _syncClient!.ping();
     if (mounted) {
-      if (_isMcpConnected != isConnected) {
-        setState(() => _isMcpConnected = isConnected);
+      if (_isServerConnected != isConnected) {
+        setState(() => _isServerConnected = isConnected);
       }
       if (isConnected) {
         _startStatusPolling();
@@ -119,7 +119,7 @@ class _AnnotterState extends State<Annotter> {
       if (!_syncClient!.isConnected) {
         _statusPollTimer?.cancel();
         _statusPollTimer = null;
-        if (_isMcpConnected == true) setState(() => _isMcpConnected = false);
+        if (_isServerConnected == true) setState(() => _isServerConnected = false);
         return;
       }
       if (_items.isEmpty) return;
@@ -143,11 +143,11 @@ class _AnnotterState extends State<Annotter> {
   final List<List<AnnotterItem>> _redoStack = [];
 
   Offset _fabPosition = const Offset(20, 120);
-  double _currentScrollOffset = 0.0;
+  double _scrollOffset = 0.0;
 
-  AnnotterItem? _activeDialogItem;
-  bool _isCreatingItem = false;
-  bool _showListSheet = false;
+  AnnotterItem? _editingItem;
+  bool _isCreating = false;
+  bool _showList = false;
   String _currentScreenName = 'HomeScreen';
 
   String get _activeScreenName {
@@ -270,11 +270,11 @@ class _AnnotterState extends State<Annotter> {
                                       height: canvasHeight,
                                       decoration: BoxDecoration(
                                         border: Border.all(
-                                          color: _activeMode ==
+                                          color: _mode ==
                                                   AnnotterMode.move
                                               ? AnnotterColors.emerald[
                                                   500]! // Green in Move
-                                              : _activeMode ==
+                                              : _mode ==
                                                       AnnotterMode.select
                                                   ? AnnotterColors.indigo[
                                                       500]! // Indigo in Select
@@ -297,7 +297,7 @@ class _AnnotterState extends State<Annotter> {
                                                           .metrics.axis ==
                                                       Axis.vertical) {
                                                     setState(() {
-                                                      _currentScrollOffset =
+                                                      _scrollOffset =
                                                           notification
                                                               .metrics.pixels;
                                                     });
@@ -333,25 +333,24 @@ class _AnnotterState extends State<Annotter> {
 
                                             AnnotterCanvas(
                                               items: _items,
-                                              activeMode: _activeMode,
-                                              currentScrollOffset:
-                                                  _currentScrollOffset,
+                                              mode: _mode,
+                                              scrollOffset: _scrollOffset,
                                               markerColor: _markerColor,
-                                              onRequestCreate:
-                                                  (item, screenName) {
+                                              onCreate: (item, screenName) {
                                                 _saveSnapshot();
                                                 setState(() {
-                                                  if (screenName != null)
+                                                  if (screenName != null) {
                                                     _currentScreenName =
                                                         screenName;
-                                                  _activeDialogItem = item;
-                                                  _isCreatingItem = true;
+                                                  }
+                                                  _editingItem = item;
+                                                  _isCreating = true;
                                                 });
                                               },
-                                              onRequestEdit: (item) {
+                                              onEdit: (item) {
                                                 setState(() {
-                                                  _activeDialogItem = item;
-                                                  _isCreatingItem = false;
+                                                  _editingItem = item;
+                                                  _isCreating = false;
                                                 });
                                               },
                                             ),
@@ -365,13 +364,13 @@ class _AnnotterState extends State<Annotter> {
 
                               // Ultra-Thin Full-Width Bottom Bar
                               AnnotterBottomBar(
-                                activeMode: _activeMode,
+                                mode: _mode,
                                 onModeChanged: (mode) =>
-                                    setState(() => _activeMode = mode),
+                                    setState(() => _mode = mode),
                                 onExit: () => setState(() => _isActive = false),
                                 onCopy: _copyNotes,
-                                isCopiedFeedback: _isCopiedFeedback,
-                                isSyncConnected: _syncClient != null,
+                                isCopied: _isCopied,
+                                isServerConnected: _isServerConnected == true,
                                 itemCount: _items.length,
                                 canUndo: _undoStack.isNotEmpty,
                                 onUndo: _undo,
@@ -380,10 +379,10 @@ class _AnnotterState extends State<Annotter> {
                                 onHotReload: _handleHotReload,
                                 isAnimationPaused: _isAnimationPaused,
                                 onToggleAnimationPause: _toggleAnimationPause,
-                                onOpenListSheet: () =>
-                                    setState(() => _showListSheet = true),
+                                onOpenList: () =>
+                                    setState(() => _showList = true),
                                 onOpenSettings: () {
-                                  _checkMcpConnection();
+                                  _checkServerConnection();
                                   setState(() => _showSettings = true);
                                 },
                                 onClearAll: _items.isNotEmpty
@@ -398,10 +397,10 @@ class _AnnotterState extends State<Annotter> {
                         ),
 
                         // Inline Modal Note Dialog
-                        if (_activeDialogItem != null)
+                        if (_editingItem != null)
                           _buildModalBackdrop(
                             onDismiss: () =>
-                                setState(() => _activeDialogItem = null),
+                                setState(() => _editingItem = null),
                             alignment: mediaQuery.viewInsets.bottom > 0
                                 ? Alignment.topCenter
                                 : Alignment.center,
@@ -417,33 +416,33 @@ class _AnnotterState extends State<Annotter> {
                               child: SingleChildScrollView(
                                 physics: const ClampingScrollPhysics(),
                                 child: AnnotationDialog(
-                                  item: _activeDialogItem!,
-                                  isNew: _isCreatingItem,
+                                  item: _editingItem!,
+                                  isNew: _isCreating,
                                   onCancel: () =>
-                                      setState(() => _activeDialogItem = null),
+                                      setState(() => _editingItem = null),
                                   onDelete: () {
-                                    final deletedId = _activeDialogItem?.id;
+                                    final deletedId = _editingItem?.id;
                                     _saveSnapshot();
                                     setState(() {
                                       _items.removeWhere(
-                                          (i) => i.id == _activeDialogItem!.id);
+                                          (i) => i.id == _editingItem!.id);
                                       _renumberItems();
-                                      _activeDialogItem = null;
+                                      _editingItem = null;
                                     });
                                     if (deletedId != null) {
                                       _syncClient?.deleteAnnotation(deletedId);
                                     }
                                   },
                                   onSave: (note, intent, severity) {
-                                    final currentItem = _activeDialogItem;
+                                    final currentItem = _editingItem;
                                     _saveSnapshot();
                                     setState(() {
-                                      _activeDialogItem!.note = note;
-                                      _activeDialogItem!.intent = intent;
-                                      _activeDialogItem!.severity = severity;
-                                      if (_isCreatingItem)
-                                        _items.add(_activeDialogItem!);
-                                      _activeDialogItem = null;
+                                      _editingItem!.note = note;
+                                      _editingItem!.intent = intent;
+                                      _editingItem!.severity = severity;
+                                      if (_isCreating)
+                                        _items.add(_editingItem!);
+                                      _editingItem = null;
                                     });
                                     if (currentItem != null) {
                                       _captureScreenshot(
@@ -463,10 +462,10 @@ class _AnnotterState extends State<Annotter> {
                           ),
 
                         // Inline Modal Annotation List Sheet
-                        if (_showListSheet)
+                        if (_showList)
                           _buildModalBackdrop(
                             onDismiss: () =>
-                                setState(() => _showListSheet = false),
+                                setState(() => _showList = false),
                             alignment: Alignment.bottomCenter,
                             child: SafeArea(
                               bottom: true,
@@ -476,7 +475,7 @@ class _AnnotterState extends State<Annotter> {
                                 child: AnnotationListSheet(
                                   items: _items,
                                   onClose: () =>
-                                      setState(() => _showListSheet = false),
+                                      setState(() => _showList = false),
                                   onReorder: (newItems) {
                                     _saveSnapshot();
                                     setState(() {
@@ -486,9 +485,9 @@ class _AnnotterState extends State<Annotter> {
                                   },
                                   onEdit: (item) {
                                     setState(() {
-                                      _showListSheet = false;
-                                      _activeDialogItem = item;
-                                      _isCreatingItem = false;
+                                      _showList = false;
+                                      _editingItem = item;
+                                      _isCreating = false;
                                     });
                                   },
                                   onDelete: (item) {
@@ -503,7 +502,7 @@ class _AnnotterState extends State<Annotter> {
                                   onClearAll: () {
                                     _saveSnapshot();
                                     setState(() => _items.clear());
-                                    _syncClient?.clearAll();
+                                    _syncClient?.clearAnnotations();
                                   },
                                 ),
                               ),
@@ -522,9 +521,9 @@ class _AnnotterState extends State<Annotter> {
                                 markerColor: _markerColor,
                                 clearOnCopy: _clearOnCopy,
                                 blockInteractions: _blockInteractions,
-                                replaceMcpOnCopy: _replaceMcpOnCopy,
-                                isMcpConnected: _isMcpConnected,
-                                snapshotDirectory: _customSnapshotDirectory,
+                                replaceServerOnCopy: _replaceServerOnCopy,
+                                isServerConnected: _isServerConnected,
+                                snapshotDirectory: _snapshotDirectory,
                                 onDetailLevelChanged: (lvl) =>
                                     setState(() => _detailLevel = lvl),
                                 onIncludeTreeChanged: (val) =>
@@ -535,13 +534,13 @@ class _AnnotterState extends State<Annotter> {
                                     setState(() => _clearOnCopy = val),
                                 onBlockInteractionsChanged: (val) =>
                                     setState(() => _blockInteractions = val),
-                                onReplaceMcpOnCopyChanged: (val) =>
-                                    setState(() => _replaceMcpOnCopy = val),
+                                onReplaceServerOnCopyChanged: (val) =>
+                                    setState(() => _replaceServerOnCopy = val),
                                 onSnapshotDirectoryChanged: (dir) =>
-                                    setState(() => _customSnapshotDirectory = dir),
-                                onClearAllSnapshots: () async {
+                                    setState(() => _snapshotDirectory = dir),
+                                onClearSnapshots: () async {
                                   return await AnnotterSnapshotHelper.clearSnapshots(
-                                    snapshotDirectory: _customSnapshotDirectory,
+                                    snapshotDirectory: _snapshotDirectory,
                                     syncClient: _syncClient,
                                   );
                                 },
@@ -597,7 +596,7 @@ class _AnnotterState extends State<Annotter> {
     return AnnotterSnapshotHelper.capture(
       boundary: boundary,
       filename: filename,
-      snapshotDirectory: _customSnapshotDirectory,
+      snapshotDirectory: _snapshotDirectory,
       syncClient: _syncClient,
     );
   }
@@ -685,7 +684,7 @@ class _AnnotterState extends State<Annotter> {
       // Group items by scroll cluster
       final sortedItems = List<AnnotterItem>.from(_items)
         ..sort((a, b) =>
-            a.scrollOffsetAtCreation.compareTo(b.scrollOffsetAtCreation));
+            a.scrollOffset.compareTo(b.scrollOffset));
 
       final List<List<AnnotterItem>> clusters = [];
       for (final item in sortedItems) {
@@ -693,8 +692,8 @@ class _AnnotterState extends State<Annotter> {
           clusters.add([item]);
         } else {
           final lastCluster = clusters.last;
-          final diff = (item.scrollOffsetAtCreation -
-                  lastCluster.first.scrollOffsetAtCreation)
+          final diff = (item.scrollOffset -
+                  lastCluster.first.scrollOffset)
               .abs();
           if (diff < canvasHeight * 0.75) {
             lastCluster.add(item);
@@ -715,14 +714,14 @@ class _AnnotterState extends State<Annotter> {
         ));
       } else {
         // Multi-view capture: smoothly snap to each cluster, capture, and restore
-        final originalOffset = _currentScrollOffset;
+        final originalOffset = _scrollOffset;
 
         for (int i = 0; i < clusters.length; i++) {
           final cluster = clusters[i];
-          final targetOffset = cluster.first.scrollOffsetAtCreation;
+          final targetOffset = cluster.first.scrollOffset;
 
           scrollPos?.jumpTo(targetOffset);
-          setState(() => _currentScrollOffset = targetOffset);
+          setState(() => _scrollOffset = targetOffset);
           await Future.delayed(const Duration(milliseconds: 100));
 
           final filename = 'annotter_view_${i + 1}_$timestamp.png';
@@ -741,7 +740,7 @@ class _AnnotterState extends State<Annotter> {
 
         // Restore original scroll offset
         scrollPos?.jumpTo(originalOffset);
-        setState(() => _currentScrollOffset = originalOffset);
+        setState(() => _scrollOffset = originalOffset);
       }
     }
 
@@ -760,11 +759,11 @@ class _AnnotterState extends State<Annotter> {
     if (_syncClient != null && _items.isNotEmpty) {
       final mainScreenshot =
           sections.isNotEmpty ? sections.first.screenshotPath : null;
-      _syncClient!.syncAllAnnotations(
+      _syncClient!.syncAnnotations(
         _items,
         route: _activeScreenName,
         screenshotPath: mainScreenshot,
-        replace: _replaceMcpOnCopy,
+        replace: _replaceServerOnCopy,
       );
     }
 
@@ -776,10 +775,10 @@ class _AnnotterState extends State<Annotter> {
     // 3. Smooth in-place visual feedback on the button (2s green checkmark, no intrusive snackbar)
     if (mounted) {
       _copiedTimer?.cancel();
-      setState(() => _isCopiedFeedback = true);
+      setState(() => _isCopied = true);
       _copiedTimer = Timer(const Duration(seconds: 2), () {
         if (mounted) {
-          setState(() => _isCopiedFeedback = false);
+          setState(() => _isCopied = false);
         }
       });
     }

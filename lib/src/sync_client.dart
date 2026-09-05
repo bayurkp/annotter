@@ -58,11 +58,13 @@ class AnnotterSyncClient {
       'number': item.number,
       'widgetName': item.widgetName,
       'selectedText': item.selectedText,
+      'sourceLocation': item.sourceLocation,
+      'properties': item.properties,
       'hierarchy': item.hierarchy,
       'note': item.note,
       'intent': item.intent ?? 'fix',
       'severity': item.severity ?? 'important',
-      'status': 'pending',
+      'status': item.status,
       'mode': item.mode.name,
       'route': route ?? item.screenName,
       'screenshotPath': screenshotPath,
@@ -99,7 +101,7 @@ class AnnotterSyncClient {
 
   /// Syncs multiple annotations in bulk to the MCP server (e.g. on Copy/Export)
   /// If [replace] is true, replaces all existing annotations on server with these.
-  Future<bool> syncAllAnnotations(List<AnnotterItem> items,
+  Future<bool> syncAnnotations(List<AnnotterItem> items,
       {String? route, String? screenshotPath, bool replace = false}) async {
     if (kIsWeb || !_isConnected || items.isEmpty) return false;
     try {
@@ -149,10 +151,10 @@ class AnnotterSyncClient {
   }
 
   /// Deletes an annotation from the MCP server
-  Future<bool> deleteAnnotation(int itemId) async {
+  Future<bool> deleteAnnotation(int id) async {
     if (kIsWeb || !_isConnected) return false;
     try {
-      final uri = _uri('/api/annotations/ann_$itemId');
+      final uri = _uri('/api/annotations/ann_$id');
       final request = await _httpClient.deleteUrl(uri).timeout(const Duration(seconds: 1));
       final response = await request.close().timeout(const Duration(seconds: 1));
       return response.statusCode >= 200 && response.statusCode < 300;
@@ -163,7 +165,7 @@ class AnnotterSyncClient {
   }
 
   /// Clears all annotations on the MCP server
-  Future<bool> clearAll() async {
+  Future<bool> clearAnnotations() async {
     if (kIsWeb || !_isConnected) return false;
     try {
       final uri = _uri('/api/annotations');
@@ -188,6 +190,13 @@ class AnnotterSyncClient {
       _isConnected = false;
       return false;
     }
+  }
+
+  /// Clears both annotations and snapshots on the MCP server
+  Future<bool> clearAll() async {
+    final a = await clearAnnotations();
+    final b = await clearSnapshots();
+    return a || b;
   }
 
   /// Polls server for resolved status updates from AI agent

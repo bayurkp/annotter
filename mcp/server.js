@@ -189,6 +189,32 @@ const httpServer = http.createServer((req, res) => {
     return;
   }
 
+  // DELETE /api/snapshots (Clear all snapshot images)
+  if (req.method === "DELETE" && pathname === "/api/snapshots") {
+    const screenshotsDir = path.resolve(process.cwd(), ".annotter", "screenshots");
+    let deletedCount = 0;
+    try {
+      if (fs.existsSync(screenshotsDir)) {
+        const files = fs.readdirSync(screenshotsDir);
+        for (const file of files) {
+          if (file.endsWith(".png")) {
+            fs.unlinkSync(path.join(screenshotsDir, file));
+            deletedCount++;
+          }
+        }
+      }
+      log(`Cleared ${deletedCount} snapshots from disk`);
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ success: true, count: deletedCount }));
+      return;
+    } catch (err) {
+      log(`Failed to clear snapshots: ${err.message}`);
+      res.writeHead(500, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: err.message }));
+      return;
+    }
+  }
+
   res.writeHead(404, { "Content-Type": "application/json" });
   res.end(JSON.stringify({ error: "Not found" }));
 });
@@ -252,6 +278,14 @@ mcpServer.setRequestHandler(ListToolsRequestSchema, async () => {
           properties: {},
         },
       },
+      {
+        name: "annotter_clear_snapshots",
+        description: "Clear all saved snapshot image files from disk.",
+        inputSchema: {
+          type: "object",
+          properties: {},
+        },
+      },
     ],
   };
 });
@@ -281,7 +315,14 @@ mcpServer.setRequestHandler(CallToolRequestSchema, async (request) => {
         if (item.severity) tags.push(item.severity.toUpperCase());
 
         let out = `### #${item.number || 1} [${tags.join("][")}] ${item.widgetName}\n`;
+        if (item.sourceLocation) out += `- Source: \`${item.sourceLocation}\`\n`;
         if (item.selectedText) out += `- Content: "${item.selectedText}"\n`;
+        if (item.properties && Object.keys(item.properties).length > 0) {
+          const props = Object.entries(item.properties)
+            .map(([k, v]) => `${k}: ${v}`)
+            .join(", ");
+          out += `- Properties: {${props}}\n`;
+        }
         if (item.route) out += `- Screen/Route: ${item.route}\n`;
         if (item.screenshotPath)
           out += `- Snapshot: \`${item.screenshotPath}\`\n`;
@@ -357,6 +398,40 @@ mcpServer.setRequestHandler(CallToolRequestSchema, async (request) => {
         },
       ],
     };
+  }
+
+  if (name === "annotter_clear_snapshots") {
+    const screenshotsDir = path.resolve(process.cwd(), ".annotter", "screenshots");
+    let deletedCount = 0;
+    try {
+      if (fs.existsSync(screenshotsDir)) {
+        const files = fs.readdirSync(screenshotsDir);
+        for (const file of files) {
+          if (file.endsWith(".png")) {
+            fs.unlinkSync(path.join(screenshotsDir, file));
+            deletedCount++;
+          }
+        }
+      }
+      log(`Cleared ${deletedCount} snapshots from disk via MCP tool`);
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Cleared ${deletedCount} snapshot image files from disk.`,
+          },
+        ],
+      };
+    } catch (err) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Failed to clear snapshots: ${err.message}`,
+          },
+        ],
+      };
+    }
   }
 
   throw new Error(`Unknown tool: ${name}`);

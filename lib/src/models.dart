@@ -18,13 +18,13 @@ class AnnotterItem {
   AnnotterMode mode;
   String screenName;
   bool isScrollable;
-  double scrollOffsetAtCreation;
+  double scrollOffset;
   String? intent; // 'fix', 'style', 'change', 'question'
   String? severity; // 'blocking', 'important', 'suggestion'
   String?
       selectedText; // Actual text content if clicked element is or contains Text
   String? sourceLocation; // Flutter file & line e.g. "lib/views/home_screen.dart:42"
-  Map<String, String>? flutterProperties; // Flutter widget properties (DiagnosticsNode)
+  Map<String, String>? properties; // Widget properties (DiagnosticsNode)
   String status; // 'pending', 'resolved'
 
   AnnotterItem({
@@ -37,12 +37,12 @@ class AnnotterItem {
     this.mode = AnnotterMode.widget,
     this.screenName = 'HomeScreen',
     this.isScrollable = false,
-    this.scrollOffsetAtCreation = 0.0,
+    this.scrollOffset = 0.0,
     this.intent,
     this.severity,
     this.selectedText,
     this.sourceLocation,
-    this.flutterProperties,
+    this.properties,
     this.status = 'pending',
   });
 
@@ -57,12 +57,12 @@ class AnnotterItem {
       mode: mode,
       screenName: screenName,
       isScrollable: isScrollable,
-      scrollOffsetAtCreation: scrollOffsetAtCreation,
+      scrollOffset: scrollOffset,
       intent: intent,
       severity: severity,
       selectedText: selectedText,
       sourceLocation: sourceLocation,
-      flutterProperties: flutterProperties != null ? Map.from(flutterProperties!) : null,
+      properties: properties != null ? Map.from(properties!) : null,
       status: status,
     );
   }

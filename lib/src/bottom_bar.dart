@@ -7,12 +7,12 @@ import 'models.dart';
 /// quick Copy/Sent feedback CTA, undo/redo, hot-reload, pause animation,
 /// annotations list, and settings triggers.
 class AnnotterBottomBar extends StatelessWidget {
-  final AnnotterMode activeMode;
+  final AnnotterMode mode;
   final ValueChanged<AnnotterMode> onModeChanged;
   final VoidCallback onExit;
   final VoidCallback onCopy;
-  final bool isCopiedFeedback;
-  final bool isSyncConnected;
+  final bool isCopied;
+  final bool isServerConnected;
   final int itemCount;
   final bool canUndo;
   final VoidCallback? onUndo;
@@ -21,18 +21,18 @@ class AnnotterBottomBar extends StatelessWidget {
   final VoidCallback onHotReload;
   final bool isAnimationPaused;
   final VoidCallback onToggleAnimationPause;
-  final VoidCallback onOpenListSheet;
+  final VoidCallback onOpenList;
   final VoidCallback onOpenSettings;
   final VoidCallback? onClearAll;
 
   const AnnotterBottomBar({
     super.key,
-    required this.activeMode,
+    required this.mode,
     required this.onModeChanged,
     required this.onExit,
     required this.onCopy,
-    required this.isCopiedFeedback,
-    required this.isSyncConnected,
+    required this.isCopied,
+    required this.isServerConnected,
     required this.itemCount,
     required this.canUndo,
     required this.onUndo,
@@ -41,7 +41,7 @@ class AnnotterBottomBar extends StatelessWidget {
     required this.onHotReload,
     required this.isAnimationPaused,
     required this.onToggleAnimationPause,
-    required this.onOpenListSheet,
+    required this.onOpenList,
     required this.onOpenSettings,
     this.onClearAll,
   });
@@ -145,7 +145,7 @@ class AnnotterBottomBar extends StatelessWidget {
                     height: 34,
                     padding: const EdgeInsets.symmetric(horizontal: 10),
                     decoration: BoxDecoration(
-                      gradient: isCopiedFeedback
+                      gradient: isCopied
                           ? LinearGradient(
                               colors: [
                                 AnnotterColors.emerald[600]!,
@@ -164,7 +164,7 @@ class AnnotterBottomBar extends StatelessWidget {
                             ),
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
-                        color: isCopiedFeedback
+                        color: isCopied
                             ? AnnotterColors.emerald[400]!
                                 .withValues(alpha: 0.4)
                             : AnnotterColors.blue[400]!.withValues(alpha: 0.4),
@@ -172,7 +172,7 @@ class AnnotterBottomBar extends StatelessWidget {
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: (isCopiedFeedback
+                          color: (isCopied
                                   ? AnnotterColors.emerald[600]!
                                   : AnnotterColors.blue[600]!)
                               .withValues(alpha: 0.35),
@@ -185,7 +185,7 @@ class AnnotterBottomBar extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
-                          isCopiedFeedback
+                          isCopied
                               ? Icons.check_rounded
                               : Icons.copy_rounded,
                           color: Colors.white,
@@ -193,8 +193,8 @@ class AnnotterBottomBar extends StatelessWidget {
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          isCopiedFeedback
-                              ? (isSyncConnected
+                          isCopied
+                              ? (isServerConnected
                                   ? 'Sent & Copied'
                                   : 'Copied!')
                               : (itemCount == 0
@@ -261,7 +261,7 @@ class AnnotterBottomBar extends StatelessWidget {
                   tooltip: 'Annotations List',
                   badgeCount: itemCount > 0 ? itemCount : null,
                   enabled: true,
-                  onTap: onOpenListSheet,
+                  onTap: onOpenList,
                 ),
                 const SizedBox(width: 4),
 
@@ -300,7 +300,7 @@ class AnnotterBottomBar extends StatelessWidget {
     required String label,
     required AnnotterMode mode,
   }) {
-    final isSelected = activeMode == mode;
+    final isSelected = this.mode == mode;
     final activeColor = mode == AnnotterMode.move
         ? AnnotterColors.emerald[500]!
         : mode == AnnotterMode.select

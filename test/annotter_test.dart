@@ -166,7 +166,7 @@ void main() {
         standard, contains('1. [WIDGET][FIX][BLOCKING] **AppButton > Text**'));
     expect(standard, contains('Tree: HomeScreen > AppButton > Text'));
     expect(standard, contains('Position: x:10, y:20'));
-    expect(standard, contains('Selected: "Settigns"'));
+    expect(standard, contains('Content: "Settigns"'));
     expect(standard, contains('Note: Fix typo on button'));
 
     // 3. Compact export
@@ -196,7 +196,7 @@ void main() {
     expect(forensic, contains('Note: Fix typo on button'));
   });
 
-  test('AnnotterExporter formats sourceLocation and flutterProperties with Flutter identity', () {
+  test('AnnotterExporter formats sourceLocation and properties with Flutter identity', () {
     final item = AnnotterItem(
       id: 2,
       number: 1,
@@ -206,7 +206,7 @@ void main() {
       note: 'Increase vertical padding and fontSize',
       mode: AnnotterMode.widget,
       sourceLocation: 'lib/src/widgets/app_button.dart:42',
-      flutterProperties: {
+      properties: {
         'fontSize': '14.0',
         'fontWeight': 'FontWeight.w600',
         'padding': 'EdgeInsets.all(12.0)',

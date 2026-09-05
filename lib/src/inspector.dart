@@ -3,24 +3,24 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 
 class InspectedWidgetInfo {
-  final String name;
+  final String widgetName;
   final List<String> hierarchy;
   final Rect rect;
   final String? screenName;
   final bool isScrollable;
   final String? selectedText;
   final String? sourceLocation;
-  final Map<String, String>? flutterProperties;
+  final Map<String, String>? properties;
 
   const InspectedWidgetInfo({
-    required this.name,
+    required this.widgetName,
     required this.hierarchy,
     required this.rect,
     this.screenName,
     this.isScrollable = false,
     this.selectedText,
     this.sourceLocation,
-    this.flutterProperties,
+    this.properties,
   });
 }
 
@@ -426,7 +426,7 @@ class WidgetInspectorHelper {
     }
 
     return InspectedWidgetInfo(
-      name: foundWidgetName,
+      widgetName: foundWidgetName,
       hierarchy: bestHierarchy,
       rect: smallestRect ??
           Rect.fromCenter(center: localOffset, width: 40, height: 40),
@@ -434,7 +434,7 @@ class WidgetInspectorHelper {
       isScrollable: detectedScrollable,
       selectedText: extractedText,
       sourceLocation: detectedSourceLocation,
-      flutterProperties: detectedProperties,
+      properties: detectedProperties,
     );
   }
 

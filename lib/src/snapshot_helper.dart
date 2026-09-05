@@ -9,10 +9,10 @@ import 'sync_client.dart';
 /// or streaming them directly to the Annotter MCP host server.
 class AnnotterSnapshotHelper {
   /// Resolves the effective snapshot directory on the current platform
-  static Directory? resolveDirectory([String? customDirectory]) {
+  static Directory? resolveDirectory([String? snapshotDirectory]) {
     if (kIsWeb) return null;
-    if (customDirectory != null && customDirectory.trim().isNotEmpty) {
-      return Directory(customDirectory.trim());
+    if (snapshotDirectory != null && snapshotDirectory.trim().isNotEmpty) {
+      return Directory(snapshotDirectory.trim());
     }
     if (defaultTargetPlatform == TargetPlatform.android) {
       final downloadDir = Directory('/sdcard/Download');

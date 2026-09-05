@@ -5,20 +5,20 @@ import 'inspector.dart';
 
 class AnnotterCanvas extends StatefulWidget {
   final List<AnnotterItem> items;
-  final AnnotterMode activeMode;
-  final double currentScrollOffset;
+  final AnnotterMode mode;
+  final double scrollOffset;
   final Color? markerColor;
-  final void Function(AnnotterItem item, String? screenName) onRequestCreate;
-  final ValueChanged<AnnotterItem> onRequestEdit;
+  final void Function(AnnotterItem item, String? screenName) onCreate;
+  final ValueChanged<AnnotterItem> onEdit;
 
   const AnnotterCanvas({
     super.key,
     required this.items,
-    required this.activeMode,
-    this.currentScrollOffset = 0.0,
+    required this.mode,
+    this.scrollOffset = 0.0,
     this.markerColor,
-    required this.onRequestCreate,
-    required this.onRequestEdit,
+    required this.onCreate,
+    required this.onEdit,
   });
 
   @override
@@ -32,7 +32,7 @@ class _AnnotterCanvasState extends State<AnnotterCanvas> {
 
   @override
   Widget build(BuildContext context) {
-    final isNavigating = widget.activeMode == AnnotterMode.move;
+    final isNavigating = widget.mode == AnnotterMode.move;
 
     return Positioned.fill(
       child: IgnorePointer(
@@ -46,19 +46,19 @@ class _AnnotterCanvasState extends State<AnnotterCanvas> {
             behavior: HitTestBehavior.opaque,
             onTapDown: _handleTapDown,
             onPanStart:
-                widget.activeMode == AnnotterMode.area ? _handlePanStart : null,
-            onPanUpdate: widget.activeMode == AnnotterMode.area
+                widget.mode == AnnotterMode.area ? _handlePanStart : null,
+            onPanUpdate: widget.mode == AnnotterMode.area
                 ? _handlePanUpdate
                 : null,
             onPanEnd:
-                widget.activeMode == AnnotterMode.area ? _handlePanEnd : null,
+                widget.mode == AnnotterMode.area ? _handlePanEnd : null,
             child: CustomPaint(
               painter: _AnnotterPainter(
                 items: widget.items,
                 dragStart: _dragStart,
                 dragCurrent: _dragCurrent,
                 hoveredWidget: _hoveredWidget,
-                currentScrollOffset: widget.currentScrollOffset,
+                scrollOffset: widget.scrollOffset,
                 markerColor: widget.markerColor,
               ),
             ),
@@ -69,26 +69,26 @@ class _AnnotterCanvasState extends State<AnnotterCanvas> {
   }
 
   void _updateHover(Offset localPos) {
-    if (widget.activeMode != AnnotterMode.widget) {
+    if (widget.mode != AnnotterMode.widget) {
       if (_hoveredWidget != null) setState(() => _hoveredWidget = null);
       return;
     }
     final info = WidgetInspectorHelper.inspectAt(context, localPos, fastPreview: true);
     if (_hoveredWidget?.rect != info.rect ||
-        _hoveredWidget?.name != info.name) {
+        _hoveredWidget?.widgetName != info.widgetName) {
       setState(() => _hoveredWidget = info);
     }
   }
 
   void _handleTapDown(TapDownDetails details) {
-    if (widget.activeMode == AnnotterMode.move) return;
+    if (widget.mode == AnnotterMode.move) return;
 
     // 1. Dedicated Select Mode: tap anywhere on annotation box or badge opens edit
-    if (widget.activeMode == AnnotterMode.select) {
+    if (widget.mode == AnnotterMode.select) {
       final selectedItem =
           _findItemAt(details.localPosition, allowEntireRect: true);
       if (selectedItem != null) {
-        widget.onRequestEdit(selectedItem);
+        widget.onEdit(selectedItem);
       }
       return;
     }
@@ -97,46 +97,46 @@ class _AnnotterCanvasState extends State<AnnotterCanvas> {
     final tappedItem =
         _findItemAt(details.localPosition, allowEntireRect: false);
     if (tappedItem != null) {
-      widget.onRequestEdit(tappedItem);
+      widget.onEdit(tappedItem);
       return;
     }
 
     // 2. Create new annotation based on active tool
-    if (widget.activeMode == AnnotterMode.widget) {
+    if (widget.mode == AnnotterMode.widget) {
       final info =
           WidgetInspectorHelper.inspectAt(context, details.localPosition);
       final newItem = AnnotterItem(
         id: DateTime.now().millisecondsSinceEpoch,
         number: widget.items.length + 1,
         rect: info.rect,
-        widgetName: info.name,
+        widgetName: info.widgetName,
         hierarchy: info.hierarchy,
         mode: AnnotterMode.widget,
         isScrollable: info.isScrollable,
-        scrollOffsetAtCreation: widget.currentScrollOffset,
+        scrollOffset: widget.scrollOffset,
         selectedText: info.selectedText,
         sourceLocation: info.sourceLocation,
-        flutterProperties: info.flutterProperties,
+        properties: info.properties,
       );
       setState(() => _hoveredWidget = null);
-      widget.onRequestCreate(newItem, info.screenName);
-    } else if (widget.activeMode == AnnotterMode.point) {
+      widget.onCreate(newItem, info.screenName);
+    } else if (widget.mode == AnnotterMode.point) {
       final pos = details.localPosition;
       final info = WidgetInspectorHelper.inspectAt(context, pos);
       final newItem = AnnotterItem(
         id: DateTime.now().millisecondsSinceEpoch,
         number: widget.items.length + 1,
         rect: Rect.fromCenter(center: pos, width: 32, height: 32),
-        widgetName: info.name != 'Element' ? info.name : 'PointLocation',
+        widgetName: info.widgetName != 'Element' ? info.widgetName : 'PointLocation',
         hierarchy: info.hierarchy,
         mode: AnnotterMode.point,
         isScrollable: info.isScrollable,
-        scrollOffsetAtCreation: widget.currentScrollOffset,
+        scrollOffset: widget.scrollOffset,
         selectedText: info.selectedText,
         sourceLocation: info.sourceLocation,
-        flutterProperties: info.flutterProperties,
+        properties: info.properties,
       );
-      widget.onRequestCreate(newItem, info.screenName);
+      widget.onCreate(newItem, info.screenName);
     }
   }
 
@@ -162,20 +162,20 @@ class _AnnotterCanvasState extends State<AnnotterCanvas> {
           id: DateTime.now().millisecondsSinceEpoch,
           number: widget.items.length + 1,
           rect: rect,
-          widgetName: (info.name != 'Element' &&
-                  !info.name.contains('Gesture') &&
-                  !info.name.contains('Detector'))
-              ? info.name
+          widgetName: (info.widgetName != 'Element' &&
+                  !info.widgetName.contains('Gesture') &&
+                  !info.widgetName.contains('Detector'))
+              ? info.widgetName
               : 'SelectionArea',
           hierarchy: info.hierarchy,
           mode: AnnotterMode.area,
           isScrollable: info.isScrollable,
-          scrollOffsetAtCreation: widget.currentScrollOffset,
+          scrollOffset: widget.scrollOffset,
           selectedText: info.selectedText,
           sourceLocation: info.sourceLocation,
-          flutterProperties: info.flutterProperties,
+          properties: info.properties,
         );
-        widget.onRequestCreate(newItem, info.screenName);
+        widget.onCreate(newItem, info.screenName);
       }
     }
     setState(() {
@@ -187,7 +187,7 @@ class _AnnotterCanvasState extends State<AnnotterCanvas> {
   AnnotterItem? _findItemAt(Offset pos, {bool allowEntireRect = false}) {
     for (final item in widget.items.reversed) {
       final dy = item.isScrollable
-          ? (item.scrollOffsetAtCreation - widget.currentScrollOffset)
+          ? (item.scrollOffset - widget.scrollOffset)
           : 0.0;
       final displayRect = item.rect.translate(0, dy);
 
@@ -214,7 +214,7 @@ class _AnnotterPainter extends CustomPainter {
   final Offset? dragStart;
   final Offset? dragCurrent;
   final InspectedWidgetInfo? hoveredWidget;
-  final double currentScrollOffset;
+  final double scrollOffset;
   final Color? markerColor;
 
   _AnnotterPainter({
@@ -222,7 +222,7 @@ class _AnnotterPainter extends CustomPainter {
     this.dragStart,
     this.dragCurrent,
     this.hoveredWidget,
-    this.currentScrollOffset = 0.0,
+    this.scrollOffset = 0.0,
     this.markerColor,
   });
 
@@ -248,7 +248,7 @@ class _AnnotterPainter extends CustomPainter {
 
       // Floating DevTools Tag Banner
       final labelText =
-          '${hoveredWidget!.name} ${rect.width.toInt()}×${rect.height.toInt()}';
+          '${hoveredWidget!.widgetName} ${rect.width.toInt()}×${rect.height.toInt()}';
       final textPainter = TextPainter(
         text: TextSpan(
           text: labelText,
@@ -287,7 +287,7 @@ class _AnnotterPainter extends CustomPainter {
     // 2. Existing Annotations (Transformed by Scroll Offset)
     for (final item in items) {
       final dy = item.isScrollable
-          ? (item.scrollOffsetAtCreation - currentScrollOffset)
+          ? (item.scrollOffset - scrollOffset)
           : 0.0;
       final displayRect = item.rect.translate(0, dy);
 

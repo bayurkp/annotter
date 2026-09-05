@@ -7,17 +7,17 @@ class AnnotterSettingsDialog extends StatefulWidget {
   final Color markerColor;
   final bool clearOnCopy;
   final bool blockInteractions;
-  final bool replaceMcpOnCopy;
-  final bool? isMcpConnected;
+  final bool replaceServerOnCopy;
+  final bool? isServerConnected;
   final String? snapshotDirectory;
   final ValueChanged<String> onDetailLevelChanged;
   final ValueChanged<bool> onIncludeTreeChanged;
   final ValueChanged<Color> onMarkerColorChanged;
   final ValueChanged<bool> onClearOnCopyChanged;
   final ValueChanged<bool> onBlockInteractionsChanged;
-  final ValueChanged<bool> onReplaceMcpOnCopyChanged;
+  final ValueChanged<bool> onReplaceServerOnCopyChanged;
   final ValueChanged<String?>? onSnapshotDirectoryChanged;
-  final Future<int> Function()? onClearAllSnapshots;
+  final Future<int> Function()? onClearSnapshots;
   final VoidCallback onClose;
 
   const AnnotterSettingsDialog({
@@ -27,17 +27,17 @@ class AnnotterSettingsDialog extends StatefulWidget {
     required this.markerColor,
     required this.clearOnCopy,
     required this.blockInteractions,
-    this.replaceMcpOnCopy = false,
-    this.isMcpConnected,
+    this.replaceServerOnCopy = false,
+    this.isServerConnected,
     this.snapshotDirectory,
     required this.onDetailLevelChanged,
     required this.onIncludeTreeChanged,
     required this.onMarkerColorChanged,
     required this.onClearOnCopyChanged,
     required this.onBlockInteractionsChanged,
-    required this.onReplaceMcpOnCopyChanged,
+    required this.onReplaceServerOnCopyChanged,
     this.onSnapshotDirectoryChanged,
-    this.onClearAllSnapshots,
+    this.onClearSnapshots,
     required this.onClose,
   });
 
@@ -47,7 +47,7 @@ class AnnotterSettingsDialog extends StatefulWidget {
 
 class _AnnotterSettingsDialogState extends State<AnnotterSettingsDialog> {
   bool _isClearing = false;
-  String? _clearFeedbackText;
+  String? _clearFeedback;
 
   @override
   Widget build(BuildContext context) {
@@ -238,9 +238,9 @@ class _AnnotterSettingsDialogState extends State<AnnotterSettingsDialog> {
                 ),
                 const SizedBox(height: 8),
                 _buildCheckboxRow(
-                  label: 'Replace MCP notes on copy',
-                  value: widget.replaceMcpOnCopy,
-                  onChanged: widget.onReplaceMcpOnCopyChanged,
+                  label: 'Replace server notes on copy',
+                  value: widget.replaceServerOnCopy,
+                  onChanged: widget.onReplaceServerOnCopyChanged,
                 ),
 
                 const SizedBox(height: 12),
@@ -318,7 +318,7 @@ class _AnnotterSettingsDialogState extends State<AnnotterSettingsDialog> {
                   ),
                 ),
 
-                if (widget.onClearAllSnapshots != null) ...[
+                if (widget.onClearSnapshots != null) ...[
                   const SizedBox(height: 8),
                   InkWell(
                     borderRadius: BorderRadius.circular(6),
@@ -327,17 +327,17 @@ class _AnnotterSettingsDialogState extends State<AnnotterSettingsDialog> {
                         : () async {
                             setState(() {
                               _isClearing = true;
-                              _clearFeedbackText = null;
+                              _clearFeedback = null;
                             });
                             try {
-                              final count = await widget.onClearAllSnapshots!();
+                              final count = await widget.onClearSnapshots!();
                               if (mounted) {
                                 setState(() {
-                                  _clearFeedbackText = 'Cleared $count snapshot(s)';
+                                  _clearFeedback = 'Cleared $count snapshot(s)';
                                 });
                                 Future.delayed(const Duration(seconds: 2), () {
                                   if (mounted) {
-                                    setState(() => _clearFeedbackText = null);
+                                    setState(() => _clearFeedback = null);
                                   }
                                 });
                               }
@@ -351,12 +351,12 @@ class _AnnotterSettingsDialogState extends State<AnnotterSettingsDialog> {
                       duration: const Duration(milliseconds: 200),
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                       decoration: BoxDecoration(
-                        color: _clearFeedbackText != null
+                        color: _clearFeedback != null
                             ? AnnotterColors.emerald[950]!.withValues(alpha: 0.4)
                             : AnnotterColors.rose[950]!.withValues(alpha: 0.3),
                         borderRadius: BorderRadius.circular(6),
                         border: Border.all(
-                          color: _clearFeedbackText != null
+                          color: _clearFeedback != null
                               ? AnnotterColors.emerald[600]!.withValues(alpha: 0.5)
                               : AnnotterColors.rose[800]!.withValues(alpha: 0.4),
                           width: 1,
@@ -366,21 +366,21 @@ class _AnnotterSettingsDialogState extends State<AnnotterSettingsDialog> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(
-                            _clearFeedbackText != null
+                            _clearFeedback != null
                                 ? Icons.check_circle_outline_rounded
                                 : Icons.delete_sweep_outlined,
                             size: 14,
-                            color: _clearFeedbackText != null
+                            color: _clearFeedback != null
                                 ? AnnotterColors.emerald[300]
                                 : AnnotterColors.rose[300],
                           ),
                           const SizedBox(width: 6),
                           Text(
-                            _clearFeedbackText ?? (_isClearing ? 'Clearing...' : 'Clear All Snapshots'),
+                            _clearFeedback ?? (_isClearing ? 'Clearing...' : 'Clear All Snapshots'),
                             style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w600,
-                              color: _clearFeedbackText != null
+                              color: _clearFeedback != null
                                   ? AnnotterColors.emerald[300]
                                   : AnnotterColors.rose[300],
                             ),
@@ -395,12 +395,12 @@ class _AnnotterSettingsDialogState extends State<AnnotterSettingsDialog> {
                 Divider(color: AnnotterColors.slate[800], height: 1),
                 const SizedBox(height: 10),
 
-                // 6. MCP Bridge Status Indicator
+                // 6. Server Connection Status Indicator
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'MCP Server Bridge',
+                      'Server Connection',
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
@@ -414,12 +414,12 @@ class _AnnotterSettingsDialogState extends State<AnnotterSettingsDialog> {
                           height: 8,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: widget.isMcpConnected == true
+                            color: widget.isServerConnected == true
                                 ? AnnotterColors.emerald[400]
-                                : widget.isMcpConnected == false
+                                : widget.isServerConnected == false
                                     ? AnnotterColors.rose[400]
                                     : AnnotterColors.slate[500],
-                            boxShadow: widget.isMcpConnected == true
+                            boxShadow: widget.isServerConnected == true
                                 ? [
                                     BoxShadow(
                                       color: AnnotterColors.emerald[400]!
@@ -432,17 +432,17 @@ class _AnnotterSettingsDialogState extends State<AnnotterSettingsDialog> {
                         ),
                         const SizedBox(width: 6),
                         Text(
-                          widget.isMcpConnected == true
+                          widget.isServerConnected == true
                               ? 'Connected'
-                              : widget.isMcpConnected == false
+                              : widget.isServerConnected == false
                                   ? 'Disconnected'
                                   : 'Not Configured',
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.bold,
-                            color: widget.isMcpConnected == true
+                            color: widget.isServerConnected == true
                                 ? AnnotterColors.emerald[400]
-                                : widget.isMcpConnected == false
+                                : widget.isServerConnected == false
                                     ? AnnotterColors.rose[400]
                                     : AnnotterColors.slate[500],
                           ),

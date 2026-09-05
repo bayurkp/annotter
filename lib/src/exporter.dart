@@ -183,8 +183,8 @@ class AnnotterExporter {
         buffer.writeln('   - Source: `${item.sourceLocation}`');
       }
 
-      if (item.flutterProperties != null && item.flutterProperties!.isNotEmpty) {
-        final formattedProps = item.flutterProperties!.entries
+      if (item.properties != null && item.properties!.isNotEmpty) {
+        final formattedProps = item.properties!.entries
             .map((e) => '${e.key}: ${e.value}')
             .join(', ');
         buffer.writeln('   - Properties: {$formattedProps}');
@@ -219,8 +219,8 @@ class AnnotterExporter {
         buffer.writeln('   - Content: "${item.selectedText}"');
       }
 
-      if (item.flutterProperties != null && item.flutterProperties!.isNotEmpty) {
-        final formattedProps = item.flutterProperties!.entries
+      if (item.properties != null && item.properties!.isNotEmpty) {
+        final formattedProps = item.properties!.entries
             .map((e) => '${e.key}: ${e.value}')
             .join(', ');
         buffer.writeln('   - Properties: {$formattedProps}');
@@ -246,7 +246,7 @@ class AnnotterExporter {
           '   - Position: x:${item.rect.left.toInt()}, y:${item.rect.top.toInt()} (w:${item.rect.width.toInt()}, h:${item.rect.height.toInt()})');
 
       if (item.selectedText != null && item.selectedText!.isNotEmpty) {
-        buffer.writeln('   - Selected: "${item.selectedText}"');
+        buffer.writeln('   - Content: "${item.selectedText}"');
       }
 
       buffer.writeln(
