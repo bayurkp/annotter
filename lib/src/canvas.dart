@@ -101,7 +101,7 @@ class _AnnotterCanvasState extends State<AnnotterCanvas> {
       return;
     }
 
-    // 2. Create new annotation based on active tool
+    // 3. Create new annotation based on active tool
     if (widget.mode == AnnotterMode.widget) {
       final info =
           WidgetInspectorHelper.inspectAt(context, details.localPosition);

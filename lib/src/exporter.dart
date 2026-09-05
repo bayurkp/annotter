@@ -2,7 +2,7 @@ import 'package:flutter/services.dart';
 import 'models.dart';
 
 class AnnotterExporter {
-  // Formats annotations into structured Markdown grouped by screen or view section for AI agents
+  /// Formats annotations into structured Markdown grouped by screen or view section for AI agents.
   static String toMarkdown({
     required List<AnnotterItem> items,
     String? routeName,
@@ -266,7 +266,7 @@ class AnnotterExporter {
     buffer.writeln();
   }
 
-  // ponytail: Directly uses Flutter native Clipboard.
+  /// Copies formatted markdown annotations to the system clipboard.
   static Future<void> copyToClipboard({
     required List<AnnotterItem> items,
     String? routeName,

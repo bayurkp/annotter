@@ -224,7 +224,7 @@ class _AnnotterSettingsDialogState extends State<AnnotterSettingsDialog> {
                 Divider(color: AnnotterColors.slate[800], height: 1),
                 const SizedBox(height: 12),
 
-                // 5. Checkboxes: Clear on Copy, Block Interactions, Replace MCP on Copy
+                // 5. Checkboxes: Clear on Copy, Block Interactions, Replace Server on Copy
                 _buildCheckboxRow(
                   label: 'Clear on copy',
                   value: widget.clearOnCopy,

@@ -216,7 +216,7 @@ class WidgetInspectorHelper {
     return idx != -1 ? type.substring(0, idx) : type;
   }
 
-  // ponytail: Hit-tests the app sibling RenderBox directly using local coordinates.
+  /// Hit-tests the application RenderBox directly using local coordinates.
   static InspectedWidgetInfo inspectAt(
     BuildContext context,
     Offset localOffset, {

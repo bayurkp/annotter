@@ -772,7 +772,7 @@ class _AnnotterState extends State<Annotter> {
       setState(() => _items.clear());
     }
 
-    // 3. Smooth in-place visual feedback on the button (2s green checkmark, no intrusive snackbar)
+    // In-place button feedback (2s state indication)
     if (mounted) {
       _copiedTimer?.cancel();
       setState(() => _isCopied = true);

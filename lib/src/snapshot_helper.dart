@@ -35,7 +35,7 @@ class AnnotterSnapshotHelper {
   }
 
   /// Captures a snapshot from the provided [RepaintBoundary] render object.
-  /// If [_syncClient] is connected, directly uploads to host and returns local host path.
+  /// If [syncClient] is connected, directly uploads to host and returns local host path.
   /// Otherwise, saves locally to [snapshotDirectory] or platform default Downloads folder.
   static Future<String?> capture({
     required RenderRepaintBoundary? boundary,
