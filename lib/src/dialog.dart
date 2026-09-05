@@ -56,6 +56,9 @@ class _AnnotationDialogState extends State<AnnotationDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final mediaQuery = MediaQuery.of(context);
+    final isKeyboardOpen = mediaQuery.viewInsets.bottom > 0;
+
     return Theme(
       data: ThemeData.dark().copyWith(
         textTheme: const TextTheme().apply(fontFamily: 'sans-serif'),
@@ -65,8 +68,14 @@ class _AnnotationDialogState extends State<AnnotationDialog> {
         child: Center(
           child: Container(
             width: 360,
-            margin: const EdgeInsets.symmetric(horizontal: 24),
-            padding: const EdgeInsets.all(20),
+            margin: EdgeInsets.symmetric(
+              horizontal: 20,
+              vertical: isKeyboardOpen ? 8 : 24,
+            ),
+            padding: EdgeInsets.symmetric(
+              horizontal: 18,
+              vertical: isKeyboardOpen ? 14 : 20,
+            ),
             decoration: BoxDecoration(
               color: AnnotterColors.slate[900],
               borderRadius: BorderRadius.circular(16),
@@ -231,11 +240,11 @@ class _AnnotationDialogState extends State<AnnotationDialog> {
                   }).toList(),
                 ),
 
-                const SizedBox(height: 12),
+                SizedBox(height: isKeyboardOpen ? 8 : 12),
                 TextField(
                   controller: _controller,
                   autofocus: true,
-                  maxLines: 3,
+                  maxLines: isKeyboardOpen ? 2 : 3,
                   style: const TextStyle(
                       fontSize: 13,
                       color: AnnotterColors.white,
@@ -248,7 +257,8 @@ class _AnnotationDialogState extends State<AnnotationDialog> {
                         fontFamily: 'sans-serif'),
                     filled: true,
                     fillColor: AnnotterColors.slate[950],
-                    contentPadding: const EdgeInsets.all(12),
+                    contentPadding: EdgeInsets.symmetric(
+                        horizontal: 12, vertical: isKeyboardOpen ? 8 : 12),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
                       borderSide: BorderSide.none,
@@ -260,7 +270,7 @@ class _AnnotationDialogState extends State<AnnotationDialog> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: isKeyboardOpen ? 10 : 16),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [

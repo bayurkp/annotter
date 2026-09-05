@@ -192,7 +192,7 @@ class _AnnotterState extends State<Annotter> {
       child: Overlay(
         initialEntries: [
           OverlayEntry(
-            builder: (context) {
+            builder: (overlayContext) {
               if (!_isActive) {
                 // Inactive: Fullscreen app + Draggable FAB
                 return Stack(
@@ -352,13 +352,20 @@ class _AnnotterState extends State<Annotter> {
                           _buildModalBackdrop(
                             onDismiss: () =>
                                 setState(() => _activeDialogItem = null),
+                            alignment: mediaQuery.viewInsets.bottom > 0
+                                ? Alignment.topCenter
+                                : Alignment.center,
                             child: AnimatedPadding(
-                              duration: const Duration(milliseconds: 180),
+                              duration: const Duration(milliseconds: 200),
                               curve: Curves.easeOutCubic,
                               padding: EdgeInsets.only(
-                                bottom: mediaQuery.viewInsets.bottom,
+                                top: mediaQuery.viewInsets.bottom > 0 ? 16 : 0,
+                                bottom: mediaQuery.viewInsets.bottom > 0
+                                    ? mediaQuery.viewInsets.bottom + 12
+                                    : 0,
                               ),
                               child: SingleChildScrollView(
+                                physics: const ClampingScrollPhysics(),
                                 child: AnnotationDialog(
                                   item: _activeDialogItem!,
                                   isNew: _isCreatingItem,
