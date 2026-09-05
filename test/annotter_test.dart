@@ -36,7 +36,7 @@ void main() {
     expect(
         md, contains('## UI Revision Request (Total: 2 notes across 1 view)'));
     expect(md, contains('**Viewport:** 390x844'));
-    expect(md, contains('### 📱 Page: DashboardScreen'));
+    expect(md, contains('### Page: DashboardScreen'));
     expect(md, contains('1. [WIDGET] **SubmitButton**'));
     expect(md,
         contains('Tree: DashboardPage > FormCard > ActionRow > SubmitButton'));
@@ -113,18 +113,18 @@ void main() {
     expect(md, contains('**Viewport:** 384x805 (DPR: 2.75x)'));
     expect(md, contains('**Route:** /home'));
     expect(md, contains('**Generated:** 2026-09-03 20:10:42'));
-    expect(md, contains('### 📸 View 1: HomeScreen (Top)'));
+    expect(md, contains('### View 1: HomeScreen (Top)'));
     expect(
-        md, contains('**Screenshot:** `/sdcard/Download/annotter_view_1.png`'));
-    expect(md, contains('> 💡 *Fetch via ADB:* `adb pull /sdcard/Download/annotter_view_1.png ./`'));
+        md, contains('**Snapshot:** `/sdcard/Download/annotter_view_1.png`'));
+    expect(md, contains('> *Fetch via ADB:* `adb pull /sdcard/Download/annotter_view_1.png ./`'));
     expect(md, contains('1. [WIDGET] **HomeSearchBar**'));
     expect(md, contains('Tree: HomeScreen > CustomScrollView > HomeSearchBar'));
     expect(md, contains('Note: Change placeholder'));
     expect(
-        md, contains('### 📸 View 2: HomeScreen (Scrolled to 650px)'));
+        md, contains('### View 2: HomeScreen (Scrolled to 650px)'));
     expect(
-        md, contains('**Screenshot:** `/sdcard/Download/annotter_view_2.png`'));
-    expect(md, contains('> 💡 *Fetch via ADB:* `adb pull /sdcard/Download/annotter_view_2.png ./`'));
+        md, contains('**Snapshot:** `/sdcard/Download/annotter_view_2.png`'));
+    expect(md, contains('> *Fetch via ADB:* `adb pull /sdcard/Download/annotter_view_2.png ./`'));
     expect(md, contains('2. [AREA] **MissionCard**'));
     expect(md, contains('Note: Margin is too tight'));
   });

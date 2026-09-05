@@ -62,9 +62,9 @@ class AnnotterExporter {
       for (int i = 0; i < sections.length; i++) {
         final sec = sections[i];
         if (sections.length == 1) {
-          buffer.writeln('### 📱 Page: ${sec.title}');
+          buffer.writeln('### Page: ${sec.title}');
         } else {
-          buffer.writeln('### 📸 View ${i + 1}: ${sec.title}');
+          buffer.writeln('### View ${i + 1}: ${sec.title}');
         }
 
         if (sec.screenshotPath != null && sec.screenshotPath!.isNotEmpty) {
@@ -104,7 +104,7 @@ class AnnotterExporter {
     }
 
     for (final entry in grouped.entries) {
-      buffer.writeln('### 📱 Page: ${entry.key}');
+      buffer.writeln('### Page: ${entry.key}');
       for (final item in entry.value) {
         _formatItem(buffer, item,
             detailLevel: detailLevel,
@@ -122,16 +122,19 @@ class AnnotterExporter {
     String path,
     AnnotterEnvironment? environment,
   ) {
-    buffer.writeln('**Screenshot:** `$path`');
+    buffer.writeln('**Snapshot:** `$path`');
 
     final platform = environment?.platform;
-    final isAndroid = platform == 'Android' || path.startsWith('/sdcard') || path.startsWith('/storage/emulated');
+    final isAndroid = platform == 'Android' ||
+        path.startsWith('/sdcard') ||
+        path.startsWith('/storage/emulated');
     final isIos = platform == 'iOS';
 
     if (isAndroid) {
-      buffer.writeln('  > 💡 *Fetch via ADB:* `adb pull $path ./`');
+      buffer.writeln('  > *Fetch via ADB:* `adb pull $path ./`');
     } else if (isIos) {
-      buffer.writeln('  > 💡 *iOS Sandbox:* Sandboxed in app documents. Connect via Wi-Fi/MCP bridge to sync directly.');
+      buffer.writeln(
+          '  > *iOS Sandbox:* Sandboxed in app documents. Connect via Wi-Fi/MCP bridge to sync directly.');
     }
   }
 
