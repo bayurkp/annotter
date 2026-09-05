@@ -9,6 +9,8 @@
  */
 
 import http from "http";
+import fs from "fs";
+import path from "path";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import {
@@ -118,6 +120,48 @@ const httpServer = http.createServer((req, res) => {
         res.end(JSON.stringify({ success: true, item }));
       } catch (err) {
         res.writeHead(400, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: err.message }));
+      }
+    });
+    return;
+  }
+
+  // POST /api/upload-screenshot (Direct screenshot upload from Android / iOS / Web / Desktop)
+  if (req.method === "POST" && pathname === "/api/upload-screenshot") {
+    const filename = url.searchParams.get("filename") || `annotter_${Date.now()}.png`;
+    const safeFilename = path.basename(filename);
+    const screenshotsDir = path.resolve(process.cwd(), ".annotter", "screenshots");
+
+    try {
+      if (!fs.existsSync(screenshotsDir)) {
+        fs.mkdirSync(screenshotsDir, { recursive: true });
+      }
+    } catch (err) {
+      log(`Failed to create screenshots dir: ${err.message}`);
+    }
+
+    const targetFilePath = path.join(screenshotsDir, safeFilename);
+    const chunks = [];
+
+    req.on("data", (chunk) => chunks.push(chunk));
+    req.on("end", () => {
+      try {
+        const buffer = Buffer.concat(chunks);
+        fs.writeFileSync(targetFilePath, buffer);
+        log(`Saved uploaded screenshot: ${targetFilePath} (${buffer.length} bytes)`);
+
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(
+          JSON.stringify({
+            success: true,
+            filename: safeFilename,
+            localPath: targetFilePath,
+            size: buffer.length,
+          }),
+        );
+      } catch (err) {
+        log(`Failed saving uploaded screenshot: ${err.message}`);
+        res.writeHead(500, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ error: err.message }));
       }
     });

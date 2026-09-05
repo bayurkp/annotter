@@ -108,6 +108,29 @@ class AnnotterSyncClient {
     }
   }
 
+  /// Uploads screenshot image bytes directly to MCP server host
+  /// Returns the host's saved local absolute file path, or null if upload failed.
+  Future<String?> uploadScreenshot(List<int> bytes, String filename) async {
+    if (kIsWeb || bytes.isEmpty) return null;
+    try {
+      final uri = _uri('/api/upload-screenshot?filename=${Uri.encodeComponent(filename)}');
+      final request = await _httpClient.postUrl(uri);
+      request.headers.contentType = ContentType.binary;
+      request.headers.contentLength = bytes.length;
+      request.add(bytes);
+
+      final response = await request.close();
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final body = await response.transform(utf8.decoder).join();
+        final json = jsonDecode(body);
+        if (json is Map && json['localPath'] != null) {
+          return json['localPath'] as String;
+        }
+      }
+    } catch (_) {}
+    return null;
+  }
+
   /// Deletes an annotation from the MCP server
   Future<bool> deleteAnnotation(int itemId) async {
     if (kIsWeb) return false;

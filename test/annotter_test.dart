@@ -116,12 +116,15 @@ void main() {
     expect(md, contains('### 📸 View 1: HomeScreen (Top)'));
     expect(
         md, contains('**Screenshot:** `/sdcard/Download/annotter_view_1.png`'));
+    expect(md, contains('> 💡 *Fetch via ADB:* `adb pull /sdcard/Download/annotter_view_1.png ./`'));
     expect(md, contains('1. [WIDGET] **HomeSearchBar**'));
     expect(md, contains('Tree: HomeScreen > CustomScrollView > HomeSearchBar'));
     expect(md, contains('Note: Change placeholder'));
-    expect(md, contains('### 📸 View 2: HomeScreen (Scrolled to 650px)'));
+    expect(
+        md, contains('### 📸 View 2: HomeScreen (Scrolled to 650px)'));
     expect(
         md, contains('**Screenshot:** `/sdcard/Download/annotter_view_2.png`'));
+    expect(md, contains('> 💡 *Fetch via ADB:* `adb pull /sdcard/Download/annotter_view_2.png ./`'));
     expect(md, contains('2. [AREA] **MissionCard**'));
     expect(md, contains('Note: Margin is too tight'));
   });

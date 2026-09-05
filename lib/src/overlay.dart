@@ -1010,6 +1010,17 @@ class _AnnotterState extends State<Annotter> {
           // 3. Fallback to system temp directory
           file ??= File('${Directory.systemTemp.path}/$filename');
           await file.writeAsBytes(pngBytes);
+
+          // 4. If MCP sync server is connected, upload image bytes directly to host
+          if (_syncClient != null) {
+            try {
+              final remotePath = await _syncClient!.uploadScreenshot(pngBytes, filename);
+              if (remotePath != null && remotePath.isNotEmpty) {
+                return remotePath;
+              }
+            } catch (_) {}
+          }
+
           return file.path;
         }
       }
