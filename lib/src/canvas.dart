@@ -73,7 +73,7 @@ class _AnnotterCanvasState extends State<AnnotterCanvas> {
       if (_hoveredWidget != null) setState(() => _hoveredWidget = null);
       return;
     }
-    final info = WidgetInspectorHelper.inspectAt(context, localPos);
+    final info = WidgetInspectorHelper.inspectAt(context, localPos, fastPreview: true);
     if (_hoveredWidget?.rect != info.rect ||
         _hoveredWidget?.name != info.name) {
       setState(() => _hoveredWidget = info);

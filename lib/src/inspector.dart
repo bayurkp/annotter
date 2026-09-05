@@ -218,7 +218,10 @@ class WidgetInspectorHelper {
 
   // ponytail: Hit-tests the app sibling RenderBox directly using local coordinates.
   static InspectedWidgetInfo inspectAt(
-      BuildContext context, Offset localOffset) {
+    BuildContext context,
+    Offset localOffset, {
+    bool fastPreview = false,
+  }) {
     final canvasBox = context.findRenderObject() as RenderBox?;
     final parent = canvasBox?.parent;
 
@@ -294,17 +297,14 @@ class WidgetInspectorHelper {
 
       // Helper to extract Flutter source location (file and line) from Diagnostics
       String? extractSource(Element el) {
+        if (fastPreview || detectedSourceLocation != null) return detectedSourceLocation;
         try {
           final info = el.toDiagnosticsNode();
-          // Check line & file info from diagnostic chain / description
-          final desc = info.toStringDeep();
-          final lines = desc.split('\n');
-          for (final line in lines) {
-            final trimmed = line.trim();
-            final match = RegExp(r'(package:[^\s)]+|lib/[^\s)]+):(\d+)(?::(\d+))?').firstMatch(trimmed);
-            if (match != null) {
-              return match.group(0);
-            }
+          final desc = info.toString();
+          final match = RegExp(r'(package:[^\s)]+|lib/[^\s)]+):(\d+)(?::(\d+))?')
+              .firstMatch(desc);
+          if (match != null) {
+            return match.group(0);
           }
         } catch (_) {}
         return null;
@@ -312,6 +312,7 @@ class WidgetInspectorHelper {
 
       // Helper to extract Flutter native widget properties (DiagnosticsNode)
       Map<String, String> extractProperties(Element el) {
+        if (fastPreview) return const {};
         final Map<String, String> props = {};
         try {
           final node = el.toDiagnosticsNode();
@@ -352,10 +353,12 @@ class WidgetInspectorHelper {
       }
 
       checkWidgetForText(element.widget);
-      detectedSourceLocation ??= extractSource(element);
-      final initialProps = extractProperties(element);
-      if (initialProps.isNotEmpty) {
-        detectedProperties = initialProps;
+      if (!fastPreview) {
+        detectedSourceLocation = extractSource(element);
+        final initialProps = extractProperties(element);
+        if (initialProps.isNotEmpty) {
+          detectedProperties = initialProps;
+        }
       }
 
       if (_isComponentCandidate(element.widget)) {
@@ -368,10 +371,14 @@ class WidgetInspectorHelper {
       element.visitAncestorElements((ancestor) {
         final aw = ancestor.widget;
         checkWidgetForText(aw);
-        detectedSourceLocation ??= extractSource(ancestor);
-        if (detectedProperties == null || detectedProperties!.isEmpty) {
-          final p = extractProperties(ancestor);
-          if (p.isNotEmpty) detectedProperties = p;
+        if (!fastPreview) {
+          if (detectedSourceLocation == null) {
+            detectedSourceLocation = extractSource(ancestor);
+          }
+          if (detectedProperties == null || detectedProperties!.isEmpty) {
+            final p = extractProperties(ancestor);
+            if (p.isNotEmpty) detectedProperties = p;
+          }
         }
 
         final type = cleanType(aw.runtimeType.toString());
