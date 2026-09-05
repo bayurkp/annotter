@@ -1,18 +1,19 @@
 import 'dart:async';
-import 'dart:io';
-import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
 import 'colors.dart';
 import 'models.dart';
+import 'bottom_bar.dart';
 import 'canvas.dart';
 import 'dialog.dart';
 import 'exporter.dart';
+import 'idle_fab.dart';
 import 'inspector.dart';
 import 'list_sheet.dart';
 import 'settings_dialog.dart';
+import 'snapshot_helper.dart';
 import 'sync_client.dart';
 
 /// The root wrapper for Annotter.
@@ -205,7 +206,12 @@ class _AnnotterState extends State<Annotter> {
                         child: widget.child,
                       ),
                     ),
-                    _buildIdleFab(mediaQuery, size),
+                    AnnotterIdleFab(
+                      position: _fabPosition,
+                      onPositionChanged: (pos) => setState(() => _fabPosition = pos),
+                      onTap: () => setState(() => _isActive = true),
+                      badgeCount: _items.length,
+                    ),
                   ],
                 );
               }
@@ -342,7 +348,35 @@ class _AnnotterState extends State<Annotter> {
                               ),
 
                               // Ultra-Thin Full-Width Bottom Bar
-                              _buildSlimBottomBar(context),
+                              AnnotterBottomBar(
+                                activeMode: _activeMode,
+                                onModeChanged: (mode) =>
+                                    setState(() => _activeMode = mode),
+                                onExit: () => setState(() => _isActive = false),
+                                onCopy: _copyNotes,
+                                isCopiedFeedback: _isCopiedFeedback,
+                                isSyncConnected: _syncClient != null,
+                                itemCount: _items.length,
+                                canUndo: _undoStack.isNotEmpty,
+                                onUndo: _undo,
+                                canRedo: _redoStack.isNotEmpty,
+                                onRedo: _redo,
+                                onHotReload: _handleHotReload,
+                                isAnimationPaused: _isAnimationPaused,
+                                onToggleAnimationPause: _toggleAnimationPause,
+                                onOpenListSheet: () =>
+                                    setState(() => _showListSheet = true),
+                                onOpenSettings: () {
+                                  _checkMcpConnection();
+                                  setState(() => _showSettings = true);
+                                },
+                                onClearAll: _items.isNotEmpty
+                                    ? () {
+                                        _saveSnapshot();
+                                        setState(() => _items.clear());
+                                      }
+                                    : null,
+                              ),
                             ],
                           ),
                         ),
@@ -506,360 +540,7 @@ class _AnnotterState extends State<Annotter> {
     );
   }
 
-  // Modern Glassmorphic Developer Tool Bottom Bar (Linear / Figma Dev Mode Aesthetic)
-  Widget _buildSlimBottomBar(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      color: const Color(0xFF090D16), // Deep Obsidian
-      child: SafeArea(
-        top: false,
-        child: Container(
-          height: 48,
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-          decoration: BoxDecoration(
-            color: const Color(0xFF0F172A), // Slate 900
-            border: Border(
-              top: BorderSide(
-                  color: Colors.white.withValues(alpha: 0.12), width: 1.0),
-            ),
-          ),
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            physics: const BouncingScrollPhysics(),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // 1. Exit Button (Micro-glass rounded square)
-                InkWell(
-                  borderRadius: BorderRadius.circular(8),
-                  onTap: () => setState(() => _isActive = false),
-                  child: Container(
-                    width: 34,
-                    height: 34,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.06),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.08)),
-                    ),
-                    child: const Icon(Icons.close_rounded,
-                        color: Colors.white70, size: 18),
-                  ),
-                ),
-
-                const SizedBox(width: 8),
-
-                // 2. Cohesive Segmented Control Capsule for Tools
-                Container(
-                  padding: const EdgeInsets.all(3),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF1E293B),
-                    borderRadius: BorderRadius.circular(10),
-                    border:
-                        Border.all(color: Colors.white.withValues(alpha: 0.08)),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      _buildSegmentTool(
-                        icon: Icons.pan_tool_outlined,
-                        label: 'Move',
-                        mode: AnnotterMode.move,
-                      ),
-                      const SizedBox(width: 2),
-                      _buildSegmentTool(
-                        icon: Icons.near_me_outlined,
-                        label: 'Select',
-                        mode: AnnotterMode.select,
-                      ),
-                      const SizedBox(width: 2),
-                      _buildSegmentTool(
-                        icon: Icons.widgets_outlined,
-                        label: 'Widget',
-                        mode: AnnotterMode.widget,
-                      ),
-                      const SizedBox(width: 2),
-                      _buildSegmentTool(
-                        icon: Icons.crop_square_rounded,
-                        label: 'Area',
-                        mode: AnnotterMode.area,
-                      ),
-                      const SizedBox(width: 2),
-                      _buildSegmentTool(
-                        icon: Icons.adjust_rounded,
-                        label: 'Point',
-                        mode: AnnotterMode.point,
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(width: 6),
-
-                // 3. Copy / Sent CTA Button (Placed prominently before Undo for quick access)
-                InkWell(
-                  borderRadius: BorderRadius.circular(8),
-                  onTap: _copyNotes,
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    height: 34,
-                    padding: const EdgeInsets.symmetric(horizontal: 10),
-                    decoration: BoxDecoration(
-                      gradient: _isCopiedFeedback
-                          ? LinearGradient(
-                              colors: [
-                                AnnotterColors.emerald[600]!,
-                                AnnotterColors.emerald[700]!,
-                              ],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            )
-                          : LinearGradient(
-                              colors: [
-                                AnnotterColors.blue[600]!,
-                                AnnotterColors.blue[700]!,
-                              ],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: _isCopiedFeedback
-                            ? AnnotterColors.emerald[400]!
-                                .withValues(alpha: 0.4)
-                            : AnnotterColors.blue[400]!.withValues(alpha: 0.4),
-                        width: 0.8,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: (_isCopiedFeedback
-                                  ? AnnotterColors.emerald[600]!
-                                  : AnnotterColors.blue[600]!)
-                              .withValues(alpha: 0.35),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          _isCopiedFeedback
-                              ? Icons.check_rounded
-                              : Icons.copy_rounded,
-                          color: Colors.white,
-                          size: 15,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          _isCopiedFeedback
-                              ? (_syncClient != null
-                                  ? 'Sent & Copied'
-                                  : 'Copied!')
-                              : (_items.isEmpty
-                                  ? 'Copy'
-                                  : 'Copy (${_items.length})'),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            fontFamily: 'sans-serif',
-                            letterSpacing: 0.2,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-                const SizedBox(width: 6),
-
-                // 4. Action Buttons Group (Undo, Redo, Hot Reload, Pause, List, Settings, Clear)
-                _buildActionSquare(
-                  icon: Icons.undo_rounded,
-                  tooltip: 'Undo',
-                  enabled: _undoStack.isNotEmpty,
-                  onTap: _undoStack.isEmpty ? null : _undo,
-                ),
-                const SizedBox(width: 4),
-
-                _buildActionSquare(
-                  icon: Icons.redo_rounded,
-                  tooltip: 'Redo',
-                  enabled: _redoStack.isNotEmpty,
-                  onTap: _redoStack.isEmpty ? null : _redo,
-                ),
-                const SizedBox(width: 4),
-
-                // Hot Reload & Re-render Button
-                _buildActionSquare(
-                  icon: Icons.refresh_rounded,
-                  tooltip: 'Hot Reload & Refresh',
-                  enabled: true,
-                  onTap: _handleHotReload,
-                ),
-                const SizedBox(width: 4),
-
-                // Freeze Animation Button (timeDilation)
-                _buildActionSquare(
-                  icon: _isAnimationPaused
-                      ? Icons.play_arrow_rounded
-                      : Icons.pause_rounded,
-                  tooltip: _isAnimationPaused
-                      ? 'Resume Animation'
-                      : 'Freeze Animation',
-                  iconColor:
-                      _isAnimationPaused ? AnnotterColors.amber[400] : null,
-                  enabled: true,
-                  onTap: _toggleAnimationPause,
-                ),
-                const SizedBox(width: 4),
-
-                _buildActionSquare(
-                  icon: Icons.format_list_numbered_rounded,
-                  tooltip: 'Annotations List',
-                  badgeCount: _items.isNotEmpty ? _items.length : null,
-                  enabled: true,
-                  onTap: () => setState(() => _showListSheet = true),
-                ),
-                const SizedBox(width: 4),
-
-                // Settings Gear Button
-                _buildActionSquare(
-                  icon: Icons.settings_outlined,
-                  tooltip: 'Settings',
-                  enabled: true,
-                  onTap: () {
-                    _checkMcpConnection();
-                    setState(() => _showSettings = true);
-                  },
-                ),
-                const SizedBox(width: 4),
-
-                if (_items.isNotEmpty) ...[
-                  _buildActionSquare(
-                    icon: Icons.delete_outline_rounded,
-                    tooltip: 'Clear All',
-                    iconColor: Colors.redAccent.shade100,
-                    enabled: true,
-                    onTap: () {
-                      _saveSnapshot();
-                      setState(() => _items.clear());
-                    },
-                  ),
-                  const SizedBox(width: 4),
-                ],
-
-                const SizedBox(width: 4),
-                const SizedBox(width: 6),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSegmentTool({
-    required IconData icon,
-    required String label,
-    required AnnotterMode mode,
-  }) {
-    final isSelected = _activeMode == mode;
-    final activeColor = mode == AnnotterMode.move
-        ? AnnotterColors.emerald[500]!
-        : mode == AnnotterMode.select
-            ? AnnotterColors.indigo[500]!
-            : AnnotterColors.blue[600]!;
-
-    return Tooltip(
-      message: label,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(7),
-        onTap: () => setState(() => _activeMode = mode),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
-          width: 28,
-          height: 28,
-          decoration: BoxDecoration(
-            color: isSelected ? activeColor : Colors.transparent,
-            borderRadius: BorderRadius.circular(7),
-            boxShadow: isSelected
-                ? [
-                    BoxShadow(
-                      color: activeColor.withValues(alpha: 0.4),
-                      blurRadius: 6,
-                      offset: const Offset(0, 1),
-                    ),
-                  ]
-                : null,
-          ),
-          alignment: Alignment.center,
-          child: Icon(
-            icon,
-            size: 16,
-            color: isSelected ? Colors.white : Colors.white60,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildActionSquare({
-    required IconData icon,
-    required String tooltip,
-    required bool enabled,
-    VoidCallback? onTap,
-    Color? iconColor,
-    int? badgeCount,
-  }) {
-    final effectiveColor =
-        enabled ? (iconColor ?? Colors.white70) : Colors.white24;
-
-    return InkWell(
-      borderRadius: BorderRadius.circular(8),
-      onTap: onTap,
-      child: Container(
-        width: 34,
-        height: 34,
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: enabled ? 0.06 : 0.02),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-        ),
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            Icon(icon, size: 17, color: effectiveColor),
-            if (badgeCount != null)
-              Positioned(
-                top: 3,
-                right: 3,
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                  decoration: BoxDecoration(
-                    color: AnnotterColors.blue[600],
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Text(
-                    '$badgeCount',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 8,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ponytail: Reusable modal backdrop scaffold with tap-to-dismiss.
+  // Reusable modal backdrop scaffold with tap-to-dismiss.
   Widget _buildModalBackdrop({
     required VoidCallback onDismiss,
     required Widget child,
@@ -882,71 +563,6 @@ class _AnnotterState extends State<Annotter> {
     );
   }
 
-  // Draggable FAB for idle trigger
-  Widget _buildIdleFab(MediaQueryData mediaQuery, Size size) {
-    return Positioned(
-      left: _fabPosition.dx,
-      top: _fabPosition.dy,
-      child: Material(
-        color: Colors.transparent,
-        child: GestureDetector(
-          onPanUpdate: (details) {
-            setState(() {
-              _fabPosition += details.delta;
-              _fabPosition = Offset(
-                _fabPosition.dx.clamp(10.0, size.width - 60.0),
-                _fabPosition.dy
-                    .clamp(mediaQuery.padding.top + 10, size.height - 70.0),
-              );
-            });
-          },
-          child: Material(
-            elevation: 8,
-            shape: const CircleBorder(),
-            color: AnnotterColors.blue[600], // Royal Blue
-            child: InkWell(
-              customBorder: const CircleBorder(),
-              onTap: () => setState(() => _isActive = true),
-              child: Container(
-                width: 48,
-                height: 48,
-                decoration: const BoxDecoration(shape: BoxShape.circle),
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    const Icon(Icons.edit_note, color: Colors.white, size: 26),
-                    if (_items.isNotEmpty)
-                      Positioned(
-                        top: 4,
-                        right: 4,
-                        child: Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: const BoxDecoration(
-                            color: Colors.redAccent,
-                            shape: BoxShape.circle,
-                          ),
-                          child: Text(
-                            '${_items.length}',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 9,
-                              fontWeight: FontWeight.bold,
-                              fontFamily: 'sans-serif',
-                              decoration: TextDecoration.none,
-                            ),
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
   void _renumberItems() {
     for (int i = 0; i < _items.length; i++) {
       _items[i].number = i + 1;
@@ -954,78 +570,14 @@ class _AnnotterState extends State<Annotter> {
   }
 
   Future<String?> _captureScreenshot(String filename) async {
-    try {
-      final boundary = _repaintBoundaryKey.currentContext?.findRenderObject()
-          as RenderRepaintBoundary?;
-      if (boundary != null) {
-        final image = await boundary.toImage(pixelRatio: 2.0);
-        final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
-        if (byteData != null) {
-          final pngBytes = byteData.buffer.asUint8List();
-
-          if (kIsWeb) {
-            return 'web_$filename';
-          }
-
-          File? file;
-
-          // 1. Check user custom directory from settings or widget parameter
-          if (_customSavePath != null && _customSavePath!.trim().isNotEmpty) {
-            try {
-              final customDir = Directory(_customSavePath!.trim());
-              if (!await customDir.exists()) {
-                await customDir.create(recursive: true);
-              }
-              file = File('${customDir.path}/$filename');
-            } catch (_) {}
-          }
-
-          // 2. Platform default folders (Downloads folder preference)
-          if (file == null) {
-            if (defaultTargetPlatform == TargetPlatform.android) {
-              final downloadDir = Directory('/sdcard/Download');
-              if (await downloadDir.exists()) {
-                file = File('${downloadDir.path}/$filename');
-              }
-            } else if (defaultTargetPlatform == TargetPlatform.windows) {
-              final userProfile = Platform.environment['USERPROFILE'];
-              if (userProfile != null && userProfile.isNotEmpty) {
-                final winDownloads = Directory('$userProfile\\Downloads');
-                if (await winDownloads.exists()) {
-                  file = File('${winDownloads.path}\\$filename');
-                }
-              }
-            } else if (defaultTargetPlatform == TargetPlatform.macOS ||
-                defaultTargetPlatform == TargetPlatform.linux) {
-              final home = Platform.environment['HOME'];
-              if (home != null && home.isNotEmpty) {
-                final unixDownloads = Directory('$home/Downloads');
-                if (await unixDownloads.exists()) {
-                  file = File('${unixDownloads.path}/$filename');
-                }
-              }
-            }
-          }
-
-          // 3. Fallback to system temp directory
-          file ??= File('${Directory.systemTemp.path}/$filename');
-          await file.writeAsBytes(pngBytes);
-
-          // 4. If MCP sync server is connected, upload image bytes directly to host
-          if (_syncClient != null) {
-            try {
-              final remotePath = await _syncClient!.uploadScreenshot(pngBytes, filename);
-              if (remotePath != null && remotePath.isNotEmpty) {
-                return remotePath;
-              }
-            } catch (_) {}
-          }
-
-          return file.path;
-        }
-      }
-    } catch (_) {}
-    return null;
+    final boundary = _repaintBoundaryKey.currentContext?.findRenderObject()
+        as RenderRepaintBoundary?;
+    return AnnotterSnapshotHelper.capture(
+      boundary: boundary,
+      filename: filename,
+      customSavePath: _customSavePath,
+      syncClient: _syncClient,
+    );
   }
 
   void _copyNotes() async {
