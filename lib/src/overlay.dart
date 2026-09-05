@@ -540,18 +540,10 @@ class _AnnotterState extends State<Annotter> {
                                 onSnapshotDirectoryChanged: (dir) =>
                                     setState(() => _customSnapshotDirectory = dir),
                                 onClearAllSnapshots: () async {
-                                  final count = await AnnotterSnapshotHelper.clearSnapshots(
+                                  return await AnnotterSnapshotHelper.clearSnapshots(
                                     snapshotDirectory: _customSnapshotDirectory,
                                     syncClient: _syncClient,
                                   );
-                                  if (context.mounted) {
-                                    ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-                                      SnackBar(
-                                        content: Text('Cleared $count snapshot(s)'),
-                                        duration: const Duration(seconds: 2),
-                                      ),
-                                    );
-                                  }
                                 },
                                 onClose: () =>
                                     setState(() => _showSettings = false),

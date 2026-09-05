@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'colors.dart';
 
-class AnnotterSettingsDialog extends StatelessWidget {
+class AnnotterSettingsDialog extends StatefulWidget {
   final String detailLevel; // 'compact', 'standard', 'detailed'
   final bool includeTree;
   final Color markerColor;
@@ -17,7 +17,7 @@ class AnnotterSettingsDialog extends StatelessWidget {
   final ValueChanged<bool> onBlockInteractionsChanged;
   final ValueChanged<bool> onReplaceMcpOnCopyChanged;
   final ValueChanged<String?>? onSnapshotDirectoryChanged;
-  final VoidCallback? onClearAllSnapshots;
+  final Future<int> Function()? onClearAllSnapshots;
   final VoidCallback onClose;
 
   const AnnotterSettingsDialog({
@@ -40,6 +40,14 @@ class AnnotterSettingsDialog extends StatelessWidget {
     this.onClearAllSnapshots,
     required this.onClose,
   });
+
+  @override
+  State<AnnotterSettingsDialog> createState() => _AnnotterSettingsDialogState();
+}
+
+class _AnnotterSettingsDialogState extends State<AnnotterSettingsDialog> {
+  bool _isClearing = false;
+  String? _clearFeedbackText;
 
   @override
   Widget build(BuildContext context) {
@@ -94,7 +102,7 @@ class AnnotterSettingsDialog extends StatelessWidget {
                     ),
                     InkWell(
                       borderRadius: BorderRadius.circular(6),
-                      onTap: onClose,
+                      onTap: widget.onClose,
                       child: Padding(
                         padding: const EdgeInsets.all(4),
                         child: Icon(Icons.close_rounded,
@@ -119,7 +127,7 @@ class AnnotterSettingsDialog extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      detailLevel[0].toUpperCase() + detailLevel.substring(1),
+                      widget.detailLevel[0].toUpperCase() + widget.detailLevel.substring(1),
                       style: TextStyle(
                         fontSize: 11.5,
                         fontWeight: FontWeight.bold,
@@ -161,8 +169,8 @@ class AnnotterSettingsDialog extends StatelessWidget {
                       ),
                     ),
                     _buildCustomSwitch(
-                      value: includeTree,
-                      onChanged: onIncludeTreeChanged,
+                      value: widget.includeTree,
+                      onChanged: widget.onIncludeTreeChanged,
                     ),
                   ],
                 ),
@@ -183,10 +191,10 @@ class AnnotterSettingsDialog extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: AnnotterColors.markerPalette.map((color) {
                     final isSelected =
-                        markerColor.toARGB32() == color.toARGB32();
+                        widget.markerColor.toARGB32() == color.toARGB32();
                     return InkWell(
                       borderRadius: BorderRadius.circular(16),
-                      onTap: () => onMarkerColorChanged(color),
+                      onTap: () => widget.onMarkerColorChanged(color),
                       child: Container(
                         width: 24,
                         height: 24,
@@ -219,20 +227,20 @@ class AnnotterSettingsDialog extends StatelessWidget {
                 // 5. Checkboxes: Clear on Copy, Block Interactions, Replace MCP on Copy
                 _buildCheckboxRow(
                   label: 'Clear on copy',
-                  value: clearOnCopy,
-                  onChanged: onClearOnCopyChanged,
+                  value: widget.clearOnCopy,
+                  onChanged: widget.onClearOnCopyChanged,
                 ),
                 const SizedBox(height: 8),
                 _buildCheckboxRow(
                   label: 'Block page interactions',
-                  value: blockInteractions,
-                  onChanged: onBlockInteractionsChanged,
+                  value: widget.blockInteractions,
+                  onChanged: widget.onBlockInteractionsChanged,
                 ),
                 const SizedBox(height: 8),
                 _buildCheckboxRow(
                   label: 'Replace MCP notes on copy',
-                  value: replaceMcpOnCopy,
-                  onChanged: onReplaceMcpOnCopyChanged,
+                  value: widget.replaceMcpOnCopy,
+                  onChanged: widget.onReplaceMcpOnCopyChanged,
                 ),
 
                 const SizedBox(height: 12),
@@ -252,7 +260,7 @@ class AnnotterSettingsDialog extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      snapshotDirectory == null || snapshotDirectory!.trim().isEmpty
+                      widget.snapshotDirectory == null || widget.snapshotDirectory!.trim().isEmpty
                           ? 'Default (Downloads)'
                           : 'Custom',
                       style: TextStyle(
@@ -273,7 +281,7 @@ class AnnotterSettingsDialog extends StatelessWidget {
                     border: Border.all(color: AnnotterColors.slate[800]!),
                   ),
                   child: TextFormField(
-                    initialValue: snapshotDirectory ?? '',
+                    initialValue: widget.snapshotDirectory ?? '',
                     style: const TextStyle(
                       fontSize: 11.5,
                       color: AnnotterColors.white,
@@ -290,9 +298,9 @@ class AnnotterSettingsDialog extends StatelessWidget {
                       isDense: true,
                       contentPadding: const EdgeInsets.symmetric(vertical: 8),
                       suffixIcon:
-                          (snapshotDirectory != null && snapshotDirectory!.trim().isNotEmpty)
+                          (widget.snapshotDirectory != null && widget.snapshotDirectory!.trim().isNotEmpty)
                               ? InkWell(
-                                  onTap: () => onSnapshotDirectoryChanged?.call(null),
+                                  onTap: () => widget.onSnapshotDirectoryChanged?.call(null),
                                   child: Icon(
                                     Icons.clear_rounded,
                                     size: 14,
@@ -305,23 +313,52 @@ class AnnotterSettingsDialog extends StatelessWidget {
                     ),
                     onChanged: (val) {
                       final trimmed = val.trim();
-                      onSnapshotDirectoryChanged?.call(trimmed.isEmpty ? null : trimmed);
+                      widget.onSnapshotDirectoryChanged?.call(trimmed.isEmpty ? null : trimmed);
                     },
                   ),
                 ),
 
-                if (onClearAllSnapshots != null) ...[
+                if (widget.onClearAllSnapshots != null) ...[
                   const SizedBox(height: 8),
                   InkWell(
                     borderRadius: BorderRadius.circular(6),
-                    onTap: onClearAllSnapshots,
-                    child: Container(
+                    onTap: _isClearing
+                        ? null
+                        : () async {
+                            setState(() {
+                              _isClearing = true;
+                              _clearFeedbackText = null;
+                            });
+                            try {
+                              final count = await widget.onClearAllSnapshots!();
+                              if (mounted) {
+                                setState(() {
+                                  _clearFeedbackText = 'Cleared $count snapshot(s)';
+                                });
+                                Future.delayed(const Duration(seconds: 2), () {
+                                  if (mounted) {
+                                    setState(() => _clearFeedbackText = null);
+                                  }
+                                });
+                              }
+                            } finally {
+                              if (mounted) {
+                                setState(() => _isClearing = false);
+                              }
+                            }
+                          },
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                       decoration: BoxDecoration(
-                        color: AnnotterColors.rose[950]!.withValues(alpha: 0.3),
+                        color: _clearFeedbackText != null
+                            ? AnnotterColors.emerald[950]!.withValues(alpha: 0.4)
+                            : AnnotterColors.rose[950]!.withValues(alpha: 0.3),
                         borderRadius: BorderRadius.circular(6),
                         border: Border.all(
-                          color: AnnotterColors.rose[800]!.withValues(alpha: 0.4),
+                          color: _clearFeedbackText != null
+                              ? AnnotterColors.emerald[600]!.withValues(alpha: 0.5)
+                              : AnnotterColors.rose[800]!.withValues(alpha: 0.4),
                           width: 1,
                         ),
                       ),
@@ -329,17 +366,23 @@ class AnnotterSettingsDialog extends StatelessWidget {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(
-                            Icons.delete_sweep_outlined,
+                            _clearFeedbackText != null
+                                ? Icons.check_circle_outline_rounded
+                                : Icons.delete_sweep_outlined,
                             size: 14,
-                            color: AnnotterColors.rose[300],
+                            color: _clearFeedbackText != null
+                                ? AnnotterColors.emerald[300]
+                                : AnnotterColors.rose[300],
                           ),
                           const SizedBox(width: 6),
                           Text(
-                            'Clear All Snapshots',
+                            _clearFeedbackText ?? (_isClearing ? 'Clearing...' : 'Clear All Snapshots'),
                             style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w600,
-                              color: AnnotterColors.rose[300],
+                              color: _clearFeedbackText != null
+                                  ? AnnotterColors.emerald[300]
+                                  : AnnotterColors.rose[300],
                             ),
                           ),
                         ],
@@ -371,12 +414,12 @@ class AnnotterSettingsDialog extends StatelessWidget {
                           height: 8,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: isMcpConnected == true
+                            color: widget.isMcpConnected == true
                                 ? AnnotterColors.emerald[400]
-                                : isMcpConnected == false
+                                : widget.isMcpConnected == false
                                     ? AnnotterColors.rose[400]
                                     : AnnotterColors.slate[500],
-                            boxShadow: isMcpConnected == true
+                            boxShadow: widget.isMcpConnected == true
                                 ? [
                                     BoxShadow(
                                       color: AnnotterColors.emerald[400]!
@@ -389,17 +432,17 @@ class AnnotterSettingsDialog extends StatelessWidget {
                         ),
                         const SizedBox(width: 6),
                         Text(
-                          isMcpConnected == true
+                          widget.isMcpConnected == true
                               ? 'Connected'
-                              : isMcpConnected == false
+                              : widget.isMcpConnected == false
                                   ? 'Disconnected'
                                   : 'Not Configured',
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.bold,
-                            color: isMcpConnected == true
+                            color: widget.isMcpConnected == true
                                 ? AnnotterColors.emerald[400]
-                                : isMcpConnected == false
+                                : widget.isMcpConnected == false
                                     ? AnnotterColors.rose[400]
                                     : AnnotterColors.slate[500],
                           ),
@@ -417,11 +460,11 @@ class AnnotterSettingsDialog extends StatelessWidget {
   }
 
   Widget _buildDetailOption(String value, String label) {
-    final isSelected = detailLevel == value;
+    final isSelected = widget.detailLevel == value;
     return Expanded(
       child: InkWell(
         borderRadius: BorderRadius.circular(6),
-        onTap: () => onDetailLevelChanged(value),
+        onTap: () => widget.onDetailLevelChanged(value),
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 5),
           decoration: BoxDecoration(
