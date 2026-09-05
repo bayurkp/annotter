@@ -67,6 +67,8 @@ class AnnotterSyncClient {
       'status': item.status,
       'mode': item.mode.name,
       'route': route ?? item.screenName,
+      'isScrollable': item.isScrollable,
+      'scrollOffset': item.scrollOffset,
       'screenshotPath': screenshotPath,
       'timestamp': DateTime.now().millisecondsSinceEpoch,
       'rect': {

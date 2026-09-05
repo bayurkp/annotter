@@ -65,4 +65,5 @@ Do NOT guess file locations. Use the rich metadata provided:
 If the project is configured with the Annotter MCP server:
 - **`annotter_get_pending_annotations()`**: Fetches all live unresolved annotations from the running Flutter app.
 - **`annotter_resolve_annotation(id, message)`**: Marks an annotation as fixed and updates the device screen in real time.
-- **`annotter_clear_all()`**: Clears the session once all items are completed.
+- **`annotter_clear_all()`**: Clears all annotations from the current session.
+- **`annotter_clear_snapshots()`**: Clears all saved snapshot image files from disk.

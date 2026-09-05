@@ -323,6 +323,9 @@ mcpServer.setRequestHandler(CallToolRequestSchema, async (request) => {
             .join(", ");
           out += `- Properties: {${props}}\n`;
         }
+        if (item.rect) {
+          out += `- Position: x:${Math.round(item.rect.x)}, y:${Math.round(item.rect.y)} (w:${Math.round(item.rect.width)}, h:${Math.round(item.rect.height)})\n`;
+        }
         if (item.route) out += `- Screen/Route: ${item.route}\n`;
         if (item.screenshotPath)
           out += `- Snapshot: \`${item.screenshotPath}\`\n`;
