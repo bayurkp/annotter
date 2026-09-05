@@ -64,11 +64,15 @@ class _AnnotterState extends State<Annotter> {
   Timer? _copiedTimer;
 
   void _handleHotReload() {
-    try {
-      WidgetsBinding.instance.reassembleApplication();
-    } catch (_) {}
-    setState(() {
-      _appSubtreeKey = UniqueKey();
+    scheduleMicrotask(() async {
+      try {
+        await WidgetsBinding.instance.reassembleApplication();
+      } catch (_) {}
+      if (mounted) {
+        setState(() {
+          _appSubtreeKey = UniqueKey();
+        });
+      }
     });
   }
 

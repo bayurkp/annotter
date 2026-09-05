@@ -9,6 +9,8 @@ class InspectedWidgetInfo {
   final String? screenName;
   final bool isScrollable;
   final String? selectedText;
+  final String? sourceLocation;
+  final Map<String, String>? flutterProperties;
 
   const InspectedWidgetInfo({
     required this.name,
@@ -17,6 +19,8 @@ class InspectedWidgetInfo {
     this.screenName,
     this.isScrollable = false,
     this.selectedText,
+    this.sourceLocation,
+    this.flutterProperties,
   });
 }
 
@@ -277,6 +281,8 @@ class WidgetInspectorHelper {
     String? detectedScreen;
     List<String> bestHierarchy = [];
     String? extractedText;
+    String? detectedSourceLocation;
+    Map<String, String>? detectedProperties;
 
     // Pass 2: Inspect ONLY the single best RenderBox (0ms overhead)
     if (bestTarget != null &&
@@ -285,6 +291,51 @@ class WidgetInspectorHelper {
       final element = (bestTarget.debugCreator as DebugCreator).element;
       final List<String> chain = [];
       final List<_TargetCandidate> candidates = [];
+
+      // Helper to extract Flutter source location (file and line) from Diagnostics
+      String? extractSource(Element el) {
+        try {
+          final info = el.toDiagnosticsNode();
+          // Check line & file info from diagnostic chain / description
+          final desc = info.toStringDeep();
+          final lines = desc.split('\n');
+          for (final line in lines) {
+            final trimmed = line.trim();
+            final match = RegExp(r'(package:[^\s)]+|lib/[^\s)]+):(\d+)(?::(\d+))?').firstMatch(trimmed);
+            if (match != null) {
+              return match.group(0);
+            }
+          }
+        } catch (_) {}
+        return null;
+      }
+
+      // Helper to extract Flutter native widget properties (DiagnosticsNode)
+      Map<String, String> extractProperties(Element el) {
+        final Map<String, String> props = {};
+        try {
+          final node = el.toDiagnosticsNode();
+          for (final prop in node.getProperties()) {
+            final name = prop.name;
+            if (name == null || name.startsWith('_')) continue;
+            // Relevant Flutter UI styling and layout properties
+            const relevantProps = {
+              'data', 'fontSize', 'fontWeight', 'fontStyle', 'color', 'textAlign',
+              'padding', 'margin', 'alignment', 'width', 'height',
+              'mainAxisAlignment', 'crossAxisAlignment', 'mainAxisSize',
+              'elevation', 'borderRadius', 'decoration', 'flex', 'fit',
+              'icon', 'size', 'enabled', 'selected', 'value', 'crossAxisCount',
+            };
+            if (relevantProps.contains(name)) {
+              final val = prop.toDescription();
+              if (val.isNotEmpty && val != 'null') {
+                props[name] = val;
+              }
+            }
+          }
+        } catch (_) {}
+        return props;
+      }
 
       void checkWidgetForText(Widget w) {
         if (extractedText != null) return;
@@ -301,6 +352,11 @@ class WidgetInspectorHelper {
       }
 
       checkWidgetForText(element.widget);
+      detectedSourceLocation ??= extractSource(element);
+      final initialProps = extractProperties(element);
+      if (initialProps.isNotEmpty) {
+        detectedProperties = initialProps;
+      }
 
       if (_isComponentCandidate(element.widget)) {
         final rawType = cleanType(element.widget.runtimeType.toString());
@@ -312,6 +368,12 @@ class WidgetInspectorHelper {
       element.visitAncestorElements((ancestor) {
         final aw = ancestor.widget;
         checkWidgetForText(aw);
+        detectedSourceLocation ??= extractSource(ancestor);
+        if (detectedProperties == null || detectedProperties!.isEmpty) {
+          final p = extractProperties(ancestor);
+          if (p.isNotEmpty) detectedProperties = p;
+        }
+
         final type = cleanType(aw.runtimeType.toString());
 
         if (aw is Scrollable ||
@@ -364,6 +426,8 @@ class WidgetInspectorHelper {
       screenName: detectedScreen,
       isScrollable: detectedScrollable,
       selectedText: extractedText,
+      sourceLocation: detectedSourceLocation,
+      flutterProperties: detectedProperties,
     );
   }
 

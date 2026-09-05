@@ -179,6 +179,17 @@ class AnnotterExporter {
         buffer.writeln('   - Content: "${item.selectedText}"');
       }
 
+      if (item.sourceLocation != null && item.sourceLocation!.isNotEmpty) {
+        buffer.writeln('   - Source: `${item.sourceLocation}`');
+      }
+
+      if (item.flutterProperties != null && item.flutterProperties!.isNotEmpty) {
+        final formattedProps = item.flutterProperties!.entries
+            .map((e) => '${e.key}: ${e.value}')
+            .join(', ');
+        buffer.writeln('   - Properties: {$formattedProps}');
+      }
+
       final primarySearchWidget = item.widgetName.contains(' > ')
           ? item.widgetName.split(' > ').first
           : item.widgetName;
@@ -194,6 +205,9 @@ class AnnotterExporter {
     // --- 2. DETAILED TIER (Default) ---
     if (detailLevel == 'detailed') {
       buffer.writeln('${item.number}. $tagString **${item.widgetName}**');
+      if (item.sourceLocation != null && item.sourceLocation!.isNotEmpty) {
+        buffer.writeln('   - Source: `${item.sourceLocation}`');
+      }
       if (includeTree && item.hierarchy.isNotEmpty) {
         final breadcrumb = item.hierarchy.reversed.join(' > ');
         buffer.writeln('   - Tree: $breadcrumb');
@@ -205,6 +219,13 @@ class AnnotterExporter {
         buffer.writeln('   - Content: "${item.selectedText}"');
       }
 
+      if (item.flutterProperties != null && item.flutterProperties!.isNotEmpty) {
+        final formattedProps = item.flutterProperties!.entries
+            .map((e) => '${e.key}: ${e.value}')
+            .join(', ');
+        buffer.writeln('   - Properties: {$formattedProps}');
+      }
+
       buffer.writeln(
           '   - Note: ${item.note.isEmpty ? "*(No note provided)*" : item.note}');
       buffer.writeln();
@@ -214,6 +235,9 @@ class AnnotterExporter {
     // --- 3. STANDARD TIER ---
     if (detailLevel == 'standard') {
       buffer.writeln('${item.number}. $tagString **${item.widgetName}**');
+      if (item.sourceLocation != null && item.sourceLocation!.isNotEmpty) {
+        buffer.writeln('   - Source: `${item.sourceLocation}`');
+      }
       if (includeTree && item.hierarchy.isNotEmpty) {
         final breadcrumb = item.hierarchy.reversed.join(' > ');
         buffer.writeln('   - Tree: $breadcrumb');

@@ -194,4 +194,45 @@ void main() {
     expect(forensic, contains('Search tips: Try `grep -r "AppButton" lib/`'));
     expect(forensic, contains('Note: Fix typo on button'));
   });
+
+  test('AnnotterExporter formats sourceLocation and flutterProperties with Flutter identity', () {
+    final item = AnnotterItem(
+      id: 2,
+      number: 1,
+      rect: const Rect.fromLTWH(10, 20, 120, 48),
+      widgetName: 'AppButton',
+      hierarchy: ['AppButton', 'HomeScreen'],
+      note: 'Increase vertical padding and fontSize',
+      mode: AnnotterMode.widget,
+      sourceLocation: 'lib/src/widgets/app_button.dart:42',
+      flutterProperties: {
+        'fontSize': '14.0',
+        'fontWeight': 'FontWeight.w600',
+        'padding': 'EdgeInsets.all(12.0)',
+      },
+    );
+
+    // Detailed export
+    final detailed = AnnotterExporter.toMarkdown(
+      items: [item],
+      detailLevel: 'detailed',
+    );
+    expect(detailed, contains('- Source: `lib/src/widgets/app_button.dart:42`'));
+    expect(detailed, contains('- Properties: {fontSize: 14.0, fontWeight: FontWeight.w600, padding: EdgeInsets.all(12.0)}'));
+
+    // Forensic export
+    final forensic = AnnotterExporter.toMarkdown(
+      items: [item],
+      detailLevel: 'forensic',
+    );
+    expect(forensic, contains('- Source: `lib/src/widgets/app_button.dart:42`'));
+    expect(forensic, contains('- Properties: {fontSize: 14.0, fontWeight: FontWeight.w600, padding: EdgeInsets.all(12.0)}'));
+
+    // Standard export
+    final standard = AnnotterExporter.toMarkdown(
+      items: [item],
+      detailLevel: 'standard',
+    );
+    expect(standard, contains('- Source: `lib/src/widgets/app_button.dart:42`'));
+  });
 }

@@ -23,6 +23,8 @@ class AnnotterItem {
   String? severity; // 'blocking', 'important', 'suggestion'
   String?
       selectedText; // Actual text content if clicked element is or contains Text
+  String? sourceLocation; // Flutter file & line e.g. "lib/views/home_screen.dart:42"
+  Map<String, String>? flutterProperties; // Flutter widget properties (DiagnosticsNode)
   String status; // 'pending', 'resolved'
 
   AnnotterItem({
@@ -39,6 +41,8 @@ class AnnotterItem {
     this.intent,
     this.severity,
     this.selectedText,
+    this.sourceLocation,
+    this.flutterProperties,
     this.status = 'pending',
   });
 
@@ -57,6 +61,8 @@ class AnnotterItem {
       intent: intent,
       severity: severity,
       selectedText: selectedText,
+      sourceLocation: sourceLocation,
+      flutterProperties: flutterProperties != null ? Map.from(flutterProperties!) : null,
       status: status,
     );
   }

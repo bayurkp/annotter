@@ -115,6 +115,8 @@ class _AnnotterCanvasState extends State<AnnotterCanvas> {
         isScrollable: info.isScrollable,
         scrollOffsetAtCreation: widget.currentScrollOffset,
         selectedText: info.selectedText,
+        sourceLocation: info.sourceLocation,
+        flutterProperties: info.flutterProperties,
       );
       setState(() => _hoveredWidget = null);
       widget.onRequestCreate(newItem, info.screenName);
@@ -131,6 +133,8 @@ class _AnnotterCanvasState extends State<AnnotterCanvas> {
         isScrollable: info.isScrollable,
         scrollOffsetAtCreation: widget.currentScrollOffset,
         selectedText: info.selectedText,
+        sourceLocation: info.sourceLocation,
+        flutterProperties: info.flutterProperties,
       );
       widget.onRequestCreate(newItem, info.screenName);
     }
@@ -168,6 +172,8 @@ class _AnnotterCanvasState extends State<AnnotterCanvas> {
           isScrollable: info.isScrollable,
           scrollOffsetAtCreation: widget.currentScrollOffset,
           selectedText: info.selectedText,
+          sourceLocation: info.sourceLocation,
+          flutterProperties: info.flutterProperties,
         );
         widget.onRequestCreate(newItem, info.screenName);
       }
