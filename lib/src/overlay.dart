@@ -82,16 +82,24 @@ class _AnnotterState extends State<Annotter> {
     _customSavePath = widget.savePath;
     if (widget.serverUrl != null && widget.serverUrl!.isNotEmpty) {
       _syncClient = AnnotterSyncClient(serverUrl: widget.serverUrl!);
+      // Passive initial check: does not block UI, fast 1s timeout
       _checkMcpConnection();
-      _startStatusPolling();
     }
   }
 
   Future<void> _checkMcpConnection() async {
     if (_syncClient == null || !mounted) return;
     final isConnected = await _syncClient!.ping();
-    if (mounted && _isMcpConnected != isConnected) {
-      setState(() => _isMcpConnected = isConnected);
+    if (mounted) {
+      if (_isMcpConnected != isConnected) {
+        setState(() => _isMcpConnected = isConnected);
+      }
+      if (isConnected) {
+        _startStatusPolling();
+      } else {
+        _statusPollTimer?.cancel();
+        _statusPollTimer = null;
+      }
     }
   }
 
@@ -105,10 +113,14 @@ class _AnnotterState extends State<Annotter> {
 
   void _startStatusPolling() {
     _statusPollTimer?.cancel();
-    _statusPollTimer = Timer.periodic(const Duration(seconds: 2), (_) async {
+    // Only poll when connected and not already polling
+    _statusPollTimer = Timer.periodic(const Duration(seconds: 3), (_) async {
       if (_syncClient == null || !mounted) return;
-      if (_showSettings) {
-        _checkMcpConnection();
+      if (!_syncClient!.isConnected) {
+        _statusPollTimer?.cancel();
+        _statusPollTimer = null;
+        if (_isMcpConnected == true) setState(() => _isMcpConnected = false);
+        return;
       }
       if (_items.isEmpty) return;
       final statuses = await _syncClient!.fetchStatuses();

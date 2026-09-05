@@ -76,7 +76,7 @@ class AnnotterSnapshotHelper {
       await file.writeAsBytes(pngBytes);
 
       // 4. Direct stream to MCP server host if connected
-      if (syncClient != null) {
+      if (syncClient != null && syncClient.isConnected) {
         try {
           final remotePath =
               await syncClient.uploadScreenshot(pngBytes, filename);
