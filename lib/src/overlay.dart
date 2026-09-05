@@ -547,7 +547,7 @@ class _AnnotterState extends State<Annotter> {
                                   if (context.mounted) {
                                     ScaffoldMessenger.maybeOf(context)?.showSnackBar(
                                       SnackBar(
-                                        content: Text('Cleared $count local snapshot(s) & synced with server.'),
+                                        content: Text('Cleared $count snapshot(s)'),
                                         duration: const Duration(seconds: 2),
                                       ),
                                     );

@@ -335,7 +335,7 @@ class AnnotterSettingsDialog extends StatelessWidget {
                           ),
                           const SizedBox(width: 6),
                           Text(
-                            'Clear All Snapshots (Device & Server)',
+                            'Clear All Snapshots',
                             style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w600,
