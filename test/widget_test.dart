@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:annotter/annotter.dart';
 import 'package:annotter/src/list_sheet.dart';
+import 'package:annotter/src/sheet.dart';
 
 void main() {
   testWidgets('Annotter works inside MaterialApp.builder and toggles between FAB and Floating Pill Toolbar', (tester) async {
@@ -89,5 +91,54 @@ void main() {
     // Tap Clear All
     await tester.tap(find.text('Clear All'));
     expect(clearAllCalled, isTrue);
+  });
+
+  testWidgets('AnnotationSheet saves note on Enter and inserts newline on Shift+Enter', (tester) async {
+    final item = AnnotterItem(
+      id: 1,
+      number: 1,
+      rect: const Rect.fromLTWH(0, 0, 100, 50),
+      widgetName: 'SubmitButton',
+      note: 'Initial text',
+    );
+
+    String? savedNote;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: AnnotationSheet(
+            item: item,
+            onCancel: () {},
+            onDelete: () {},
+            onSave: (note, intent, severity) => savedNote = note,
+          ),
+        ),
+      ),
+    );
+
+    // Verify keyboard hint is visible
+    expect(find.textContaining('Enter to save'), findsOneWidget);
+
+    // Focus TextField and type
+    final textFieldFinder = find.byType(TextField);
+    expect(textFieldFinder, findsOneWidget);
+
+    // Simulate Shift + Enter
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.pump();
+
+    // Verify newline was inserted and onSave was NOT called yet
+    expect(savedNote, isNull);
+    final textField = tester.widget<TextField>(textFieldFinder);
+    expect(textField.controller!.text, equals('Initial text\n'));
+
+    // Simulate plain Enter
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pump();
+
+    // Verify onSave was called with trimmed text
+    expect(savedNote, equals('Initial text'));
   });
 }

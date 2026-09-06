@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'tokens.dart';
 import 'models.dart';
 
@@ -26,6 +27,7 @@ class AnnotationSheet extends StatefulWidget {
 
 class _AnnotationSheetState extends State<AnnotationSheet> {
   late final TextEditingController _controller;
+  late final FocusNode _focusNode;
   String? _selectedIntent;
   String? _selectedSeverity;
 
@@ -48,12 +50,56 @@ class _AnnotationSheetState extends State<AnnotationSheet> {
     _controller = TextEditingController(text: widget.item.note);
     _selectedIntent = widget.item.intent;
     _selectedSeverity = widget.item.severity;
+    _focusNode = FocusNode(onKeyEvent: _handleKeyEvent);
   }
 
   @override
   void dispose() {
+    _focusNode.dispose();
     _controller.dispose();
     super.dispose();
+  }
+
+  void _save() {
+    widget.onSave(
+      _controller.text.trim(),
+      _selectedIntent,
+      _selectedSeverity,
+    );
+  }
+
+  KeyEventResult _handleKeyEvent(FocusNode node, KeyEvent event) {
+    final isEnter = event.logicalKey == LogicalKeyboardKey.enter ||
+        event.logicalKey == LogicalKeyboardKey.numpadEnter;
+
+    if (isEnter) {
+      final isShiftPressed = HardwareKeyboard.instance.isShiftPressed;
+      if (isShiftPressed) {
+        if (event is KeyDownEvent) {
+          final text = _controller.text;
+          final selection = _controller.selection;
+          if (selection.isValid && selection.start >= 0) {
+            final newText =
+                '${selection.textBefore(text)}\n${selection.textAfter(text)}';
+            _controller.value = TextEditingValue(
+              text: newText,
+              selection: TextSelection.collapsed(offset: selection.start + 1),
+            );
+          } else {
+            _controller.text = '$text\n';
+            _controller.selection =
+                TextSelection.collapsed(offset: _controller.text.length);
+          }
+        }
+        return KeyEventResult.handled;
+      }
+
+      if (event is KeyDownEvent) {
+        _save();
+      }
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
   }
 
   @override
@@ -330,8 +376,11 @@ class _AnnotationSheetState extends State<AnnotationSheet> {
                     // Feedback Note Input TextField
                     TextField(
                       controller: _controller,
+                      focusNode: _focusNode,
                       autofocus: true,
                       maxLines: bottomInset > 0 ? 2 : 3,
+                      textInputAction: TextInputAction.done,
+                      onSubmitted: (_) => _save(),
                       style: const TextStyle(
                         fontSize: 13,
                         color: AnnotterColors.foreground,
@@ -363,50 +412,71 @@ class _AnnotationSheetState extends State<AnnotationSheet> {
 
                     // Action Buttons Footer
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        OutlinedButton(
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: AnnotterColors.mutedForeground,
-                            backgroundColor: AnnotterColors.surface,
-                            side: const BorderSide(color: AnnotterColors.borderSubtle),
-                            shape: const RoundedRectangleBorder(
-                              borderRadius: AnnotterBorders.radiusSm,
-                            ),
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                            minimumSize: const Size(0, 36),
-                          ),
-                          onPressed: widget.onCancel,
-                          child: const Text(
-                            'Cancel',
-                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                        // Keyboard shortcut hint
+                        Flexible(
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: const [
+                              Icon(Icons.keyboard_return_rounded,
+                                  size: 13, color: AnnotterColors.subtleForeground),
+                              SizedBox(width: 4),
+                              Flexible(
+                                child: Text(
+                                  'Enter to save · Shift+Enter newline',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: AnnotterColors.subtleForeground,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                         const SizedBox(width: 8),
-                        ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AnnotterColors.primary,
-                            foregroundColor: AnnotterColors.onPrimary,
-                            elevation: 0,
-                            side: BorderSide(color: AnnotterColors.blue[400]!),
-                            shape: const RoundedRectangleBorder(
-                              borderRadius: AnnotterBorders.radiusSm,
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            OutlinedButton(
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: AnnotterColors.mutedForeground,
+                                backgroundColor: AnnotterColors.surface,
+                                side: const BorderSide(color: AnnotterColors.borderSubtle),
+                                shape: const RoundedRectangleBorder(
+                                  borderRadius: AnnotterBorders.radiusSm,
+                                ),
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                minimumSize: const Size(0, 36),
+                              ),
+                              onPressed: widget.onCancel,
+                              child: const Text(
+                                'Cancel',
+                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                              ),
                             ),
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                            minimumSize: const Size(0, 36),
-                          ),
-                          icon: const Icon(Icons.check_rounded, size: 16),
-                          label: const Text(
-                            'Save Note',
-                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                          ),
-                          onPressed: () {
-                            widget.onSave(
-                              _controller.text.trim(),
-                              _selectedIntent,
-                              _selectedSeverity,
-                            );
-                          },
+                            const SizedBox(width: 8),
+                            ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AnnotterColors.primary,
+                                foregroundColor: AnnotterColors.onPrimary,
+                                elevation: 0,
+                                side: BorderSide(color: AnnotterColors.blue[400]!),
+                                shape: const RoundedRectangleBorder(
+                                  borderRadius: AnnotterBorders.radiusSm,
+                                ),
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                minimumSize: const Size(0, 36),
+                              ),
+                              icon: const Icon(Icons.check_rounded, size: 16),
+                              label: const Text(
+                                'Save Note',
+                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                              ),
+                              onPressed: _save,
+                            ),
+                          ],
                         ),
                       ],
                     ),
