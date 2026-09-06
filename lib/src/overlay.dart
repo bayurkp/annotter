@@ -310,8 +310,8 @@ class _AnnotterState extends State<Annotter> {
 
                     // Agentations-style Draggable Floating Pill Toolbar
                     AnnotterFloatingToolbar(
-                      position: _toolbarPosition,
-                      onPositionChanged: (pos) => setState(() => _toolbarPosition = pos),
+                      initialPosition: _toolbarPosition,
+                      onPositionChanged: (pos) => _toolbarPosition = pos,
                       mode: _mode,
                       onModeChanged: (mode) => setState(() => _mode = mode),
                       onExit: () => setState(() => _isActive = false),
