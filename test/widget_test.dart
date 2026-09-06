@@ -116,8 +116,9 @@ void main() {
       ),
     );
 
-    // Verify keyboard hint is visible
-    expect(find.textContaining('Enter to save'), findsOneWidget);
+    // Verify Save button has 'Save' text and '↵' kbd symbol
+    expect(find.text('Save'), findsOneWidget);
+    expect(find.text('↵'), findsOneWidget);
 
     // Focus TextField and type
     final textFieldFinder = find.byType(TextField);

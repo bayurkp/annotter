@@ -412,71 +412,69 @@ class _AnnotationSheetState extends State<AnnotationSheet> {
 
                     // Action Buttons Footer
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      mainAxisAlignment: MainAxisAlignment.end,
                       children: [
-                        // Keyboard shortcut hint
-                        Flexible(
+                        OutlinedButton(
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AnnotterColors.mutedForeground,
+                            backgroundColor: AnnotterColors.surface,
+                            side: const BorderSide(color: AnnotterColors.borderSubtle),
+                            shape: const RoundedRectangleBorder(
+                              borderRadius: AnnotterBorders.radiusSm,
+                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                            minimumSize: const Size(0, 36),
+                          ),
+                          onPressed: widget.onCancel,
+                          child: const Text(
+                            'Cancel',
+                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AnnotterColors.primary,
+                            foregroundColor: AnnotterColors.onPrimary,
+                            elevation: 0,
+                            side: BorderSide(color: AnnotterColors.blue[400]!),
+                            shape: const RoundedRectangleBorder(
+                              borderRadius: AnnotterBorders.radiusSm,
+                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                            minimumSize: const Size(0, 36),
+                          ),
+                          onPressed: _save,
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
-                            children: const [
-                              Icon(Icons.keyboard_return_rounded,
-                                  size: 13, color: AnnotterColors.subtleForeground),
-                              SizedBox(width: 4),
-                              Flexible(
-                                child: Text(
-                                  'Enter to save · Shift+Enter newline',
+                            children: [
+                              const Text(
+                                'Save',
+                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                              ),
+                              const SizedBox(width: 7),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 4.5, vertical: 1),
+                                decoration: BoxDecoration(
+                                  color: AnnotterColors.white.withValues(alpha: 0.18),
+                                  borderRadius: BorderRadius.circular(4),
+                                  border: Border.all(
+                                    color: AnnotterColors.white.withValues(alpha: 0.28),
+                                    width: 1,
+                                  ),
+                                ),
+                                child: const Text(
+                                  '↵',
                                   style: TextStyle(
                                     fontSize: 11,
-                                    color: AnnotterColors.subtleForeground,
+                                    fontWeight: FontWeight.bold,
+                                    height: 1.1,
+                                    color: AnnotterColors.white,
                                   ),
-                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
                             ],
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            OutlinedButton(
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: AnnotterColors.mutedForeground,
-                                backgroundColor: AnnotterColors.surface,
-                                side: const BorderSide(color: AnnotterColors.borderSubtle),
-                                shape: const RoundedRectangleBorder(
-                                  borderRadius: AnnotterBorders.radiusSm,
-                                ),
-                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                                minimumSize: const Size(0, 36),
-                              ),
-                              onPressed: widget.onCancel,
-                              child: const Text(
-                                'Cancel',
-                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            ElevatedButton.icon(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AnnotterColors.primary,
-                                foregroundColor: AnnotterColors.onPrimary,
-                                elevation: 0,
-                                side: BorderSide(color: AnnotterColors.blue[400]!),
-                                shape: const RoundedRectangleBorder(
-                                  borderRadius: AnnotterBorders.radiusSm,
-                                ),
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                minimumSize: const Size(0, 36),
-                              ),
-                              icon: const Icon(Icons.check_rounded, size: 16),
-                              label: const Text(
-                                'Save Note',
-                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                              ),
-                              onPressed: _save,
-                            ),
-                          ],
                         ),
                       ],
                     ),
