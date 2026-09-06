@@ -134,26 +134,6 @@ class _AnnotterFloatingToolbarState extends State<AnnotterFloatingToolbar> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Play / Pause Animation (Warna konsisten netral)
-                    Tooltip(
-                      message: widget.isAnimationPaused ? 'Resume Animation' : 'Freeze Animation',
-                      child: InkWell(
-                        customBorder: const CircleBorder(),
-                        onTap: widget.onToggleAnimationPause,
-                        child: SizedBox(
-                          width: 30,
-                          height: 30,
-                          child: Icon(
-                            widget.isAnimationPaused
-                                ? Icons.play_arrow_rounded
-                                : Icons.pause_rounded,
-                            size: 17,
-                            color: AnnotterColors.foreground,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 2),
                     _buildRoundTool(
                       icon: Icons.pan_tool_outlined,
                       tooltip: 'Move',
@@ -182,6 +162,43 @@ class _AnnotterFloatingToolbarState extends State<AnnotterFloatingToolbar> {
                       icon: Icons.adjust_rounded,
                       tooltip: 'Point Pin',
                       mode: AnnotterMode.point,
+                    ),
+                    const SizedBox(height: 3),
+
+                    // Play / Pause Animation (setelah Point Pin, sebelum Copy)
+                    Tooltip(
+                      message: widget.isAnimationPaused ? 'Resume Animation' : 'Freeze Animation',
+                      child: InkWell(
+                        customBorder: const CircleBorder(),
+                        onTap: widget.onToggleAnimationPause,
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 140),
+                          width: 30,
+                          height: 30,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: widget.isAnimationPaused
+                                ? AnnotterColors.amber.withValues(alpha: 0.2)
+                                : AnnotterColors.surfaceElevated.withValues(alpha: 0.6),
+                            border: Border.all(
+                              color: widget.isAnimationPaused
+                                  ? AnnotterColors.amber.withValues(alpha: 0.4)
+                                  : AnnotterColors.borderSubtle,
+                              width: 1,
+                            ),
+                          ),
+                          alignment: Alignment.center,
+                          child: Icon(
+                            widget.isAnimationPaused
+                                ? Icons.play_arrow_rounded
+                                : Icons.pause_rounded,
+                            size: 16,
+                            color: widget.isAnimationPaused
+                                ? AnnotterColors.amber[400]
+                                : AnnotterColors.slate[300],
+                          ),
+                        ),
+                      ),
                     ),
                   ],
                 ),
