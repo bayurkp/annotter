@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'tokens.dart';
 import 'models.dart';
 
-/// Floating Pill Toolbar inspired by Agentations.
-/// Ultra-compact, rounded capsule (44px height), draggable across the screen,
-/// featuring modern inspection iconography, action tools, and quick close.
+/// Floating Toolbar inspired by Agentations.
+/// Vertical pill design with scrollable actions, clamped height (max 60% viewport),
+/// perfectly round tool buttons (CircleBorder), and draggable across the screen.
 class AnnotterFloatingToolbar extends StatelessWidget {
   final Offset position;
   final ValueChanged<Offset> onPositionChanged;
@@ -53,220 +53,265 @@ class AnnotterFloatingToolbar extends StatelessWidget {
   Widget build(BuildContext context) {
     final mediaQuery = MediaQuery.of(context);
     final size = mediaQuery.size;
+    final maxToolbarHeight = size.height * 0.65; // Batasi panjang vertikal
 
     return Positioned(
       left: position.dx,
       top: position.dy,
       child: Material(
         color: AnnotterColors.transparent,
-        child: GestureDetector(
-          onPanUpdate: (details) {
-            final newPos = position + details.delta;
-            final clamped = Offset(
-              newPos.dx.clamp(8.0, (size.width - 240.0).clamp(8.0, size.width)),
-              newPos.dy.clamp(mediaQuery.padding.top + 8, size.height - 56.0),
-            );
-            onPositionChanged(clamped);
-          },
-          child: Container(
-            height: 44,
-            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 4),
-            decoration: BoxDecoration(
-              color: AnnotterColors.background,
-              borderRadius: AnnotterBorders.radiusPill,
-              border: Border.all(
-                color: AnnotterColors.border,
-                width: 1.0,
-              ),
-              boxShadow: AnnotterShadows.pill,
+        child: Container(
+          width: 48,
+          constraints: BoxConstraints(maxHeight: maxToolbarHeight),
+          decoration: BoxDecoration(
+            color: AnnotterColors.background,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(
+              color: AnnotterColors.border,
+              width: 1.0,
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // 1. Drag Handle Indicator
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  child: const Icon(
-                    Icons.drag_indicator_rounded,
-                    size: 16,
-                    color: AnnotterColors.subtleForeground,
+            boxShadow: AnnotterShadows.pill,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // 1. Dedicated Drag Handle at the Top
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onPanUpdate: (details) {
+                  final newPos = position + details.delta;
+                  final clamped = Offset(
+                    newPos.dx.clamp(8.0, size.width - 56.0),
+                    newPos.dy.clamp(mediaQuery.padding.top + 8, size.height - 120.0),
+                  );
+                  onPositionChanged(clamped);
+                },
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: const Center(
+                    child: Icon(
+                      Icons.drag_indicator_rounded,
+                      size: 16,
+                      color: AnnotterColors.subtleForeground,
+                    ),
                   ),
                 ),
+              ),
 
-                // 2. Tools Segmented Capsule
-                Container(
-                  padding: const EdgeInsets.all(2),
-                  decoration: BoxDecoration(
-                    color: AnnotterColors.surface,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AnnotterColors.borderSubtle),
-                  ),
-                  child: Row(
+              // 2. Scrollable Action Buttons Group (Never overflow or cut off)
+              Flexible(
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                  child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      _buildSegmentTool(
-                        icon: Icons.pan_tool_outlined,
-                        tooltip: 'Move',
-                        mode: AnnotterMode.move,
+                      // Tools Segment (Bulat Sempurna 34x34)
+                      Container(
+                        padding: const EdgeInsets.symmetric(vertical: 3, horizontal: 2),
+                        decoration: BoxDecoration(
+                          color: AnnotterColors.surface,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: AnnotterColors.borderSubtle),
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            _buildRoundTool(
+                              icon: Icons.pan_tool_outlined,
+                              tooltip: 'Move',
+                              mode: AnnotterMode.move,
+                            ),
+                            const SizedBox(height: 3),
+                            _buildRoundTool(
+                              icon: Icons.near_me_outlined,
+                              tooltip: 'Select',
+                              mode: AnnotterMode.select,
+                            ),
+                            const SizedBox(height: 3),
+                            _buildRoundTool(
+                              icon: Icons.touch_app_outlined,
+                              tooltip: 'Widget Inspect',
+                              mode: AnnotterMode.widget,
+                            ),
+                            const SizedBox(height: 3),
+                            _buildRoundTool(
+                              icon: Icons.crop_square_rounded,
+                              tooltip: 'Area Box',
+                              mode: AnnotterMode.area,
+                            ),
+                            const SizedBox(height: 3),
+                            _buildRoundTool(
+                              icon: Icons.adjust_rounded,
+                              tooltip: 'Point Pin',
+                              mode: AnnotterMode.point,
+                            ),
+                          ],
+                        ),
                       ),
-                      const SizedBox(width: 2),
-                      _buildSegmentTool(
-                        icon: Icons.near_me_outlined,
-                        tooltip: 'Select',
-                        mode: AnnotterMode.select,
+
+                      const SizedBox(height: 6),
+
+                      // Prominent Copy Button (Bulat Sempurna 36x36)
+                      Tooltip(
+                        message: isCopied
+                            ? (isServerConnected ? 'Sent to AI Agent' : 'Copied to Clipboard')
+                            : (itemCount == 0 ? 'Copy Markdown' : 'Copy ($itemCount notes)'),
+                        child: InkWell(
+                          customBorder: const CircleBorder(),
+                          onTap: onCopy,
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 180),
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: isCopied ? AnnotterColors.success : AnnotterColors.primary,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: (isCopied ? AnnotterColors.success : AnnotterColors.primary)
+                                      .withValues(alpha: 0.4),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                Icon(
+                                  isCopied ? Icons.check_rounded : Icons.copy_rounded,
+                                  color: AnnotterColors.white,
+                                  size: 16,
+                                ),
+                                if (itemCount > 0 && !isCopied)
+                                  Positioned(
+                                    top: 1,
+                                    right: 1,
+                                    child: Container(
+                                      padding: const EdgeInsets.all(3),
+                                      decoration: const BoxDecoration(
+                                        color: Colors.redAccent,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      constraints: const BoxConstraints(minWidth: 12, minHeight: 12),
+                                      child: Text(
+                                        '$itemCount',
+                                        textAlign: TextAlign.center,
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 7.5,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ),
                       ),
-                      const SizedBox(width: 2),
-                      _buildSegmentTool(
-                        icon: Icons.touch_app_outlined,
-                        tooltip: 'Widget Inspect',
-                        mode: AnnotterMode.widget,
+
+                      const SizedBox(height: 6),
+
+                      // Secondary Quick Actions
+                      _buildActionCircle(
+                        icon: Icons.undo_rounded,
+                        tooltip: 'Undo',
+                        enabled: canUndo,
+                        onTap: canUndo ? onUndo : null,
                       ),
-                      const SizedBox(width: 2),
-                      _buildSegmentTool(
-                        icon: Icons.crop_square_rounded,
-                        tooltip: 'Area Box',
-                        mode: AnnotterMode.area,
+                      const SizedBox(height: 3),
+                      _buildActionCircle(
+                        icon: Icons.redo_rounded,
+                        tooltip: 'Redo',
+                        enabled: canRedo,
+                        onTap: canRedo ? onRedo : null,
                       ),
-                      const SizedBox(width: 2),
-                      _buildSegmentTool(
-                        icon: Icons.adjust_rounded,
-                        tooltip: 'Point Pin',
-                        mode: AnnotterMode.point,
+                      const SizedBox(height: 3),
+                      _buildActionCircle(
+                        icon: Icons.refresh_rounded,
+                        tooltip: 'Hot Reload & Refresh',
+                        enabled: true,
+                        onTap: onHotReload,
                       ),
+                      const SizedBox(height: 3),
+                      _buildActionCircle(
+                        icon: isAnimationPaused
+                            ? Icons.play_arrow_rounded
+                            : Icons.pause_rounded,
+                        tooltip: isAnimationPaused ? 'Resume Animation' : 'Freeze Animation',
+                        iconColor: isAnimationPaused ? AnnotterColors.amber : null,
+                        enabled: true,
+                        onTap: onToggleAnimationPause,
+                      ),
+                      const SizedBox(height: 3),
+                      _buildActionCircle(
+                        icon: Icons.format_list_numbered_rounded,
+                        tooltip: 'Annotation List',
+                        badgeCount: itemCount > 0 ? itemCount : null,
+                        enabled: true,
+                        onTap: onOpenList,
+                      ),
+                      const SizedBox(height: 3),
+                      _buildActionCircle(
+                        icon: Icons.settings_outlined,
+                        tooltip: 'Settings',
+                        enabled: true,
+                        onTap: onOpenSettings,
+                      ),
+                      if (itemCount > 0 && onClearAll != null) ...[
+                        const SizedBox(height: 3),
+                        _buildActionCircle(
+                          icon: Icons.delete_outline_rounded,
+                          tooltip: 'Clear All',
+                          iconColor: AnnotterColors.red[300],
+                          enabled: true,
+                          onTap: onClearAll,
+                        ),
+                      ],
                     ],
                   ),
                 ),
+              ),
 
-                const SizedBox(width: 4),
+              // 3. Bottom Divider & Close Button
+              Container(
+                width: 20,
+                height: 1,
+                margin: const EdgeInsets.symmetric(vertical: 4),
+                color: AnnotterColors.border,
+              ),
 
-                // 3. Prominent Copy/Sent Action CTA
-                InkWell(
-                  borderRadius: BorderRadius.circular(16),
-                  onTap: onCopy,
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 180),
-                    height: 32,
-                    padding: const EdgeInsets.symmetric(horizontal: 9),
-                    decoration: BoxDecoration(
-                      color: isCopied ? AnnotterColors.success : AnnotterColors.primary,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: (isCopied ? AnnotterColors.success : AnnotterColors.primary)
-                              .withValues(alpha: 0.35),
-                          blurRadius: 6,
-                          offset: const Offset(0, 1),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          isCopied ? Icons.check_rounded : Icons.copy_rounded,
-                          color: AnnotterColors.white,
-                          size: 14,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          isCopied
-                              ? (isServerConnected ? 'Sent' : 'Copied!')
-                              : (itemCount == 0 ? 'Copy' : 'Copy ($itemCount)'),
-                          style: const TextStyle(
-                            color: AnnotterColors.white,
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Tooltip(
+                  message: 'Close Studio',
+                  child: InkWell(
+                    customBorder: const CircleBorder(),
+                    onTap: onExit,
+                    child: Container(
+                      width: 32,
+                      height: 32,
+                      alignment: Alignment.center,
+                      child: const Icon(
+                        Icons.close_rounded,
+                        size: 18,
+                        color: AnnotterColors.mutedForeground,
+                      ),
                     ),
                   ),
                 ),
-
-                const SizedBox(width: 4),
-
-                // 4. Quick Actions Group
-                _buildActionItem(
-                  icon: Icons.undo_rounded,
-                  tooltip: 'Undo',
-                  enabled: canUndo,
-                  onTap: canUndo ? onUndo : null,
-                ),
-                _buildActionItem(
-                  icon: Icons.redo_rounded,
-                  tooltip: 'Redo',
-                  enabled: canRedo,
-                  onTap: canRedo ? onRedo : null,
-                ),
-                _buildActionItem(
-                  icon: Icons.refresh_rounded,
-                  tooltip: 'Hot Reload & Refresh',
-                  enabled: true,
-                  onTap: onHotReload,
-                ),
-                _buildActionItem(
-                  icon: isAnimationPaused
-                      ? Icons.play_arrow_rounded
-                      : Icons.pause_rounded,
-                  tooltip: isAnimationPaused ? 'Resume Animation' : 'Freeze Animation',
-                  iconColor: isAnimationPaused ? AnnotterColors.amber : null,
-                  enabled: true,
-                  onTap: onToggleAnimationPause,
-                ),
-                _buildActionItem(
-                  icon: Icons.format_list_numbered_rounded,
-                  tooltip: 'Annotation List',
-                  badgeCount: itemCount > 0 ? itemCount : null,
-                  enabled: true,
-                  onTap: onOpenList,
-                ),
-                _buildActionItem(
-                  icon: Icons.settings_outlined,
-                  tooltip: 'Settings',
-                  enabled: true,
-                  onTap: onOpenSettings,
-                ),
-                if (itemCount > 0 && onClearAll != null)
-                  _buildActionItem(
-                    icon: Icons.delete_outline_rounded,
-                    tooltip: 'Clear All',
-                    iconColor: AnnotterColors.red[300],
-                    enabled: true,
-                    onTap: onClearAll,
-                  ),
-
-                // 5. Vertical Divider
-                Container(
-                  height: 18,
-                  width: 1,
-                  margin: const EdgeInsets.symmetric(horizontal: 4),
-                  color: AnnotterColors.border,
-                ),
-
-                // 6. Close / Collapse Button (back to idle FAB)
-                InkWell(
-                  borderRadius: BorderRadius.circular(16),
-                  onTap: onExit,
-                  child: Container(
-                    width: 28,
-                    height: 28,
-                    alignment: Alignment.center,
-                    child: const Icon(
-                      Icons.close_rounded,
-                      size: 17,
-                      color: AnnotterColors.mutedForeground,
-                    ),
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
     );
   }
 
-  Widget _buildSegmentTool({
+  Widget _buildRoundTool({
     required IconData icon,
     required String tooltip,
     required AnnotterMode mode,
@@ -281,15 +326,15 @@ class AnnotterFloatingToolbar extends StatelessWidget {
     return Tooltip(
       message: tooltip,
       child: InkWell(
-        borderRadius: BorderRadius.circular(12),
+        customBorder: const CircleBorder(),
         onTap: () => onModeChanged(mode),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 140),
-          width: 28,
-          height: 28,
+          width: 32,
+          height: 32,
           decoration: BoxDecoration(
+            shape: BoxShape.circle,
             color: isSelected ? activeColor : AnnotterColors.transparent,
-            borderRadius: BorderRadius.circular(12),
           ),
           alignment: Alignment.center,
           child: Icon(
@@ -302,7 +347,7 @@ class AnnotterFloatingToolbar extends StatelessWidget {
     );
   }
 
-  Widget _buildActionItem({
+  Widget _buildActionCircle({
     required IconData icon,
     required String tooltip,
     required bool enabled,
@@ -317,11 +362,11 @@ class AnnotterFloatingToolbar extends StatelessWidget {
     return Tooltip(
       message: tooltip,
       child: InkWell(
-        borderRadius: BorderRadius.circular(14),
+        customBorder: const CircleBorder(),
         onTap: onTap,
         child: Container(
-          width: 28,
-          height: 28,
+          width: 32,
+          height: 32,
           alignment: Alignment.center,
           child: Stack(
             alignment: Alignment.center,
@@ -332,16 +377,18 @@ class AnnotterFloatingToolbar extends StatelessWidget {
                   top: 2,
                   right: 2,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
-                    decoration: BoxDecoration(
+                    padding: const EdgeInsets.all(2),
+                    decoration: const BoxDecoration(
                       color: AnnotterColors.primary,
-                      borderRadius: BorderRadius.circular(8),
+                      shape: BoxShape.circle,
                     ),
+                    constraints: const BoxConstraints(minWidth: 10, minHeight: 10),
                     child: Text(
                       '$badgeCount',
+                      textAlign: TextAlign.center,
                       style: const TextStyle(
                         color: AnnotterColors.white,
-                        fontSize: 7.5,
+                        fontSize: 7,
                         fontWeight: FontWeight.bold,
                       ),
                     ),

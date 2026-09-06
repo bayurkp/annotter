@@ -230,8 +230,8 @@ class _AnnotterState extends State<Annotter> {
                           _isActive = true;
                           // Initialize toolbar position near the FAB
                           _toolbarPosition = Offset(
-                            _fabPosition.dx.clamp(12.0, (mediaQuery.size.width - 240.0).clamp(12.0, mediaQuery.size.width)),
-                            _fabPosition.dy.clamp(mediaQuery.padding.top + 10, mediaQuery.size.height - 60.0),
+                            _fabPosition.dx.clamp(8.0, mediaQuery.size.width - 56.0),
+                            _fabPosition.dy.clamp(mediaQuery.padding.top + 8, mediaQuery.size.height - 320.0),
                           );
                         });
                       },

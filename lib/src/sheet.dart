@@ -78,8 +78,6 @@ class _AnnotationSheetState extends State<AnnotationSheet> {
             alignment: Alignment.bottomCenter,
             child: Container(
               width: double.infinity,
-              constraints: const BoxConstraints(maxWidth: 540),
-              margin: const EdgeInsets.symmetric(horizontal: 12),
               padding: EdgeInsets.only(
                 left: 16,
                 right: 16,
@@ -89,9 +87,8 @@ class _AnnotationSheetState extends State<AnnotationSheet> {
               decoration: BoxDecoration(
                 color: AnnotterColors.background,
                 borderRadius: AnnotterBorders.radiusSheet,
-                border: Border.all(
-                  color: AnnotterColors.border,
-                  width: 1.0,
+                border: Border(
+                  top: BorderSide(color: AnnotterColors.border, width: 1.0),
                 ),
                 boxShadow: AnnotterShadows.sheet,
               ),
