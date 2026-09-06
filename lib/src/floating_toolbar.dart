@@ -187,37 +187,22 @@ class _AnnotterFloatingToolbarState extends State<AnnotterFloatingToolbar> {
                     ),
                     const SizedBox(height: 3),
 
-                    // Play / Pause Animation (setelah Point Pin, sebelum Copy)
+                    // Play / Pause Animation (identik persis dengan tools lainnya)
                     Tooltip(
                       message: widget.isAnimationPaused ? 'Resume Animation' : 'Freeze Animation',
                       child: InkWell(
                         customBorder: const CircleBorder(),
                         onTap: widget.onToggleAnimationPause,
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 140),
+                        child: Container(
                           width: 32,
                           height: 32,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: widget.isAnimationPaused
-                                ? AnnotterColors.amber.withValues(alpha: 0.2)
-                                : AnnotterColors.surfaceElevated.withValues(alpha: 0.6),
-                            border: Border.all(
-                              color: widget.isAnimationPaused
-                                  ? AnnotterColors.amber.withValues(alpha: 0.4)
-                                  : AnnotterColors.borderSubtle,
-                              width: 1,
-                            ),
-                          ),
                           alignment: Alignment.center,
                           child: Icon(
                             widget.isAnimationPaused
                                 ? Icons.play_arrow_rounded
                                 : Icons.pause_rounded,
-                            size: 17,
-                            color: widget.isAnimationPaused
-                                ? AnnotterColors.amber[400]
-                                : AnnotterColors.slate[300],
+                            size: 16,
+                            color: AnnotterColors.mutedForeground,
                           ),
                         ),
                       ),
