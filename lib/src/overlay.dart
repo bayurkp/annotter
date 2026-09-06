@@ -385,82 +385,75 @@ class _AnnotterState extends State<Annotter> {
                         ),
                       ),
 
-                    // Inline Modal Annotation List Sheet
+                    // Inline Modal Annotation List Sheet (Full-width edge-to-edge)
                     if (_showList)
                       _buildModalBackdrop(
                         onDismiss: () => setState(() => _showList = false),
                         alignment: Alignment.bottomCenter,
-                        child: SafeArea(
-                          bottom: true,
-                          child: Padding(
-                            padding: const EdgeInsets.fromLTRB(10, 0, 10, 10),
-                            child: AnnotationListSheet(
-                              items: _items,
-                              onClose: () => setState(() => _showList = false),
-                              onReorder: (newItems) {
-                                _saveSnapshot();
-                                setState(() {
-                                  _items = newItems;
-                                  _renumberItems();
-                                });
-                              },
-                              onEdit: (item) {
-                                setState(() {
-                                  _showList = false;
-                                  _editingItem = item;
-                                  _isCreating = false;
-                                });
-                              },
-                              onDelete: (item) {
-                                _saveSnapshot();
-                                setState(() {
-                                  _items.removeWhere((i) => i.id == item.id);
-                                  _renumberItems();
-                                });
-                                _syncClient?.deleteAnnotation(item.id);
-                              },
-                              onClearAll: () {
-                                _saveSnapshot();
-                                setState(() => _items.clear());
-                                _syncClient?.clearAnnotations();
-                              },
-                            ),
-                          ),
+                        child: AnnotationListSheet(
+                          items: _items,
+                          onClose: () => setState(() => _showList = false),
+                          onReorder: (newItems) {
+                            _saveSnapshot();
+                            setState(() {
+                              _items = newItems;
+                              _renumberItems();
+                            });
+                          },
+                          onEdit: (item) {
+                            setState(() {
+                              _showList = false;
+                              _editingItem = item;
+                              _isCreating = false;
+                            });
+                          },
+                          onDelete: (item) {
+                            _saveSnapshot();
+                            setState(() {
+                              _items.removeWhere((i) => i.id == item.id);
+                              _renumberItems();
+                            });
+                            _syncClient?.deleteAnnotation(item.id);
+                          },
+                          onClearAll: () {
+                            _saveSnapshot();
+                            setState(() => _items.clear());
+                            _syncClient?.clearAnnotations();
+                          },
                         ),
                       ),
 
-                    // Inline Modal Settings Dialog
+                    // Inline Modal Settings Sheet (Full-width edge-to-edge)
                     if (_showSettings)
                       _buildModalBackdrop(
                         onDismiss: () => setState(() => _showSettings = false),
-                        child: SingleChildScrollView(
-                          child: AnnotterSettingsDialog(
-                            detailLevel: _detailLevel,
-                            includeTree: _includeTree,
-                            markerColor: _markerColor,
-                            clearOnCopy: _clearOnCopy,
-                            blockInteractions: _blockInteractions,
-                            replaceServerOnCopy: _replaceServerOnCopy,
-                            isServerConnected: _isServerConnected,
-                            snapshotDirectory: _snapshotDirectory,
-                            onDetailLevelChanged: (lvl) => setState(() => _detailLevel = lvl),
-                            onIncludeTreeChanged: (val) => setState(() => _includeTree = val),
-                            onMarkerColorChanged: (col) => setState(() => _markerColor = col),
-                            onClearOnCopyChanged: (val) => setState(() => _clearOnCopy = val),
-                            onBlockInteractionsChanged: (val) =>
-                                setState(() => _blockInteractions = val),
-                            onReplaceServerOnCopyChanged: (val) =>
-                                setState(() => _replaceServerOnCopy = val),
-                            onSnapshotDirectoryChanged: (dir) =>
-                                setState(() => _snapshotDirectory = dir),
-                            onClearSnapshots: () async {
-                              return await AnnotterSnapshotHelper.clearSnapshots(
-                                snapshotDirectory: _snapshotDirectory,
-                                syncClient: _syncClient,
-                              );
-                            },
-                            onClose: () => setState(() => _showSettings = false),
-                          ),
+                        alignment: Alignment.bottomCenter,
+                        child: AnnotterSettingsDialog(
+                          detailLevel: _detailLevel,
+                          includeTree: _includeTree,
+                          markerColor: _markerColor,
+                          clearOnCopy: _clearOnCopy,
+                          blockInteractions: _blockInteractions,
+                          replaceServerOnCopy: _replaceServerOnCopy,
+                          isServerConnected: _isServerConnected,
+                          snapshotDirectory: _snapshotDirectory,
+                          onDetailLevelChanged: (lvl) => setState(() => _detailLevel = lvl),
+                          onIncludeTreeChanged: (val) => setState(() => _includeTree = val),
+                          onMarkerColorChanged: (col) => setState(() => _markerColor = col),
+                          onClearOnCopyChanged: (val) => setState(() => _clearOnCopy = val),
+                          onBlockInteractionsChanged: (val) =>
+                              setState(() => _blockInteractions = val),
+                          onReplaceServerOnCopyChanged: (val) =>
+                              setState(() => _replaceServerOnCopy = val),
+                          onSnapshotDirectoryChanged: (dir) =>
+                              setState(() => _snapshotDirectory = dir),
+                          onClearSnapshots: () async {
+                            return await AnnotterSnapshotHelper.clearSnapshots(
+                              snapshotDirectory: _snapshotDirectory,
+                              syncClient: _syncClient,
+                            );
+                          },
+                          onClose: () => setState(() => _showSettings = false),
                         ),
                       ),
                   ],

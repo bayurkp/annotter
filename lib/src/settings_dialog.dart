@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
-import 'colors.dart';
+import 'tokens.dart';
 
+/// Full-width Bottom Sheet for Annotter Settings.
+/// Matches the exact design language, styling tokens, and swipe gestures of AnnotationSheet & AnnotationListSheet.
 class AnnotterSettingsDialog extends StatefulWidget {
-  final String detailLevel; // 'compact', 'standard', 'detailed'
+  final String detailLevel; // 'compact', 'standard', 'detailed', 'forensic'
   final bool includeTree;
   final Color markerColor;
   final bool clearOnCopy;
@@ -51,407 +53,362 @@ class _AnnotterSettingsDialogState extends State<AnnotterSettingsDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final mediaQuery = MediaQuery.of(context);
+
     return Theme(
       data: ThemeData.dark().copyWith(
         textTheme: const TextTheme().apply(fontFamily: 'sans-serif'),
       ),
       child: Material(
-        color: Colors.transparent,
-        child: Center(
-          child: Container(
-            width: 330,
-            margin: const EdgeInsets.symmetric(horizontal: 20),
-            padding: const EdgeInsets.all(18),
-            decoration: BoxDecoration(
-              color: AnnotterColors.slate[900],
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: AnnotterColors.black.withValues(alpha: 0.6),
-                  blurRadius: 24,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-              border: Border.all(
-                color: AnnotterColors.slate[700]!,
-                width: 1.2,
+        color: AnnotterColors.transparent,
+        child: GestureDetector(
+          onVerticalDragEnd: (details) {
+            if (details.primaryVelocity != null && details.primaryVelocity! > 200) {
+              widget.onClose();
+            }
+          },
+          child: Align(
+            alignment: Alignment.bottomCenter,
+            child: Container(
+              width: double.infinity,
+              constraints: BoxConstraints(
+                maxHeight: mediaQuery.size.height * 0.82,
               ),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // 1. Header with Close Button
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              padding: EdgeInsets.only(
+                left: 18,
+                right: 18,
+                top: 8,
+                bottom: mediaQuery.padding.bottom + 16,
+              ),
+              decoration: BoxDecoration(
+                color: AnnotterColors.background,
+                borderRadius: AnnotterBorders.radiusSheet,
+                border: const Border(
+                  top: BorderSide(color: AnnotterColors.border, width: 1.0),
+                ),
+                boxShadow: AnnotterShadows.sheet,
+              ),
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Top Drag Handle
+                    Center(
+                      child: Container(
+                        width: 36,
+                        height: 4,
+                        margin: const EdgeInsets.only(bottom: 12),
+                        decoration: BoxDecoration(
+                          color: AnnotterColors.handle,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+
+                    // Header
                     Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Icon(Icons.tune_rounded,
-                            size: 18, color: AnnotterColors.blue[400]),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Annotter Settings',
+                        Row(
+                          children: [
+                            Icon(Icons.tune_rounded,
+                                size: 18, color: AnnotterColors.primary),
+                            const SizedBox(width: 8),
+                            const Text(
+                              'Annotter Settings',
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                                color: AnnotterColors.foreground,
+                              ),
+                            ),
+                          ],
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close_rounded,
+                              size: 20, color: AnnotterColors.mutedForeground),
+                          onPressed: widget.onClose,
+                        ),
+                      ],
+                    ),
+                    const Divider(color: AnnotterColors.borderSubtle, height: 16),
+
+                    // Output Detail: Segmented Control
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Output Detail',
                           style: TextStyle(
-                            fontSize: 14,
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w600,
+                            color: AnnotterColors.foreground,
+                          ),
+                        ),
+                        Text(
+                          widget.detailLevel[0].toUpperCase() +
+                              widget.detailLevel.substring(1),
+                          style: const TextStyle(
+                            fontSize: 11.5,
                             fontWeight: FontWeight.bold,
-                            color: AnnotterColors.white,
+                            color: AnnotterColors.primary,
                           ),
                         ),
                       ],
                     ),
-                    InkWell(
-                      borderRadius: BorderRadius.circular(6),
-                      onTap: widget.onClose,
-                      child: Padding(
-                        padding: const EdgeInsets.all(4),
-                        child: Icon(Icons.close_rounded,
-                            size: 18, color: AnnotterColors.slate[400]),
-                      ),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 16),
-
-                // 2. Output Detail: Segmented Control
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Output Detail',
-                      style: TextStyle(
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.w600,
-                        color: AnnotterColors.slate[200],
-                      ),
-                    ),
-                    Text(
-                      widget.detailLevel[0].toUpperCase() + widget.detailLevel.substring(1),
-                      style: TextStyle(
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.bold,
-                        color: AnnotterColors.blue[400],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                Container(
-                  padding: const EdgeInsets.all(2),
-                  decoration: BoxDecoration(
-                    color: AnnotterColors.slate[950],
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: AnnotterColors.slate[800]!),
-                  ),
-                  child: Row(
-                    children: [
-                      _buildDetailOption('compact', 'Compact'),
-                      _buildDetailOption('standard', 'Standard'),
-                      _buildDetailOption('detailed', 'Detailed'),
-                      _buildDetailOption('forensic', 'Forensic'),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 14),
-
-                // 3. Include Widget Tree: Switch
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Widget Tree',
-                      style: TextStyle(
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.w600,
-                        color: AnnotterColors.slate[200],
-                      ),
-                    ),
-                    _buildCustomSwitch(
-                      value: widget.includeTree,
-                      onChanged: widget.onIncludeTreeChanged,
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 14),
-
-                // 4. Marker Colour
-                Text(
-                  'Marker Colour',
-                  style: TextStyle(
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w600,
-                    color: AnnotterColors.slate[200],
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: AnnotterColors.markerPalette.map((color) {
-                    final isSelected =
-                        widget.markerColor.toARGB32() == color.toARGB32();
-                    return InkWell(
-                      borderRadius: BorderRadius.circular(16),
-                      onTap: () => widget.onMarkerColorChanged(color),
-                      child: Container(
-                        width: 24,
-                        height: 24,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: color,
-                          border: isSelected
-                              ? Border.all(
-                                  color: AnnotterColors.white, width: 2.5)
-                              : Border.all(
-                                  color: AnnotterColors.slate[700]!, width: 1),
-                          boxShadow: isSelected
-                              ? [
-                                  BoxShadow(
-                                    color: color.withValues(alpha: 0.5),
-                                    blurRadius: 6,
-                                  ),
-                                ]
-                              : null,
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                ),
-
-                const SizedBox(height: 16),
-                Divider(color: AnnotterColors.slate[800], height: 1),
-                const SizedBox(height: 12),
-
-                // 5. Checkboxes: Clear on Copy, Block Interactions, Replace Server on Copy
-                _buildCheckboxRow(
-                  label: 'Clear on copy',
-                  value: widget.clearOnCopy,
-                  onChanged: widget.onClearOnCopyChanged,
-                ),
-                const SizedBox(height: 8),
-                _buildCheckboxRow(
-                  label: 'Block page interactions',
-                  value: widget.blockInteractions,
-                  onChanged: widget.onBlockInteractionsChanged,
-                ),
-                const SizedBox(height: 8),
-                _buildCheckboxRow(
-                  label: 'Replace server notes on copy',
-                  value: widget.replaceServerOnCopy,
-                  onChanged: widget.onReplaceServerOnCopyChanged,
-                ),
-
-                const SizedBox(height: 12),
-                Divider(color: AnnotterColors.slate[800], height: 1),
-                const SizedBox(height: 12),
-
-                // Snapshot Directory setting
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Snapshot Folder',
-                      style: TextStyle(
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.w600,
-                        color: AnnotterColors.slate[200],
-                      ),
-                    ),
-                    Text(
-                      widget.snapshotDirectory == null || widget.snapshotDirectory!.trim().isEmpty
-                          ? 'Default (Downloads)'
-                          : 'Custom',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: AnnotterColors.blue[400],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: AnnotterColors.slate[950],
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: AnnotterColors.slate[800]!),
-                  ),
-                  child: TextFormField(
-                    initialValue: widget.snapshotDirectory ?? '',
-                    style: const TextStyle(
-                      fontSize: 11.5,
-                      color: AnnotterColors.white,
-                      fontFamily: 'monospace',
-                    ),
-                    decoration: InputDecoration(
-                      hintText: 'e.g. D:/Projects/snapshots',
-                      hintStyle: TextStyle(
-                        fontSize: 11,
-                        color: AnnotterColors.slate[500],
-                        fontFamily: 'sans-serif',
-                      ),
-                      border: InputBorder.none,
-                      isDense: true,
-                      contentPadding: const EdgeInsets.symmetric(vertical: 8),
-                      suffixIcon:
-                          (widget.snapshotDirectory != null && widget.snapshotDirectory!.trim().isNotEmpty)
-                              ? InkWell(
-                                  onTap: () => widget.onSnapshotDirectoryChanged?.call(null),
-                                  child: Icon(
-                                    Icons.clear_rounded,
-                                    size: 14,
-                                    color: AnnotterColors.slate[400],
-                                  ),
-                                )
-                              : null,
-                      suffixIconConstraints:
-                          const BoxConstraints(minWidth: 20, minHeight: 20),
-                    ),
-                    onChanged: (val) {
-                      final trimmed = val.trim();
-                      widget.onSnapshotDirectoryChanged?.call(trimmed.isEmpty ? null : trimmed);
-                    },
-                  ),
-                ),
-
-                if (widget.onClearSnapshots != null) ...[
-                  const SizedBox(height: 8),
-                  InkWell(
-                    borderRadius: BorderRadius.circular(6),
-                    onTap: _isClearing
-                        ? null
-                        : () async {
-                            setState(() {
-                              _isClearing = true;
-                              _clearFeedback = null;
-                            });
-                            try {
-                              final count = await widget.onClearSnapshots!();
-                              if (mounted) {
-                                setState(() {
-                                  _clearFeedback = 'Cleared $count snapshot(s)';
-                                });
-                                Future.delayed(const Duration(seconds: 2), () {
-                                  if (mounted) {
-                                    setState(() => _clearFeedback = null);
-                                  }
-                                });
-                              }
-                            } finally {
-                              if (mounted) {
-                                setState(() => _isClearing = false);
-                              }
-                            }
-                          },
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    const SizedBox(height: 6),
+                    Container(
+                      padding: const EdgeInsets.all(2),
                       decoration: BoxDecoration(
-                        color: _clearFeedback != null
-                            ? AnnotterColors.emerald[950]!.withValues(alpha: 0.4)
-                            : AnnotterColors.rose[950]!.withValues(alpha: 0.3),
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(
-                          color: _clearFeedback != null
-                              ? AnnotterColors.emerald[600]!.withValues(alpha: 0.5)
-                              : AnnotterColors.rose[800]!.withValues(alpha: 0.4),
-                          width: 1,
-                        ),
+                        color: AnnotterColors.input,
+                        borderRadius: AnnotterBorders.radiusSm,
+                        border: Border.all(color: AnnotterColors.borderSubtle),
                       ),
                       child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(
-                            _clearFeedback != null
-                                ? Icons.check_circle_outline_rounded
-                                : Icons.delete_sweep_outlined,
-                            size: 14,
-                            color: _clearFeedback != null
-                                ? AnnotterColors.emerald[300]
-                                : AnnotterColors.rose[300],
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            _clearFeedback ?? (_isClearing ? 'Clearing...' : 'Clear All Snapshots'),
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: _clearFeedback != null
-                                  ? AnnotterColors.emerald[300]
-                                  : AnnotterColors.rose[300],
-                            ),
-                          ),
+                          _buildDetailOption('compact', 'Compact'),
+                          _buildDetailOption('standard', 'Standard'),
+                          _buildDetailOption('detailed', 'Detailed'),
+                          _buildDetailOption('forensic', 'Forensic'),
                         ],
                       ),
                     ),
-                  ),
-                ],
 
-                const SizedBox(height: 14),
-                Divider(color: AnnotterColors.slate[800], height: 1),
-                const SizedBox(height: 10),
+                    const SizedBox(height: 14),
 
-                // 6. Server Connection Status Indicator
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Server Connection',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: AnnotterColors.slate[300],
-                      ),
-                    ),
+                    // Include Widget Tree: Switch
                     Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Container(
-                          width: 8,
-                          height: 8,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: widget.isServerConnected == true
-                                ? AnnotterColors.emerald[400]
-                                : widget.isServerConnected == false
-                                    ? AnnotterColors.rose[400]
-                                    : AnnotterColors.slate[500],
-                            boxShadow: widget.isServerConnected == true
-                                ? [
-                                    BoxShadow(
-                                      color: AnnotterColors.emerald[400]!
-                                          .withValues(alpha: 0.6),
-                                      blurRadius: 4,
-                                    ),
-                                  ]
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: const [
+                            Text(
+                              'Widget Tree',
+                              style: TextStyle(
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w600,
+                                color: AnnotterColors.foreground,
+                              ),
+                            ),
+                            SizedBox(height: 1),
+                            Text(
+                              'Include hierarchy in export',
+                              style: TextStyle(
+                                fontSize: 10.5,
+                                color: AnnotterColors.subtleForeground,
+                              ),
+                            ),
+                          ],
+                        ),
+                        _buildSwitch(
+                          value: widget.includeTree,
+                          onChanged: widget.onIncludeTreeChanged,
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 14),
+
+                    // Marker Accent Color: Swatches
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: const [
+                        Text(
+                          'Marker Color',
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w600,
+                            color: AnnotterColors.foreground,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: AnnotterColors.markerPalette.map((color) {
+                        final isSelected = widget.markerColor.toARGB32() == color.toARGB32();
+                        return InkWell(
+                          customBorder: const CircleBorder(),
+                          onTap: () => widget.onMarkerColorChanged(color),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 150),
+                            width: 26,
+                            height: 26,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: color,
+                              border: Border.all(
+                                color: isSelected
+                                    ? AnnotterColors.white
+                                    : AnnotterColors.transparent,
+                                width: 2,
+                              ),
+                              boxShadow: isSelected
+                                  ? [
+                                      BoxShadow(
+                                        color: color.withValues(alpha: 0.5),
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ]
+                                  : null,
+                            ),
+                            child: isSelected
+                                ? const Icon(Icons.check,
+                                    size: 14, color: AnnotterColors.white)
                                 : null,
                           ),
+                        );
+                      }).toList(),
+                    ),
+
+                    const SizedBox(height: 16),
+                    const Divider(color: AnnotterColors.borderSubtle, height: 1),
+                    const SizedBox(height: 12),
+
+                    // Checkboxes: Clear on Copy, Block Interactions, Replace Server on Copy
+                    _buildCheckboxRow(
+                      label: 'Clear on copy',
+                      value: widget.clearOnCopy,
+                      onChanged: widget.onClearOnCopyChanged,
+                    ),
+                    const SizedBox(height: 8),
+                    _buildCheckboxRow(
+                      label: 'Block app taps when inspecting',
+                      value: widget.blockInteractions,
+                      onChanged: widget.onBlockInteractionsChanged,
+                    ),
+                    const SizedBox(height: 8),
+                    _buildCheckboxRow(
+                      label: 'Replace server annotations on copy',
+                      value: widget.replaceServerOnCopy,
+                      onChanged: widget.onReplaceServerOnCopyChanged,
+                    ),
+
+                    const SizedBox(height: 16),
+                    const Divider(color: AnnotterColors.borderSubtle, height: 1),
+                    const SizedBox(height: 12),
+
+                    // Clear Snapshots Button
+                    if (widget.onClearSnapshots != null) ...[
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: const [
+                              Text(
+                                'Stored Snapshots',
+                                style: TextStyle(
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w600,
+                                  color: AnnotterColors.foreground,
+                                ),
+                              ),
+                              SizedBox(height: 1),
+                              Text(
+                                'Clear cached PNG screenshots',
+                                style: TextStyle(
+                                  fontSize: 10.5,
+                                  color: AnnotterColors.subtleForeground,
+                                ),
+                              ),
+                            ],
+                          ),
+                          OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AnnotterColors.error,
+                              side: const BorderSide(color: AnnotterColors.error),
+                              shape: const RoundedRectangleBorder(
+                                borderRadius: AnnotterBorders.radiusSm,
+                              ),
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              minimumSize: const Size(0, 32),
+                            ),
+                            icon: _isClearing
+                                ? const SizedBox(
+                                    width: 12,
+                                    height: 12,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: AnnotterColors.error,
+                                    ),
+                                  )
+                                : const Icon(Icons.delete_sweep_outlined, size: 16),
+                            label: const Text('Clear', style: TextStyle(fontSize: 11)),
+                            onPressed: _isClearing
+                                ? null
+                                : () async {
+                                    setState(() {
+                                      _isClearing = true;
+                                      _clearFeedback = null;
+                                    });
+                                    final count = await widget.onClearSnapshots!();
+                                    if (mounted) {
+                                      setState(() {
+                                        _isClearing = false;
+                                        _clearFeedback = 'Cleared $count files';
+                                      });
+                                      Future.delayed(const Duration(seconds: 2), () {
+                                        if (mounted) {
+                                          setState(() => _clearFeedback = null);
+                                        }
+                                      });
+                                    }
+                                  },
+                          ),
+                        ],
+                      ),
+                      if (_clearFeedback != null) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          _clearFeedback!,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: AnnotterColors.success,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 12),
+                      const Divider(color: AnnotterColors.borderSubtle, height: 1),
+                      const SizedBox(height: 12),
+                    ],
+
+                    // Server Connectivity Status
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.circle,
+                          size: 9,
+                          color: widget.isServerConnected == true
+                              ? AnnotterColors.success
+                              : AnnotterColors.subtleForeground,
                         ),
                         const SizedBox(width: 6),
                         Text(
-                          widget.isServerConnected == true
-                              ? 'Connected'
-                              : widget.isServerConnected == false
-                                  ? 'Disconnected'
-                                  : 'Not Configured',
+                          widget.isServerConnected == null
+                              ? 'Server: No URL configured'
+                              : widget.isServerConnected == true
+                                  ? 'Server: Connected & synced'
+                                  : 'Server: Disconnected (reconnecting...)',
                           style: TextStyle(
                             fontSize: 11,
-                            fontWeight: FontWeight.bold,
+                            fontWeight: FontWeight.w500,
                             color: widget.isServerConnected == true
-                                ? AnnotterColors.emerald[400]
-                                : widget.isServerConnected == false
-                                    ? AnnotterColors.rose[400]
-                                    : AnnotterColors.slate[500],
+                                ? AnnotterColors.success
+                                : AnnotterColors.subtleForeground,
                           ),
                         ),
                       ],
                     ),
                   ],
                 ),
-              ],
+              ),
             ),
           ),
         ),
@@ -459,26 +416,26 @@ class _AnnotterSettingsDialogState extends State<AnnotterSettingsDialog> {
     );
   }
 
-  Widget _buildDetailOption(String value, String label) {
-    final isSelected = widget.detailLevel == value;
+  Widget _buildDetailOption(String key, String label) {
+    final isSelected = widget.detailLevel == key;
     return Expanded(
       child: InkWell(
-        borderRadius: BorderRadius.circular(6),
-        onTap: () => widget.onDetailLevelChanged(value),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 5),
+        borderRadius: AnnotterBorders.radiusSm,
+        onTap: () => widget.onDetailLevelChanged(key),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 140),
+          padding: const EdgeInsets.symmetric(vertical: 6),
           decoration: BoxDecoration(
-            color: isSelected ? AnnotterColors.slate[800] : Colors.transparent,
-            borderRadius: BorderRadius.circular(6),
+            color: isSelected ? AnnotterColors.primary : AnnotterColors.transparent,
+            borderRadius: AnnotterBorders.radiusSm,
           ),
-          alignment: Alignment.center,
           child: Text(
             label,
+            textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 11,
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              color:
-                  isSelected ? AnnotterColors.white : AnnotterColors.slate[400],
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+              color: isSelected ? AnnotterColors.onPrimary : AnnotterColors.mutedForeground,
             ),
           ),
         ),
@@ -486,30 +443,31 @@ class _AnnotterSettingsDialogState extends State<AnnotterSettingsDialog> {
     );
   }
 
-  Widget _buildCustomSwitch(
-      {required bool value, required ValueChanged<bool> onChanged}) {
+  Widget _buildSwitch({
+    required bool value,
+    required ValueChanged<bool> onChanged,
+  }) {
     return InkWell(
-      borderRadius: BorderRadius.circular(12),
+      customBorder: const StadiumBorder(),
       onTap: () => onChanged(!value),
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        width: 36,
-        height: 20,
+        duration: const Duration(milliseconds: 160),
+        width: 38,
+        height: 22,
         padding: const EdgeInsets.all(2),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          color: value ? AnnotterColors.blue[600] : AnnotterColors.slate[800],
+          borderRadius: BorderRadius.circular(11),
+          color: value ? AnnotterColors.primary : AnnotterColors.surfaceElevated,
           border: Border.all(
-            color:
-                value ? AnnotterColors.blue[400]! : AnnotterColors.slate[700]!,
+            color: value ? AnnotterColors.blue[400]! : AnnotterColors.borderSubtle,
             width: 1,
           ),
         ),
         child: Align(
           alignment: value ? Alignment.centerRight : Alignment.centerLeft,
           child: Container(
-            width: 14,
-            height: 14,
+            width: 16,
+            height: 16,
             decoration: const BoxDecoration(
               shape: BoxShape.circle,
               color: AnnotterColors.white,
@@ -526,7 +484,7 @@ class _AnnotterSettingsDialogState extends State<AnnotterSettingsDialog> {
     required ValueChanged<bool> onChanged,
   }) {
     return InkWell(
-      borderRadius: BorderRadius.circular(6),
+      borderRadius: AnnotterBorders.radiusSm,
       onTap: () => onChanged(!value),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 2),
@@ -537,27 +495,22 @@ class _AnnotterSettingsDialogState extends State<AnnotterSettingsDialog> {
               height: 16,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(4),
-                color: value
-                    ? AnnotterColors.blue[600]
-                    : AnnotterColors.slate[950],
+                color: value ? AnnotterColors.primary : AnnotterColors.input,
                 border: Border.all(
-                  color: value
-                      ? AnnotterColors.blue[400]!
-                      : AnnotterColors.slate[700]!,
+                  color: value ? AnnotterColors.primary : AnnotterColors.borderSubtle,
                   width: 1.2,
                 ),
               ),
               child: value
-                  ? const Icon(Icons.check,
-                      size: 12, color: AnnotterColors.white)
+                  ? const Icon(Icons.check, size: 12, color: AnnotterColors.white)
                   : null,
             ),
             const SizedBox(width: 8),
             Text(
               label,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 12,
-                color: AnnotterColors.slate[300],
+                color: AnnotterColors.mutedForeground,
               ),
             ),
           ],
