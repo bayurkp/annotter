@@ -3,7 +3,7 @@ import 'tokens.dart';
 import 'models.dart';
 
 /// Floating Toolbar inspired by Agentations.
-/// Vertical pill design with scrollable actions, clamped height (max 60% viewport),
+/// Vertical pill design with scrollable actions, clamped height (max 65% viewport),
 /// perfectly round tool buttons (CircleBorder), and draggable across the screen.
 class AnnotterFloatingToolbar extends StatelessWidget {
   final Offset position;
@@ -107,7 +107,7 @@ class AnnotterFloatingToolbar extends StatelessWidget {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // Tools Segment (Bulat Sempurna 34x34)
+                      // Tools Segment Capsule (Termasuk Freeze Animation / Play-Pause)
                       Container(
                         padding: const EdgeInsets.symmetric(vertical: 3, horizontal: 2),
                         decoration: BoxDecoration(
@@ -118,6 +118,27 @@ class AnnotterFloatingToolbar extends StatelessWidget {
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
+                            // Play / Pause Animation (Tanpa perubahan warna highlight)
+                            Tooltip(
+                              message: isAnimationPaused ? 'Resume Animation' : 'Freeze Animation',
+                              child: InkWell(
+                                customBorder: const CircleBorder(),
+                                onTap: onToggleAnimationPause,
+                                child: Container(
+                                  width: 32,
+                                  height: 32,
+                                  alignment: Alignment.center,
+                                  child: Icon(
+                                    isAnimationPaused
+                                        ? Icons.play_arrow_rounded
+                                        : Icons.pause_rounded,
+                                    size: 18,
+                                    color: AnnotterColors.foreground,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 3),
                             _buildRoundTool(
                               icon: Icons.pan_tool_outlined,
                               tooltip: 'Move',
@@ -235,16 +256,6 @@ class AnnotterFloatingToolbar extends StatelessWidget {
                         tooltip: 'Hot Reload & Refresh',
                         enabled: true,
                         onTap: onHotReload,
-                      ),
-                      const SizedBox(height: 3),
-                      _buildActionCircle(
-                        icon: isAnimationPaused
-                            ? Icons.play_arrow_rounded
-                            : Icons.pause_rounded,
-                        tooltip: isAnimationPaused ? 'Resume Animation' : 'Freeze Animation',
-                        iconColor: isAnimationPaused ? AnnotterColors.amber : null,
-                        enabled: true,
-                        onTap: onToggleAnimationPause,
                       ),
                       const SizedBox(height: 3),
                       _buildActionCircle(
