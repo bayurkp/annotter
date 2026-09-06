@@ -126,10 +126,24 @@ class _AnnotterSettingsDialogState extends State<AnnotterSettingsDialog> {
                             ),
                           ],
                         ),
-                        IconButton(
-                          icon: const Icon(Icons.close_rounded,
-                              size: 20, color: AnnotterColors.mutedForeground),
+                        OutlinedButton(
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AnnotterColors.mutedForeground,
+                            backgroundColor: AnnotterColors.surfaceElevated.withValues(alpha: 0.35),
+                            side: const BorderSide(
+                              color: AnnotterColors.border,
+                              width: 1.0,
+                            ),
+                            shape: const RoundedRectangleBorder(
+                              borderRadius: AnnotterBorders.radiusSm,
+                            ),
+                            padding: EdgeInsets.zero,
+                            minimumSize: const Size(32, 32),
+                            maximumSize: const Size(32, 32),
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
                           onPressed: widget.onClose,
+                          child: const Icon(Icons.close_rounded, size: 18),
                         ),
                       ],
                     ),

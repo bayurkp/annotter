@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:annotter/annotter.dart';
+import 'package:annotter/src/list_sheet.dart';
 
 void main() {
   testWidgets('Annotter works inside MaterialApp.builder and toggles between FAB and Floating Pill Toolbar', (tester) async {
@@ -31,5 +32,62 @@ void main() {
 
     expect(find.byIcon(Icons.edit_note), findsOneWidget);
     expect(find.byIcon(Icons.touch_app_outlined), findsNothing);
+  });
+
+  testWidgets('AnnotationListSheet renders OutlinedButtons and reorderable drag handles', (tester) async {
+    final items = [
+      AnnotterItem(
+        id: 1,
+        number: 1,
+        rect: const Rect.fromLTWH(0, 0, 100, 50),
+        widgetName: 'Widget Alpha',
+        note: 'First note',
+      ),
+      AnnotterItem(
+        id: 2,
+        number: 2,
+        rect: const Rect.fromLTWH(0, 50, 100, 50),
+        widgetName: 'Widget Beta',
+        note: 'Second note',
+      ),
+    ];
+
+    List<AnnotterItem>? reorderedResult;
+    bool clearAllCalled = false;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: AnnotationListSheet(
+            items: items,
+            onClose: () {},
+            onEdit: (_) {},
+            onDelete: (_) {},
+            onClearAll: () => clearAllCalled = true,
+            onReorder: (newList) => reorderedResult = newList,
+          ),
+        ),
+      ),
+    );
+
+    // Verify OutlinedButtons are used
+    expect(find.byType(OutlinedButton), findsNWidgets(6)); // Clear All, Close X, 2x Edit, 2x Delete
+    expect(find.text('Clear All'), findsOneWidget);
+    expect(find.byIcon(Icons.close_rounded), findsOneWidget);
+    expect(find.byIcon(Icons.edit_outlined), findsNWidgets(2));
+    expect(find.byIcon(Icons.delete_outline_rounded), findsNWidgets(3)); // 1 in Clear All, 2 in items
+
+    // Verify ReorderableDragStartListener is present for each item
+    expect(find.byType(ReorderableDragStartListener), findsNWidgets(2));
+
+    // Drag first item handle downwards
+    final firstHandle = find.byType(ReorderableDragStartListener).first;
+    await tester.timedDrag(firstHandle, const Offset(0, 100), const Duration(milliseconds: 500));
+    await tester.pumpAndSettle();
+    expect(reorderedResult, isNotNull);
+
+    // Tap Clear All
+    await tester.tap(find.text('Clear All'));
+    expect(clearAllCalled, isTrue);
   });
 }

@@ -45,15 +45,9 @@ class _AnnotationListSheetState extends State<AnnotationListSheet> {
       ),
       child: Material(
         color: AnnotterColors.transparent,
-        child: GestureDetector(
-          onVerticalDragEnd: (details) {
-            if (details.primaryVelocity != null && details.primaryVelocity! > 200) {
-              widget.onClose();
-            }
-          },
-          child: Align(
-            alignment: Alignment.bottomCenter,
-            child: Container(
+        child: Align(
+          alignment: Alignment.bottomCenter,
+          child: Container(
               width: double.infinity,
               constraints: BoxConstraints(
                 maxHeight: mediaQuery.size.height * 0.75,
@@ -117,24 +111,49 @@ class _AnnotationListSheetState extends State<AnnotationListSheet> {
                       ),
                       Row(
                         children: [
-                          if (_localItems.isNotEmpty)
-                            TextButton.icon(
-                              style: TextButton.styleFrom(
+                          if (_localItems.isNotEmpty) ...[
+                            OutlinedButton.icon(
+                              style: OutlinedButton.styleFrom(
                                 foregroundColor: AnnotterColors.error,
-                                padding: const EdgeInsets.symmetric(horizontal: 8),
+                                backgroundColor: AnnotterColors.error.withValues(alpha: 0.08),
+                                side: BorderSide(
+                                  color: AnnotterColors.error.withValues(alpha: 0.3),
+                                  width: 1.0,
+                                ),
+                                shape: const RoundedRectangleBorder(
+                                  borderRadius: AnnotterBorders.radiusSm,
+                                ),
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
                                 minimumSize: const Size(0, 32),
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                               ),
-                              icon: const Icon(Icons.delete_outline_rounded, size: 16),
-                              label: const Text('Clear All', style: TextStyle(fontSize: 12)),
+                              icon: const Icon(Icons.delete_outline_rounded, size: 15),
+                              label: const Text('Clear All', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
                               onPressed: () {
                                 widget.onClearAll();
                                 widget.onClose();
                               },
                             ),
-                          IconButton(
-                            icon: const Icon(Icons.close_rounded,
-                                color: AnnotterColors.mutedForeground, size: 20),
+                            const SizedBox(width: 8),
+                          ],
+                          OutlinedButton(
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AnnotterColors.mutedForeground,
+                              backgroundColor: AnnotterColors.surfaceElevated.withValues(alpha: 0.35),
+                              side: const BorderSide(
+                                color: AnnotterColors.border,
+                                width: 1.0,
+                              ),
+                              shape: const RoundedRectangleBorder(
+                                borderRadius: AnnotterBorders.radiusSm,
+                              ),
+                              padding: EdgeInsets.zero,
+                              minimumSize: const Size(32, 32),
+                              maximumSize: const Size(32, 32),
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
                             onPressed: widget.onClose,
+                            child: const Icon(Icons.close_rounded, size: 18),
                           ),
                         ],
                       ),
@@ -162,7 +181,17 @@ class _AnnotationListSheetState extends State<AnnotationListSheet> {
                     Flexible(
                       child: ReorderableListView.builder(
                         shrinkWrap: true,
+                        buildDefaultDragHandles: false,
                         itemCount: _localItems.length,
+                        proxyDecorator: (child, index, animation) {
+                          return Material(
+                            elevation: 6,
+                            color: AnnotterColors.transparent,
+                            shadowColor: Colors.black.withValues(alpha: 0.5),
+                            borderRadius: AnnotterBorders.radiusMd,
+                            child: child,
+                          );
+                        },
                         // ignore: deprecated_member_use
                         onReorder: (oldIndex, newIndex) {
                           setState(() {
@@ -189,9 +218,22 @@ class _AnnotationListSheetState extends State<AnnotationListSheet> {
                             child: Row(
                               children: [
                                 // Drag handle
-                                const Icon(Icons.drag_indicator_rounded,
-                                    color: AnnotterColors.subtleForeground, size: 18),
-                                const SizedBox(width: 8),
+                                ReorderableDragStartListener(
+                                  index: index,
+                                  child: MouseRegion(
+                                    cursor: SystemMouseCursors.grab,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                                      color: AnnotterColors.transparent,
+                                      child: const Icon(
+                                        Icons.drag_indicator_rounded,
+                                        color: AnnotterColors.subtleForeground,
+                                        size: 20,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
 
                                 // Number badge
                                 CircleAvatar(
@@ -269,32 +311,63 @@ class _AnnotationListSheetState extends State<AnnotationListSheet> {
                                     ),
                                   ),
                                 ),
+                                const SizedBox(width: 8),
 
-                                // Actions
-                                IconButton(
-                                  icon: const Icon(Icons.edit_outlined,
-                                      color: AnnotterColors.mutedForeground, size: 18),
-                                  padding: EdgeInsets.zero,
-                                  constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                                  onPressed: () {
-                                    widget.onClose();
-                                    widget.onEdit(item);
-                                  },
-                                ),
-                                IconButton(
-                                  icon: const Icon(Icons.delete_outline_rounded,
-                                      color: AnnotterColors.error, size: 18),
-                                  padding: EdgeInsets.zero,
-                                  constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                                  onPressed: () {
-                                    setState(() {
-                                      _localItems.removeAt(index);
-                                      for (int i = 0; i < _localItems.length; i++) {
-                                        _localItems[i].number = i + 1;
-                                      }
-                                    });
-                                    widget.onDelete(item);
-                                  },
+                                // Actions (Grouped OutlinedButtons)
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    OutlinedButton(
+                                      style: OutlinedButton.styleFrom(
+                                        foregroundColor: AnnotterColors.mutedForeground,
+                                        backgroundColor: AnnotterColors.surfaceElevated.withValues(alpha: 0.35),
+                                        side: const BorderSide(
+                                          color: AnnotterColors.border,
+                                          width: 1.0,
+                                        ),
+                                        shape: const RoundedRectangleBorder(
+                                          borderRadius: AnnotterBorders.radiusSm,
+                                        ),
+                                        padding: EdgeInsets.zero,
+                                        minimumSize: const Size(30, 30),
+                                        maximumSize: const Size(30, 30),
+                                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                      ),
+                                      onPressed: () {
+                                        widget.onClose();
+                                        widget.onEdit(item);
+                                      },
+                                      child: const Icon(Icons.edit_outlined, size: 15),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    OutlinedButton(
+                                      style: OutlinedButton.styleFrom(
+                                        foregroundColor: AnnotterColors.error,
+                                        backgroundColor: AnnotterColors.error.withValues(alpha: 0.08),
+                                        side: BorderSide(
+                                          color: AnnotterColors.error.withValues(alpha: 0.3),
+                                          width: 1.0,
+                                        ),
+                                        shape: const RoundedRectangleBorder(
+                                          borderRadius: AnnotterBorders.radiusSm,
+                                        ),
+                                        padding: EdgeInsets.zero,
+                                        minimumSize: const Size(30, 30),
+                                        maximumSize: const Size(30, 30),
+                                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                      ),
+                                      onPressed: () {
+                                        setState(() {
+                                          _localItems.removeAt(index);
+                                          for (int i = 0; i < _localItems.length; i++) {
+                                            _localItems[i].number = i + 1;
+                                          }
+                                        });
+                                        widget.onDelete(item);
+                                      },
+                                      child: const Icon(Icons.delete_outline_rounded, size: 15),
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),
@@ -307,7 +380,6 @@ class _AnnotationListSheetState extends State<AnnotationListSheet> {
             ),
           ),
         ),
-      ),
-    );
+      );
   }
 }

@@ -175,18 +175,52 @@ class _AnnotationSheetState extends State<AnnotationSheet> {
                             ],
                           ),
                         ),
-                        if (!widget.isNew)
-                          IconButton(
-                            icon: const Icon(Icons.delete_outline,
-                                color: AnnotterColors.error, size: 20),
-                            tooltip: 'Delete annotation',
-                            onPressed: widget.onDelete,
+                        if (!widget.isNew) ...[
+                          Tooltip(
+                            message: 'Delete annotation',
+                            child: OutlinedButton(
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: AnnotterColors.error,
+                                backgroundColor: AnnotterColors.error.withValues(alpha: 0.08),
+                                side: BorderSide(
+                                  color: AnnotterColors.error.withValues(alpha: 0.3),
+                                  width: 1.0,
+                                ),
+                                shape: const RoundedRectangleBorder(
+                                  borderRadius: AnnotterBorders.radiusSm,
+                                ),
+                                padding: EdgeInsets.zero,
+                                minimumSize: const Size(32, 32),
+                                maximumSize: const Size(32, 32),
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              ),
+                              onPressed: widget.onDelete,
+                              child: const Icon(Icons.delete_outline_rounded, size: 17),
+                            ),
                           ),
-                        IconButton(
-                          icon: const Icon(Icons.close_rounded,
-                              color: AnnotterColors.mutedForeground, size: 20),
-                          tooltip: 'Close',
-                          onPressed: widget.onCancel,
+                          const SizedBox(width: 8),
+                        ],
+                        Tooltip(
+                          message: 'Close',
+                          child: OutlinedButton(
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AnnotterColors.mutedForeground,
+                              backgroundColor: AnnotterColors.surfaceElevated.withValues(alpha: 0.35),
+                              side: const BorderSide(
+                                color: AnnotterColors.border,
+                                width: 1.0,
+                              ),
+                              shape: const RoundedRectangleBorder(
+                                borderRadius: AnnotterBorders.radiusSm,
+                              ),
+                              padding: EdgeInsets.zero,
+                              minimumSize: const Size(32, 32),
+                              maximumSize: const Size(32, 32),
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
+                            onPressed: widget.onCancel,
+                            child: const Icon(Icons.close_rounded, size: 18),
+                          ),
                         ),
                       ],
                     ),
