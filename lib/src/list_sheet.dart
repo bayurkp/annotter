@@ -228,6 +228,7 @@ class _AnnotationListSheetState extends State<AnnotationListSheet> {
                                                   fontWeight: FontWeight.bold,
                                                   fontSize: 13,
                                                 ),
+                                                maxLines: 1,
                                                 overflow: TextOverflow.ellipsis,
                                               ),
                                             ),

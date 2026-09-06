@@ -141,6 +141,7 @@ class _AnnotationSheetState extends State<AnnotationSheet> {
                                         fontWeight: FontWeight.bold,
                                         color: AnnotterColors.foreground,
                                       ),
+                                      maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
@@ -192,7 +193,7 @@ class _AnnotationSheetState extends State<AnnotationSheet> {
 
                     // Context preview (Selected Text or Source File Location)
                     if (widget.item.selectedText != null &&
-                        widget.item.selectedText!.isNotEmpty) ...[
+                        widget.item.selectedText!.trim().isNotEmpty) ...[
                       const SizedBox(height: 6),
                       Container(
                         width: double.infinity,
@@ -202,7 +203,7 @@ class _AnnotationSheetState extends State<AnnotationSheet> {
                           borderRadius: AnnotterBorders.radiusSm,
                         ),
                         child: Text(
-                          '"${widget.item.selectedText}"',
+                          '"${widget.item.selectedText!.replaceAll(RegExp(r'\s+'), ' ').trim()}"',
                           style: const TextStyle(
                             fontSize: 11,
                             fontStyle: FontStyle.italic,

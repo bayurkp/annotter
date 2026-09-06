@@ -261,7 +261,9 @@ class _AnnotterPainter extends CustomPainter {
           ),
         ),
         textDirection: TextDirection.ltr,
-      )..layout();
+        maxLines: 1,
+        ellipsis: '...',
+      )..layout(maxWidth: (size.width - 24).clamp(60.0, 400.0));
 
       final tagWidth = textPainter.width + 12;
       final tagHeight = 18.0;

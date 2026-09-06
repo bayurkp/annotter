@@ -416,9 +416,11 @@ class WidgetInspectorHelper {
       }
 
       if (extractedText != null) {
-        final truncated = extractedText!.length > 30
-            ? '${extractedText!.substring(0, 27)}...'
-            : extractedText!;
+        final singleLineText =
+            extractedText!.replaceAll(RegExp(r'\s+'), ' ').trim();
+        final truncated = singleLineText.length > 20
+            ? '${singleLineText.substring(0, 17)}...'
+            : singleLineText;
         if (foundWidgetName.endsWith('Text')) {
           foundWidgetName = '$foundWidgetName ("$truncated")';
         }
