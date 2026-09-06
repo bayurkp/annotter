@@ -223,8 +223,8 @@ class _AnnotterState extends State<Annotter> {
                       ),
                     ),
                     AnnotterIdleFab(
-                      position: _fabPosition,
-                      onPositionChanged: (pos) => setState(() => _fabPosition = pos),
+                      initialPosition: _fabPosition,
+                      onPositionChanged: (pos) => _fabPosition = pos,
                       onTap: () {
                         setState(() {
                           _isActive = true;

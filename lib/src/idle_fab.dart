@@ -1,20 +1,42 @@
 import 'package:flutter/material.dart';
-import 'colors.dart';
+import 'tokens.dart';
 
 /// Draggable Floating Action Button that triggers Annotter activation when idle.
-class AnnotterIdleFab extends StatelessWidget {
-  final Offset position;
+/// Uses isolated internal state for 60fps/120fps zero-lag silky smooth dragging.
+class AnnotterIdleFab extends StatefulWidget {
+  final Offset initialPosition;
   final ValueChanged<Offset> onPositionChanged;
   final VoidCallback onTap;
   final int badgeCount;
 
   const AnnotterIdleFab({
     super.key,
-    required this.position,
+    required this.initialPosition,
     required this.onPositionChanged,
     required this.onTap,
     required this.badgeCount,
   });
+
+  @override
+  State<AnnotterIdleFab> createState() => _AnnotterIdleFabState();
+}
+
+class _AnnotterIdleFabState extends State<AnnotterIdleFab> {
+  late Offset _pos;
+
+  @override
+  void initState() {
+    super.initState();
+    _pos = widget.initialPosition;
+  }
+
+  @override
+  void didUpdateWidget(covariant AnnotterIdleFab oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialPosition != widget.initialPosition) {
+      _pos = widget.initialPosition;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -22,26 +44,30 @@ class AnnotterIdleFab extends StatelessWidget {
     final size = mediaQuery.size;
 
     return Positioned(
-      left: position.dx,
-      top: position.dy,
+      left: _pos.dx,
+      top: _pos.dy,
       child: Material(
-        color: Colors.transparent,
+        color: AnnotterColors.transparent,
         child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
           onPanUpdate: (details) {
-            final newPos = position + details.delta;
+            final newPos = _pos + details.delta;
             final clamped = Offset(
-              newPos.dx.clamp(10.0, size.width - 60.0),
-              newPos.dy.clamp(mediaQuery.padding.top + 10, size.height - 70.0),
+              newPos.dx.clamp(8.0, size.width - 56.0),
+              newPos.dy.clamp(mediaQuery.padding.top + 8, size.height - 56.0),
             );
-            onPositionChanged(clamped);
+            setState(() => _pos = clamped);
+          },
+          onPanEnd: (_) {
+            widget.onPositionChanged(_pos);
           },
           child: Material(
             elevation: 8,
             shape: const CircleBorder(),
-            color: AnnotterColors.blue[600], // Royal Blue
+            color: AnnotterColors.primary,
             child: InkWell(
               customBorder: const CircleBorder(),
-              onTap: onTap,
+              onTap: widget.onTap,
               child: Container(
                 width: 48,
                 height: 48,
@@ -49,25 +75,23 @@ class AnnotterIdleFab extends StatelessWidget {
                 child: Stack(
                   alignment: Alignment.center,
                   children: [
-                    const Icon(Icons.edit_note, color: Colors.white, size: 26),
-                    if (badgeCount > 0)
+                    const Icon(Icons.edit_note, color: AnnotterColors.white, size: 26),
+                    if (widget.badgeCount > 0)
                       Positioned(
                         top: 4,
                         right: 4,
                         child: Container(
                           padding: const EdgeInsets.all(4),
                           decoration: const BoxDecoration(
-                            color: Colors.redAccent,
+                            color: AnnotterColors.error,
                             shape: BoxShape.circle,
                           ),
                           child: Text(
-                            '$badgeCount',
+                            '${widget.badgeCount}',
                             style: const TextStyle(
-                              color: Colors.white,
+                              color: AnnotterColors.white,
                               fontSize: 9,
                               fontWeight: FontWeight.bold,
-                              fontFamily: 'sans-serif',
-                              decoration: TextDecoration.none,
                             ),
                           ),
                         ),
