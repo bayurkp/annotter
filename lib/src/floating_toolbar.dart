@@ -3,8 +3,9 @@ import 'tokens.dart';
 import 'models.dart';
 
 /// Compact Floating Toolbar inspired by Agentations.
-/// Ultra-responsive, fixed-height vertical capsule (all essential tools visible without scrolling),
-/// isolated ValueNotifier/Stateful drag for 60fps zero-lag movement, and perfectly round buttons.
+/// Consistent 48px width matching idle FAB, high-performance isolated drag,
+/// close button (X) positioned conveniently at the top, followed by drag handle,
+/// tools capsule with play/pause, copy CTA, and quick actions.
 class AnnotterFloatingToolbar extends StatefulWidget {
   final Offset initialPosition;
   final ValueChanged<Offset> onPositionChanged;
@@ -65,7 +66,6 @@ class _AnnotterFloatingToolbarState extends State<AnnotterFloatingToolbar> {
   @override
   void didUpdateWidget(covariant AnnotterFloatingToolbar oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // Sync external position changes if necessary
     if (oldWidget.initialPosition != widget.initialPosition) {
       _pos = widget.initialPosition;
     }
@@ -82,10 +82,10 @@ class _AnnotterFloatingToolbarState extends State<AnnotterFloatingToolbar> {
       child: Material(
         color: AnnotterColors.transparent,
         child: Container(
-          width: 44,
+          width: 48, // Consistent diameter identical to Idle FAB (48px)
           decoration: BoxDecoration(
             color: AnnotterColors.background,
-            borderRadius: BorderRadius.circular(22),
+            borderRadius: BorderRadius.circular(24),
             border: Border.all(
               color: AnnotterColors.border,
               width: 1.0,
@@ -95,14 +95,36 @@ class _AnnotterFloatingToolbarState extends State<AnnotterFloatingToolbar> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // 1. Drag Handle Header (High-performance 60fps dragging)
+              // 1. Close Button (X) at the Very Top for easy reach
+              Padding(
+                padding: const EdgeInsets.only(top: 6, bottom: 2),
+                child: Tooltip(
+                  message: 'Close Studio',
+                  child: InkWell(
+                    customBorder: const CircleBorder(),
+                    onTap: widget.onExit,
+                    child: Container(
+                      width: 32,
+                      height: 32,
+                      alignment: Alignment.center,
+                      child: const Icon(
+                        Icons.close_rounded,
+                        size: 18,
+                        color: AnnotterColors.mutedForeground,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+              // 2. Drag Handle Bar (High-performance 60fps dragging)
               GestureDetector(
                 behavior: HitTestBehavior.opaque,
                 onPanUpdate: (details) {
                   final nextPos = _pos + details.delta;
                   final clamped = Offset(
-                    nextPos.dx.clamp(6.0, size.width - 50.0),
-                    nextPos.dy.clamp(mediaQuery.padding.top + 6, size.height - 360.0),
+                    nextPos.dx.clamp(6.0, size.width - 54.0),
+                    nextPos.dy.clamp(mediaQuery.padding.top + 6, size.height - 380.0),
                   );
                   setState(() => _pos = clamped);
                 },
@@ -111,24 +133,24 @@ class _AnnotterFloatingToolbarState extends State<AnnotterFloatingToolbar> {
                 },
                 child: Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  padding: const EdgeInsets.symmetric(vertical: 4),
                   child: const Center(
                     child: Icon(
                       Icons.drag_indicator_rounded,
-                      size: 15,
+                      size: 16,
                       color: AnnotterColors.subtleForeground,
                     ),
                   ),
                 ),
               ),
 
-              // 2. Selection Tools Capsule (Sleek, Compact & Complete)
+              // 3. Selection Tools Capsule
               Container(
                 margin: const EdgeInsets.symmetric(horizontal: 4),
                 padding: const EdgeInsets.symmetric(vertical: 3),
                 decoration: BoxDecoration(
                   color: AnnotterColors.surface,
-                  borderRadius: BorderRadius.circular(18),
+                  borderRadius: BorderRadius.circular(20),
                   border: Border.all(color: AnnotterColors.borderSubtle),
                 ),
                 child: Column(
@@ -173,8 +195,8 @@ class _AnnotterFloatingToolbarState extends State<AnnotterFloatingToolbar> {
                         onTap: widget.onToggleAnimationPause,
                         child: AnimatedContainer(
                           duration: const Duration(milliseconds: 140),
-                          width: 30,
-                          height: 30,
+                          width: 32,
+                          height: 32,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             color: widget.isAnimationPaused
@@ -192,7 +214,7 @@ class _AnnotterFloatingToolbarState extends State<AnnotterFloatingToolbar> {
                             widget.isAnimationPaused
                                 ? Icons.play_arrow_rounded
                                 : Icons.pause_rounded,
-                            size: 16,
+                            size: 17,
                             color: widget.isAnimationPaused
                                 ? AnnotterColors.amber[400]
                                 : AnnotterColors.slate[300],
@@ -206,7 +228,7 @@ class _AnnotterFloatingToolbarState extends State<AnnotterFloatingToolbar> {
 
               const SizedBox(height: 5),
 
-              // 3. Prominent Copy CTA Button (32x32 circle)
+              // 4. Prominent Copy CTA Button (34x34 circle)
               Tooltip(
                 message: widget.isCopied
                     ? (widget.isServerConnected ? 'Sent to AI Agent' : 'Copied to Clipboard')
@@ -216,8 +238,8 @@ class _AnnotterFloatingToolbarState extends State<AnnotterFloatingToolbar> {
                   onTap: widget.onCopy,
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 180),
-                    width: 32,
-                    height: 32,
+                    width: 34,
+                    height: 34,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color: widget.isCopied ? AnnotterColors.success : AnnotterColors.primary,
@@ -236,7 +258,7 @@ class _AnnotterFloatingToolbarState extends State<AnnotterFloatingToolbar> {
                         Icon(
                           widget.isCopied ? Icons.check_rounded : Icons.copy_rounded,
                           color: AnnotterColors.white,
-                          size: 15,
+                          size: 16,
                         ),
                         if (widget.itemCount > 0 && !widget.isCopied)
                           Positioned(
@@ -268,7 +290,7 @@ class _AnnotterFloatingToolbarState extends State<AnnotterFloatingToolbar> {
 
               const SizedBox(height: 4),
 
-              // 4. Quick Actions Group (Undo, List, Settings, Clear)
+              // 5. Quick Actions Group (Undo, List, Settings, Clear)
               _buildActionCircle(
                 icon: Icons.undo_rounded,
                 tooltip: 'Undo',
@@ -300,34 +322,7 @@ class _AnnotterFloatingToolbarState extends State<AnnotterFloatingToolbar> {
                   onTap: widget.onClearAll,
                 ),
               ],
-
-              // 5. Bottom Divider & Close Button
-              Container(
-                width: 18,
-                height: 1,
-                margin: const EdgeInsets.symmetric(vertical: 4),
-                color: AnnotterColors.border,
-              ),
-
-              Padding(
-                padding: const EdgeInsets.only(bottom: 5),
-                child: Tooltip(
-                  message: 'Close Studio',
-                  child: InkWell(
-                    customBorder: const CircleBorder(),
-                    onTap: widget.onExit,
-                    child: const SizedBox(
-                      width: 30,
-                      height: 30,
-                      child: Icon(
-                        Icons.close_rounded,
-                        size: 17,
-                        color: AnnotterColors.mutedForeground,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
+              const SizedBox(height: 6),
             ],
           ),
         ),
@@ -354,8 +349,8 @@ class _AnnotterFloatingToolbarState extends State<AnnotterFloatingToolbar> {
         onTap: () => widget.onModeChanged(mode),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 140),
-          width: 30,
-          height: 30,
+          width: 32,
+          height: 32,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: isSelected ? activeColor : AnnotterColors.transparent,
@@ -363,7 +358,7 @@ class _AnnotterFloatingToolbarState extends State<AnnotterFloatingToolbar> {
           alignment: Alignment.center,
           child: Icon(
             icon,
-            size: 15,
+            size: 16,
             color: isSelected ? AnnotterColors.white : AnnotterColors.mutedForeground,
           ),
         ),
@@ -389,12 +384,12 @@ class _AnnotterFloatingToolbarState extends State<AnnotterFloatingToolbar> {
         customBorder: const CircleBorder(),
         onTap: onTap,
         child: SizedBox(
-          width: 30,
-          height: 30,
+          width: 32,
+          height: 32,
           child: Stack(
             alignment: Alignment.center,
             children: [
-              Icon(icon, size: 15, color: effectiveColor),
+              Icon(icon, size: 16, color: effectiveColor),
               if (badgeCount != null)
                 Positioned(
                   top: 1,
