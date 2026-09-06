@@ -3,11 +3,11 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
-import 'colors.dart';
+import 'tokens.dart';
 import 'models.dart';
-import 'bottom_bar.dart';
+import 'floating_toolbar.dart';
 import 'canvas.dart';
-import 'dialog.dart';
+import 'sheet.dart';
 import 'exporter.dart';
 import 'idle_fab.dart';
 import 'inspector.dart';
@@ -17,7 +17,7 @@ import 'snapshot_helper.dart';
 import 'sync_client.dart';
 
 /// The root wrapper for Annotter.
-/// Wraps your application to provide in-app UI inspection and annotation.
+/// Wraps your application to provide non-intrusive in-app UI inspection and annotation.
 class Annotter extends StatefulWidget {
   final Widget child;
   final bool enabled;
@@ -63,6 +63,21 @@ class _AnnotterState extends State<Annotter> {
   bool _isCopied = false;
   Timer? _copiedTimer;
 
+  // Positions
+  Offset _fabPosition = const Offset(20, 120);
+  Offset _toolbarPosition = const Offset(20, 120);
+  double _scrollOffset = 0.0;
+
+  // Edit / Creation state
+  AnnotterItem? _editingItem;
+  bool _isCreating = false;
+  bool _showList = false;
+  String _currentScreenName = 'HomeScreen';
+
+  // Undo / Redo History Stacks
+  final List<List<AnnotterItem>> _undoStack = [];
+  final List<List<AnnotterItem>> _redoStack = [];
+
   void _handleHotReload() {
     scheduleMicrotask(() async {
       try {
@@ -82,7 +97,6 @@ class _AnnotterState extends State<Annotter> {
     _snapshotDirectory = widget.snapshotDirectory;
     if (widget.serverUrl != null && widget.serverUrl!.isNotEmpty) {
       _syncClient = AnnotterSyncClient(serverUrl: widget.serverUrl!);
-      // Passive initial check: does not block UI, fast 1s timeout
       _checkServerConnection();
     }
   }
@@ -113,7 +127,6 @@ class _AnnotterState extends State<Annotter> {
 
   void _startStatusPolling() {
     _statusPollTimer?.cancel();
-    // Only poll when connected and not already polling
     _statusPollTimer = Timer.periodic(const Duration(seconds: 3), (_) async {
       if (_syncClient == null || !mounted) return;
       if (!_syncClient!.isConnected) {
@@ -137,18 +150,6 @@ class _AnnotterState extends State<Annotter> {
       if (changed) setState(() {});
     });
   }
-
-  // Undo / Redo History Stacks
-  final List<List<AnnotterItem>> _undoStack = [];
-  final List<List<AnnotterItem>> _redoStack = [];
-
-  Offset _fabPosition = const Offset(20, 120);
-  double _scrollOffset = 0.0;
-
-  AnnotterItem? _editingItem;
-  bool _isCreating = false;
-  bool _showList = false;
-  String _currentScreenName = 'HomeScreen';
 
   String get _activeScreenName {
     final appElement = _appChildKey.currentContext as Element?;
@@ -201,7 +202,6 @@ class _AnnotterState extends State<Annotter> {
     }
 
     final mediaQuery = MediaQuery.of(context);
-    final size = mediaQuery.size;
     final direction = Directionality.maybeOf(context) ?? TextDirection.ltr;
 
     return Directionality(
@@ -211,7 +211,7 @@ class _AnnotterState extends State<Annotter> {
           OverlayEntry(
             builder: (overlayContext) {
               if (!_isActive) {
-                // Inactive: Fullscreen app + Draggable FAB
+                // Inactive: Fullscreen app + Draggable FAB button
                 return Stack(
                   fit: StackFit.expand,
                   children: [
@@ -225,333 +225,245 @@ class _AnnotterState extends State<Annotter> {
                     AnnotterIdleFab(
                       position: _fabPosition,
                       onPositionChanged: (pos) => setState(() => _fabPosition = pos),
-                      onTap: () => setState(() => _isActive = true),
+                      onTap: () {
+                        setState(() {
+                          _isActive = true;
+                          // Initialize toolbar position near the FAB
+                          _toolbarPosition = Offset(
+                            _fabPosition.dx.clamp(12.0, (mediaQuery.size.width - 240.0).clamp(12.0, mediaQuery.size.width)),
+                            _fabPosition.dy.clamp(mediaQuery.padding.top + 10, mediaQuery.size.height - 60.0),
+                          );
+                        });
+                      },
                       badgeCount: _items.length,
                     ),
                   ],
                 );
               }
 
-              final appTopPadding = mediaQuery.viewPadding.top > 0
-                  ? mediaQuery.viewPadding.top
-                  : mediaQuery.padding.top;
-              final appBottomPadding = mediaQuery.viewPadding.bottom > 0
-                  ? mediaQuery.viewPadding.bottom
-                  : mediaQuery.padding.bottom;
-              final canvasHeight = (appBottomPadding > 0 || appTopPadding > 0)
-                  ? (size.height - appTopPadding - appBottomPadding)
-                  : size.height;
-
-              // Active: Full-width Ultra-Thin Bottom Dock Studio
+              // Active: 100% Native Fullscreen application + Draggable Floating Pill Toolbar + Canvas
               return Material(
-                color: Colors.transparent,
+                color: AnnotterColors.transparent,
                 textStyle: const TextStyle(
-                    decoration: TextDecoration.none, fontFamily: 'sans-serif'),
-                child: Container(
-                  color: const Color(0xFF0B0F19), // Deep studio backdrop
-                  child: SafeArea(
-                    top: true,
-                    bottom: false,
-                    child: Stack(
-                      children: [
-                        // Studio Viewport + Toolbar (isolated from keyboard insets to prevent zoom)
-                        MediaQuery(
-                          data:
-                              mediaQuery.copyWith(viewInsets: EdgeInsets.zero),
-                          child: Column(
-                            children: [
-                              // Proportional Scaled App Viewport
-                              Expanded(
-                                child: Center(
-                                  child: FittedBox(
-                                    fit: BoxFit.contain,
-                                    child: Container(
-                                      width: size.width,
-                                      height: canvasHeight,
-                                      decoration: BoxDecoration(
-                                        border: Border.all(
-                                          color: _mode ==
-                                                  AnnotterMode.move
-                                              ? AnnotterColors.emerald[
-                                                  500]! // Green in Move
-                                              : _mode ==
-                                                      AnnotterMode.select
-                                                  ? AnnotterColors.indigo[
-                                                      500]! // Indigo in Select
-                                                  : AnnotterColors.blue[
-                                                      600]!, // Blue in annotate
-                                          width: 2.0,
-                                        ),
-                                      ),
-                                      child: RepaintBoundary(
-                                        key: _repaintBoundaryKey,
-                                        child: Stack(
-                                          fit: StackFit.expand,
-                                          children: [
-                                            // Reactive Scroll & Navigation Listener + Inset override
-                                            NotificationListener<Notification>(
-                                              onNotification: (notification) {
-                                                if (notification
-                                                    is ScrollNotification) {
-                                                  if (notification
-                                                          .metrics.axis ==
-                                                      Axis.vertical) {
-                                                    setState(() {
-                                                      _scrollOffset =
-                                                          notification
-                                                              .metrics.pixels;
-                                                    });
-                                                  }
-                                                } else if (notification
-                                                    is NavigationNotification) {
-                                                  setState(() {});
-                                                }
-                                                return false;
-                                              },
-                                              child: MediaQuery(
-                                                data: mediaQuery.copyWith(
-                                                  size: Size(
-                                                      size.width, canvasHeight),
-                                                  padding: EdgeInsets.zero,
-                                                  viewPadding: EdgeInsets.zero,
-                                                  viewInsets: EdgeInsets.zero,
-                                                ),
-                                                child: IgnorePointer(
-                                                  ignoring:
-                                                      _blockInteractions &&
-                                                          _isActive,
-                                                  child: KeyedSubtree(
-                                                    key: _appChildKey,
-                                                    child: KeyedSubtree(
-                                                      key: _appSubtreeKey,
-                                                      child: widget.child,
-                                                    ),
-                                                  ),
-                                                ),
-                                              ),
-                                            ),
-
-                                            AnnotterCanvas(
-                                              items: _items,
-                                              mode: _mode,
-                                              scrollOffset: _scrollOffset,
-                                              markerColor: _markerColor,
-                                              onCreate: (item, screenName) {
-                                                _saveSnapshot();
-                                                setState(() {
-                                                  if (screenName != null) {
-                                                    _currentScreenName =
-                                                        screenName;
-                                                  }
-                                                  _editingItem = item;
-                                                  _isCreating = true;
-                                                });
-                                              },
-                                              onEdit: (item) {
-                                                setState(() {
-                                                  _editingItem = item;
-                                                  _isCreating = false;
-                                                });
-                                              },
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ),
+                  decoration: TextDecoration.none,
+                  fontFamily: 'sans-serif',
+                ),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    // Native 1:1 App Viewport & Repaint Boundary (Zero letterboxing)
+                    RepaintBoundary(
+                      key: _repaintBoundaryKey,
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          NotificationListener<Notification>(
+                            onNotification: (notification) {
+                              if (notification is ScrollNotification) {
+                                if (notification.metrics.axis == Axis.vertical) {
+                                  setState(() {
+                                    _scrollOffset = notification.metrics.pixels;
+                                  });
+                                }
+                              } else if (notification is NavigationNotification) {
+                                setState(() {});
+                              }
+                              return false;
+                            },
+                            child: IgnorePointer(
+                              ignoring: _blockInteractions && _isActive,
+                              child: KeyedSubtree(
+                                key: _appChildKey,
+                                child: KeyedSubtree(
+                                  key: _appSubtreeKey,
+                                  child: widget.child,
                                 ),
                               ),
+                            ),
+                          ),
 
-                              // Ultra-Thin Full-Width Bottom Bar
-                              AnnotterBottomBar(
-                                mode: _mode,
-                                onModeChanged: (mode) =>
-                                    setState(() => _mode = mode),
-                                onExit: () => setState(() => _isActive = false),
-                                onCopy: _copyNotes,
-                                isCopied: _isCopied,
-                                isServerConnected: _isServerConnected == true,
-                                itemCount: _items.length,
-                                canUndo: _undoStack.isNotEmpty,
-                                onUndo: _undo,
-                                canRedo: _redoStack.isNotEmpty,
-                                onRedo: _redo,
-                                onHotReload: _handleHotReload,
-                                isAnimationPaused: _isAnimationPaused,
-                                onToggleAnimationPause: _toggleAnimationPause,
-                                onOpenList: () =>
-                                    setState(() => _showList = true),
-                                onOpenSettings: () {
-                                  _checkServerConnection();
-                                  setState(() => _showSettings = true);
-                                },
-                                onClearAll: _items.isNotEmpty
-                                    ? () {
-                                        _saveSnapshot();
-                                        setState(() => _items.clear());
-                                      }
-                                    : null,
-                              ),
-                            ],
+                          AnnotterCanvas(
+                            items: _items,
+                            mode: _mode,
+                            scrollOffset: _scrollOffset,
+                            markerColor: _markerColor,
+                            onCreate: (item, screenName) {
+                              _saveSnapshot();
+                              setState(() {
+                                if (screenName != null) {
+                                  _currentScreenName = screenName;
+                                }
+                                _editingItem = item;
+                                _isCreating = true;
+                              });
+                            },
+                            onEdit: (item) {
+                              setState(() {
+                                _editingItem = item;
+                                _isCreating = false;
+                              });
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Agentations-style Draggable Floating Pill Toolbar
+                    AnnotterFloatingToolbar(
+                      position: _toolbarPosition,
+                      onPositionChanged: (pos) => setState(() => _toolbarPosition = pos),
+                      mode: _mode,
+                      onModeChanged: (mode) => setState(() => _mode = mode),
+                      onExit: () => setState(() => _isActive = false),
+                      onCopy: _copyNotes,
+                      isCopied: _isCopied,
+                      isServerConnected: _isServerConnected == true,
+                      itemCount: _items.length,
+                      canUndo: _undoStack.isNotEmpty,
+                      onUndo: _undo,
+                      canRedo: _redoStack.isNotEmpty,
+                      onRedo: _redo,
+                      onHotReload: _handleHotReload,
+                      isAnimationPaused: _isAnimationPaused,
+                      onToggleAnimationPause: _toggleAnimationPause,
+                      onOpenList: () => setState(() => _showList = true),
+                      onOpenSettings: () {
+                        _checkServerConnection();
+                        setState(() => _showSettings = true);
+                      },
+                      onClearAll: _items.isNotEmpty
+                          ? () {
+                              _saveSnapshot();
+                              setState(() => _items.clear());
+                            }
+                          : null,
+                    ),
+
+                    // Keyboard-Adaptive Annotation Bottom Sheet Form
+                    if (_editingItem != null)
+                      _buildModalBackdrop(
+                        onDismiss: () => setState(() => _editingItem = null),
+                        alignment: Alignment.bottomCenter,
+                        child: AnnotationSheet(
+                          item: _editingItem!,
+                          isNew: _isCreating,
+                          onCancel: () => setState(() => _editingItem = null),
+                          onDelete: () {
+                            final deletedId = _editingItem?.id;
+                            _saveSnapshot();
+                            setState(() {
+                              _items.removeWhere((i) => i.id == _editingItem!.id);
+                              _renumberItems();
+                              _editingItem = null;
+                            });
+                            if (deletedId != null) {
+                              _syncClient?.deleteAnnotation(deletedId);
+                            }
+                          },
+                          onSave: (note, intent, severity) {
+                            final currentItem = _editingItem;
+                            _saveSnapshot();
+                            setState(() {
+                              _editingItem!.note = note;
+                              _editingItem!.intent = intent;
+                              _editingItem!.severity = severity;
+                              if (_isCreating) {
+                                _items.add(_editingItem!);
+                              }
+                              _editingItem = null;
+                            });
+                            if (currentItem != null) {
+                              _captureScreenshot('annotter_${currentItem.id}.png').then((path) {
+                                _syncClient?.syncAnnotation(
+                                  currentItem,
+                                  route: _activeScreenName,
+                                  screenshotPath: path,
+                                );
+                              });
+                            }
+                          },
+                        ),
+                      ),
+
+                    // Inline Modal Annotation List Sheet
+                    if (_showList)
+                      _buildModalBackdrop(
+                        onDismiss: () => setState(() => _showList = false),
+                        alignment: Alignment.bottomCenter,
+                        child: SafeArea(
+                          bottom: true,
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(10, 0, 10, 10),
+                            child: AnnotationListSheet(
+                              items: _items,
+                              onClose: () => setState(() => _showList = false),
+                              onReorder: (newItems) {
+                                _saveSnapshot();
+                                setState(() {
+                                  _items = newItems;
+                                  _renumberItems();
+                                });
+                              },
+                              onEdit: (item) {
+                                setState(() {
+                                  _showList = false;
+                                  _editingItem = item;
+                                  _isCreating = false;
+                                });
+                              },
+                              onDelete: (item) {
+                                _saveSnapshot();
+                                setState(() {
+                                  _items.removeWhere((i) => i.id == item.id);
+                                  _renumberItems();
+                                });
+                                _syncClient?.deleteAnnotation(item.id);
+                              },
+                              onClearAll: () {
+                                _saveSnapshot();
+                                setState(() => _items.clear());
+                                _syncClient?.clearAnnotations();
+                              },
+                            ),
                           ),
                         ),
+                      ),
 
-                        // Inline Modal Note Dialog
-                        if (_editingItem != null)
-                          _buildModalBackdrop(
-                            onDismiss: () =>
-                                setState(() => _editingItem = null),
-                            alignment: mediaQuery.viewInsets.bottom > 0
-                                ? Alignment.topCenter
-                                : Alignment.center,
-                            child: AnimatedPadding(
-                              duration: const Duration(milliseconds: 200),
-                              curve: Curves.easeOutCubic,
-                              padding: EdgeInsets.only(
-                                top: mediaQuery.viewInsets.bottom > 0 ? 16 : 0,
-                                bottom: mediaQuery.viewInsets.bottom > 0
-                                    ? mediaQuery.viewInsets.bottom + 12
-                                    : 0,
-                              ),
-                              child: SingleChildScrollView(
-                                physics: const ClampingScrollPhysics(),
-                                child: AnnotationDialog(
-                                  item: _editingItem!,
-                                  isNew: _isCreating,
-                                  onCancel: () =>
-                                      setState(() => _editingItem = null),
-                                  onDelete: () {
-                                    final deletedId = _editingItem?.id;
-                                    _saveSnapshot();
-                                    setState(() {
-                                      _items.removeWhere(
-                                          (i) => i.id == _editingItem!.id);
-                                      _renumberItems();
-                                      _editingItem = null;
-                                    });
-                                    if (deletedId != null) {
-                                      _syncClient?.deleteAnnotation(deletedId);
-                                    }
-                                  },
-                                  onSave: (note, intent, severity) {
-                                    final currentItem = _editingItem;
-                                    _saveSnapshot();
-                                    setState(() {
-                                      _editingItem!.note = note;
-                                      _editingItem!.intent = intent;
-                                      _editingItem!.severity = severity;
-                                      if (_isCreating)
-                                        _items.add(_editingItem!);
-                                      _editingItem = null;
-                                    });
-                                    if (currentItem != null) {
-                                      _captureScreenshot(
-                                              'annotter_${currentItem.id}.png')
-                                          .then((path) {
-                                        _syncClient?.syncAnnotation(
-                                          currentItem,
-                                          route: _activeScreenName,
-                                          screenshotPath: path,
-                                        );
-                                      });
-                                    }
-                                  },
-                                ),
-                              ),
-                            ),
-                          ),
-
-                        // Inline Modal Annotation List Sheet
-                        if (_showList)
-                          _buildModalBackdrop(
-                            onDismiss: () =>
-                                setState(() => _showList = false),
-                            alignment: Alignment.bottomCenter,
-                            child: SafeArea(
-                              bottom: true,
-                              child: Padding(
-                                padding:
-                                    const EdgeInsets.fromLTRB(10, 0, 10, 10),
-                                child: AnnotationListSheet(
-                                  items: _items,
-                                  onClose: () =>
-                                      setState(() => _showList = false),
-                                  onReorder: (newItems) {
-                                    _saveSnapshot();
-                                    setState(() {
-                                      _items = newItems;
-                                      _renumberItems();
-                                    });
-                                  },
-                                  onEdit: (item) {
-                                    setState(() {
-                                      _showList = false;
-                                      _editingItem = item;
-                                      _isCreating = false;
-                                    });
-                                  },
-                                  onDelete: (item) {
-                                    _saveSnapshot();
-                                    setState(() {
-                                      _items
-                                          .removeWhere((i) => i.id == item.id);
-                                      _renumberItems();
-                                    });
-                                    _syncClient?.deleteAnnotation(item.id);
-                                  },
-                                  onClearAll: () {
-                                    _saveSnapshot();
-                                    setState(() => _items.clear());
-                                    _syncClient?.clearAnnotations();
-                                  },
-                                ),
-                              ),
-                            ),
-                          ),
-
-                        // Inline Modal Settings Dialog
-                        if (_showSettings)
-                          _buildModalBackdrop(
-                            onDismiss: () =>
-                                setState(() => _showSettings = false),
-                            child: SingleChildScrollView(
-                              child: AnnotterSettingsDialog(
-                                detailLevel: _detailLevel,
-                                includeTree: _includeTree,
-                                markerColor: _markerColor,
-                                clearOnCopy: _clearOnCopy,
-                                blockInteractions: _blockInteractions,
-                                replaceServerOnCopy: _replaceServerOnCopy,
-                                isServerConnected: _isServerConnected,
+                    // Inline Modal Settings Dialog
+                    if (_showSettings)
+                      _buildModalBackdrop(
+                        onDismiss: () => setState(() => _showSettings = false),
+                        child: SingleChildScrollView(
+                          child: AnnotterSettingsDialog(
+                            detailLevel: _detailLevel,
+                            includeTree: _includeTree,
+                            markerColor: _markerColor,
+                            clearOnCopy: _clearOnCopy,
+                            blockInteractions: _blockInteractions,
+                            replaceServerOnCopy: _replaceServerOnCopy,
+                            isServerConnected: _isServerConnected,
+                            snapshotDirectory: _snapshotDirectory,
+                            onDetailLevelChanged: (lvl) => setState(() => _detailLevel = lvl),
+                            onIncludeTreeChanged: (val) => setState(() => _includeTree = val),
+                            onMarkerColorChanged: (col) => setState(() => _markerColor = col),
+                            onClearOnCopyChanged: (val) => setState(() => _clearOnCopy = val),
+                            onBlockInteractionsChanged: (val) =>
+                                setState(() => _blockInteractions = val),
+                            onReplaceServerOnCopyChanged: (val) =>
+                                setState(() => _replaceServerOnCopy = val),
+                            onSnapshotDirectoryChanged: (dir) =>
+                                setState(() => _snapshotDirectory = dir),
+                            onClearSnapshots: () async {
+                              return await AnnotterSnapshotHelper.clearSnapshots(
                                 snapshotDirectory: _snapshotDirectory,
-                                onDetailLevelChanged: (lvl) =>
-                                    setState(() => _detailLevel = lvl),
-                                onIncludeTreeChanged: (val) =>
-                                    setState(() => _includeTree = val),
-                                onMarkerColorChanged: (col) =>
-                                    setState(() => _markerColor = col),
-                                onClearOnCopyChanged: (val) =>
-                                    setState(() => _clearOnCopy = val),
-                                onBlockInteractionsChanged: (val) =>
-                                    setState(() => _blockInteractions = val),
-                                onReplaceServerOnCopyChanged: (val) =>
-                                    setState(() => _replaceServerOnCopy = val),
-                                onSnapshotDirectoryChanged: (dir) =>
-                                    setState(() => _snapshotDirectory = dir),
-                                onClearSnapshots: () async {
-                                  return await AnnotterSnapshotHelper.clearSnapshots(
-                                    snapshotDirectory: _snapshotDirectory,
-                                    syncClient: _syncClient,
-                                  );
-                                },
-                                onClose: () =>
-                                    setState(() => _showSettings = false),
-                              ),
-                            ),
+                                syncClient: _syncClient,
+                              );
+                            },
+                            onClose: () => setState(() => _showSettings = false),
                           ),
-                      ],
-                    ),
-                  ),
+                        ),
+                      ),
+                  ],
                 ),
               );
             },
@@ -572,7 +484,7 @@ class _AnnotterState extends State<Annotter> {
         behavior: HitTestBehavior.opaque,
         onTap: onDismiss,
         child: Container(
-          color: Colors.black.withValues(alpha: 0.65),
+          color: AnnotterColors.overlay,
           alignment: alignment,
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,
@@ -604,15 +516,6 @@ class _AnnotterState extends State<Annotter> {
   void _copyNotes() async {
     final mediaQuery = MediaQuery.of(context);
     final size = mediaQuery.size;
-    final appTopPadding = mediaQuery.viewPadding.top > 0
-        ? mediaQuery.viewPadding.top
-        : mediaQuery.padding.top;
-    final appBottomPadding = mediaQuery.viewPadding.bottom > 0
-        ? mediaQuery.viewPadding.bottom
-        : mediaQuery.padding.bottom;
-    final canvasHeight = (appBottomPadding > 0 || appTopPadding > 0)
-        ? (size.height - appTopPadding - appBottomPadding)
-        : size.height;
 
     final String platformName = kIsWeb
         ? 'Web'
@@ -634,7 +537,6 @@ class _AnnotterState extends State<Annotter> {
     final textScale =
         '${(mediaQuery.textScaler.scale(10.0) / 10.0).toStringAsFixed(1)}x';
 
-    // Dynamic real route resolution via ModalRoute or fallback
     String dynamicRoute = _activeScreenName;
     try {
       final modalRoute = ModalRoute.of(context);
@@ -665,7 +567,6 @@ class _AnnotterState extends State<Annotter> {
         items: [],
       ));
     } else {
-      // Find scrollable position in app child if available
       ScrollPosition? scrollPos;
       final appCtx = _appChildKey.currentContext;
       if (appCtx != null) {
@@ -681,10 +582,8 @@ class _AnnotterState extends State<Annotter> {
         appCtx.visitChildElements(search);
       }
 
-      // Group items by scroll cluster
       final sortedItems = List<AnnotterItem>.from(_items)
-        ..sort((a, b) =>
-            a.scrollOffset.compareTo(b.scrollOffset));
+        ..sort((a, b) => a.scrollOffset.compareTo(b.scrollOffset));
 
       final List<List<AnnotterItem>> clusters = [];
       for (final item in sortedItems) {
@@ -692,10 +591,8 @@ class _AnnotterState extends State<Annotter> {
           clusters.add([item]);
         } else {
           final lastCluster = clusters.last;
-          final diff = (item.scrollOffset -
-                  lastCluster.first.scrollOffset)
-              .abs();
-          if (diff < canvasHeight * 0.75) {
+          final diff = (item.scrollOffset - lastCluster.first.scrollOffset).abs();
+          if (diff < size.height * 0.75) {
             lastCluster.add(item);
           } else {
             clusters.add([item]);
@@ -704,7 +601,6 @@ class _AnnotterState extends State<Annotter> {
       }
 
       if (clusters.length <= 1 || scrollPos == null) {
-        // Single view capture
         final filename = 'annotter_$timestamp.png';
         final path = await _captureScreenshot(filename);
         sections.add(AnnotterViewSection(
@@ -713,7 +609,6 @@ class _AnnotterState extends State<Annotter> {
           items: _items,
         ));
       } else {
-        // Multi-view capture: smoothly snap to each cluster, capture, and restore
         final originalOffset = _scrollOffset;
 
         for (int i = 0; i < clusters.length; i++) {
@@ -738,7 +633,6 @@ class _AnnotterState extends State<Annotter> {
           ));
         }
 
-        // Restore original scroll offset
         scrollPos?.jumpTo(originalOffset);
         setState(() => _scrollOffset = originalOffset);
       }
@@ -748,7 +642,7 @@ class _AnnotterState extends State<Annotter> {
     await AnnotterExporter.copyToClipboard(
       items: _items,
       routeName: dynamicRoute,
-      viewportSize: Size(size.width, canvasHeight),
+      viewportSize: Size(size.width, size.height),
       sections: sections,
       environment: environment,
       detailLevel: _detailLevel,
