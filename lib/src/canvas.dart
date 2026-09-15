@@ -116,6 +116,7 @@ class _AnnotterCanvasState extends State<AnnotterCanvas> {
         scrollOffset: widget.scrollOffset,
         selectedText: info.selectedText,
         sourceLocation: info.sourceLocation,
+        callStack: info.callStack,
         properties: info.properties,
       );
       setState(() => _hoveredWidget = null);
@@ -134,6 +135,7 @@ class _AnnotterCanvasState extends State<AnnotterCanvas> {
         scrollOffset: widget.scrollOffset,
         selectedText: info.selectedText,
         sourceLocation: info.sourceLocation,
+        callStack: info.callStack,
         properties: info.properties,
       );
       widget.onCreate(newItem, info.screenName);
@@ -173,6 +175,7 @@ class _AnnotterCanvasState extends State<AnnotterCanvas> {
           scrollOffset: widget.scrollOffset,
           selectedText: info.selectedText,
           sourceLocation: info.sourceLocation,
+          callStack: info.callStack,
           properties: info.properties,
         );
         widget.onCreate(newItem, info.screenName);
@@ -247,10 +250,14 @@ class _AnnotterPainter extends CustomPainter {
       canvas.drawRRect(rrect, hoverBorder);
 
       // Floating DevTools Tag Banner
-      final source = (hoveredWidget!.sourceLocation != null &&
-              hoveredWidget!.sourceLocation!.isNotEmpty)
-          ? ' • ${hoveredWidget!.sourceLocation}'
-          : '';
+      String source = '';
+      if (hoveredWidget!.callStack.length >= 2) {
+        source =
+            ' • ${hoveredWidget!.callStack[0].location} ↳ ${hoveredWidget!.callStack[1].widgetName}';
+      } else if (hoveredWidget!.sourceLocation != null &&
+          hoveredWidget!.sourceLocation!.isNotEmpty) {
+        source = ' • ${hoveredWidget!.sourceLocation}';
+      }
       final labelText =
           '${hoveredWidget!.widgetName}$source ${rect.width.toInt()}×${rect.height.toInt()}';
       final textPainter = TextPainter(

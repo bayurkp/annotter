@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'models.dart';
 
 class InspectedWidgetInfo {
   final String widgetName;
@@ -11,6 +12,7 @@ class InspectedWidgetInfo {
   final bool isScrollable;
   final String? selectedText;
   final String? sourceLocation;
+  final List<SourceCallSite> callStack;
   final Map<String, String>? properties;
 
   const InspectedWidgetInfo({
@@ -21,6 +23,7 @@ class InspectedWidgetInfo {
     this.isScrollable = false,
     this.selectedText,
     this.sourceLocation,
+    this.callStack = const [],
     this.properties,
   });
 }
@@ -287,6 +290,7 @@ class WidgetInspectorHelper {
     String? extractedText;
     String? detectedSourceLocation;
     Map<String, String>? detectedProperties;
+    final List<SourceCallSite> callStack = [];
 
     // Pass 2: Inspect ONLY the single best RenderBox (0ms overhead)
     if (bestTarget != null &&
@@ -298,7 +302,7 @@ class WidgetInspectorHelper {
 
       // Helper to extract Flutter source location (file and line) from Diagnostics
       String? extractSource(Element el) {
-        if (fastPreview || detectedSourceLocation != null) return detectedSourceLocation;
+        if (fastPreview) return null;
         // 1. Try WidgetInspectorService
         try {
           if (WidgetInspectorService.instance.isWidgetCreationTracked()) {
@@ -313,7 +317,8 @@ class WidgetInspectorHelper {
                   final file = creationLoc['file']?.toString();
                   final line = creationLoc['line']?.toString();
                   if (file != null && line != null) {
-                    return _formatSourceLocation(file, line);
+                    final formatted = _formatSourceLocation(file, line);
+                    if (formatted != null) return formatted;
                   }
                 }
               }
@@ -329,7 +334,8 @@ class WidgetInspectorHelper {
           if (match != null) {
             final path = match.group(1)!;
             final line = match.group(2)!;
-            return _formatSourceLocation(path, line);
+            final formatted = _formatSourceLocation(path, line);
+            if (formatted != null) return formatted;
           }
         } catch (_) {}
 
@@ -342,7 +348,8 @@ class WidgetInspectorHelper {
           if (match != null) {
             final path = match.group(1)!;
             final line = match.group(2)!;
-            return _formatSourceLocation(path, line);
+            final formatted = _formatSourceLocation(path, line);
+            if (formatted != null) return formatted;
           }
         } catch (_) {}
 
@@ -392,8 +399,10 @@ class WidgetInspectorHelper {
       }
 
       checkWidgetForText(element.widget);
+      String? leafLocation;
       if (!fastPreview) {
-        detectedSourceLocation = extractSource(element);
+        leafLocation = extractSource(element);
+        detectedSourceLocation = leafLocation;
         final initialProps = extractProperties(element);
         if (initialProps.isNotEmpty) {
           detectedProperties = initialProps;
@@ -411,8 +420,17 @@ class WidgetInspectorHelper {
         final aw = ancestor.widget;
         checkWidgetForText(aw);
         if (!fastPreview) {
-          if (detectedSourceLocation == null) {
-            detectedSourceLocation = extractSource(ancestor);
+          final ancLoc = extractSource(ancestor);
+          if (ancLoc != null && ancLoc.isNotEmpty) {
+            detectedSourceLocation ??= ancLoc;
+            if (callStack.length < 5 &&
+                ancLoc != leafLocation &&
+                !callStack.any((c) => c.location == ancLoc)) {
+              final callerWidgetName =
+                  _widgetNameFromLocationOrCandidate(ancLoc, candidates);
+              callStack.add(
+                  SourceCallSite(widgetName: callerWidgetName, location: ancLoc));
+            }
           }
           if (detectedProperties == null || detectedProperties!.isEmpty) {
             final p = extractProperties(ancestor);
@@ -454,6 +472,27 @@ class WidgetInspectorHelper {
         bestHierarchy = List.from(chain);
       }
 
+      // If leaf location was detected, insert as primary target call site
+      if (leafLocation != null && leafLocation.isNotEmpty) {
+        final targetWidgetName = foundWidgetName.contains(' > ')
+            ? foundWidgetName.split(' > ').first
+            : foundWidgetName;
+        callStack.insert(
+          0,
+          SourceCallSite(
+            widgetName: targetWidgetName != 'Element'
+                ? targetWidgetName
+                : _widgetNameFromLocationOrCandidate(
+                    leafLocation, candidates),
+            location: leafLocation,
+          ),
+        );
+      }
+
+      if (callStack.isNotEmpty) {
+        detectedSourceLocation = callStack.first.location;
+      }
+
       if (extractedText != null) {
         final singleLineText =
             extractedText!.replaceAll(RegExp(r'\s+'), ' ').trim();
@@ -475,6 +514,7 @@ class WidgetInspectorHelper {
       isScrollable: detectedScrollable,
       selectedText: extractedText,
       sourceLocation: detectedSourceLocation,
+      callStack: callStack,
       properties: detectedProperties,
     );
   }
@@ -512,8 +552,13 @@ class WidgetInspectorHelper {
   }
 
   /// Formats raw source location file URI and line into clean relative project path.
-  static String _formatSourceLocation(String rawPath, String line) {
+  static String? _formatSourceLocation(String rawPath, String line) {
     String path = rawPath;
+    if (path.startsWith('package:flutter/') ||
+        path.contains('/packages/flutter/') ||
+        path.contains(r'\packages\flutter\')) {
+      return null;
+    }
     if (path.startsWith('file://')) {
       final uri = Uri.tryParse(path);
       if (uri != null) {
@@ -536,5 +581,30 @@ class WidgetInspectorHelper {
       }
     }
     return '$path:$line';
+  }
+
+  /// Converts a dart file path (e.g. lib/src/features/activity_metric_strip.dart:48) into PascalCase widget name.
+  static String _pascalCaseFromPath(String path) {
+    final clean = path.split(':').first;
+    final filename = clean.split('/').last.split(r'\').last;
+    final nameWithoutExt = filename.endsWith('.dart')
+        ? filename.substring(0, filename.length - 5)
+        : filename;
+    final parts = nameWithoutExt.split('_').where((s) => s.isNotEmpty).toList();
+    if (parts.isEmpty) return 'Element';
+    return parts.map((s) => s[0].toUpperCase() + s.substring(1)).join('');
+  }
+
+  static String _widgetNameFromLocationOrCandidate(
+    String location,
+    List<_TargetCandidate> candidates,
+  ) {
+    final guessed = _pascalCaseFromPath(location);
+    for (final c in candidates) {
+      if (c.name.toLowerCase() == guessed.toLowerCase()) {
+        return c.name;
+      }
+    }
+    return guessed;
   }
 }

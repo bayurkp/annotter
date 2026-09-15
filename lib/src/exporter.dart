@@ -179,7 +179,13 @@ class AnnotterExporter {
         buffer.writeln('   - Content: "${item.selectedText}"');
       }
 
-      if (item.sourceLocation != null && item.sourceLocation!.isNotEmpty) {
+      if (item.callStack.isNotEmpty) {
+        buffer.writeln('   - Call Chain:');
+        for (int i = 0; i < item.callStack.length; i++) {
+          final site = item.callStack[i];
+          buffer.writeln('     ${i + 1}. `${site.widgetName}` (`${site.location}`)');
+        }
+      } else if (item.sourceLocation != null && item.sourceLocation!.isNotEmpty) {
         buffer.writeln('   - Source: `${item.sourceLocation}`');
       }
 
@@ -205,7 +211,15 @@ class AnnotterExporter {
     // --- 2. DETAILED TIER (Default) ---
     if (detailLevel == 'detailed') {
       buffer.writeln('${item.number}. $tagString **${item.widgetName}**');
-      if (item.sourceLocation != null && item.sourceLocation!.isNotEmpty) {
+      if (item.callStack.length >= 2) {
+        buffer.writeln(
+            '   - Source: `${item.callStack[0].widgetName}` (`${item.callStack[0].location}`)');
+        buffer.writeln(
+            '     ↳ in `${item.callStack[1].widgetName}` (`${item.callStack[1].location}`)');
+      } else if (item.callStack.length == 1) {
+        buffer.writeln(
+            '   - Source: `${item.callStack[0].widgetName}` (`${item.callStack[0].location}`)');
+      } else if (item.sourceLocation != null && item.sourceLocation!.isNotEmpty) {
         buffer.writeln('   - Source: `${item.sourceLocation}`');
       }
       if (includeTree && item.hierarchy.isNotEmpty) {
@@ -235,7 +249,12 @@ class AnnotterExporter {
     // --- 3. STANDARD TIER ---
     if (detailLevel == 'standard') {
       buffer.writeln('${item.number}. $tagString **${item.widgetName}**');
-      if (item.sourceLocation != null && item.sourceLocation!.isNotEmpty) {
+      if (item.callStack.length >= 2) {
+        buffer.writeln(
+            '   - Source: `${item.callStack[0].location}` (in `${item.callStack[1].widgetName}`)');
+      } else if (item.callStack.isNotEmpty) {
+        buffer.writeln('   - Source: `${item.callStack[0].location}`');
+      } else if (item.sourceLocation != null && item.sourceLocation!.isNotEmpty) {
         buffer.writeln('   - Source: `${item.sourceLocation}`');
       }
       if (includeTree && item.hierarchy.isNotEmpty) {

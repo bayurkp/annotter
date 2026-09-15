@@ -317,6 +317,27 @@ class _AnnotationListSheetState extends State<AnnotationListSheet> {
                                             ],
                                           ),
                                         ],
+                                        if (item.callStack.length >= 2) ...[
+                                          const SizedBox(height: 1),
+                                          Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              const SizedBox(width: 14),
+                                              Flexible(
+                                                child: Text(
+                                                  '↳ in ${item.callStack[1].widgetName}',
+                                                  style: const TextStyle(
+                                                    color: AnnotterColors.info,
+                                                    fontSize: 10,
+                                                    fontFamily: 'monospace',
+                                                  ),
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
                                         const SizedBox(height: 2),
                                         Text(
                                           item.note.isEmpty

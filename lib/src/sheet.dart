@@ -235,6 +235,28 @@ class _AnnotationSheetState extends State<AnnotationSheet> {
                                     ],
                                   ),
                                 ),
+                              if (widget.item.callStack.length >= 2)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 1),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const SizedBox(width: 16),
+                                      Flexible(
+                                        child: Text(
+                                          '↳ in ${widget.item.callStack[1].widgetName} (${widget.item.callStack[1].location})',
+                                          style: const TextStyle(
+                                            fontSize: 10.5,
+                                            fontFamily: 'monospace',
+                                            color: AnnotterColors.info,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
                               if (widget.item.screenName.isNotEmpty)
                                 Text(
                                   widget.item.screenName,

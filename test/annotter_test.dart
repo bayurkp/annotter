@@ -237,6 +237,65 @@ void main() {
     expect(standard, contains('- Source: `lib/src/widgets/app_button.dart:42`'));
   });
 
+  test('AnnotterExporter formats caller callStack across tiers according to detailLevel', () {
+    final item = AnnotterItem(
+      id: 3,
+      number: 1,
+      rect: const Rect.fromLTWH(10, 20, 120, 48),
+      widgetName: 'AppContainer',
+      note: 'Check padding and border',
+      mode: AnnotterMode.widget,
+      sourceLocation: 'lib/src/core/widgets/primitives/app_container.dart:226',
+      callStack: const [
+        SourceCallSite(
+          widgetName: 'AppContainer',
+          location: 'lib/src/core/widgets/primitives/app_container.dart:226',
+        ),
+        SourceCallSite(
+          widgetName: 'ActivityMetricStrip',
+          location: 'lib/src/features/activity_metric_strip.dart:48',
+        ),
+        SourceCallSite(
+          widgetName: 'DetoxSection',
+          location: 'lib/src/features/detox_section.dart:102',
+        ),
+        SourceCallSite(
+          widgetName: 'AppKeepAlivePage',
+          location: 'lib/src/features/app_keep_alive_page.dart:34',
+        ),
+      ],
+    );
+
+    // 1. Detailed tier: 2 levels (Target + immediate caller)
+    final detailed = AnnotterExporter.toMarkdown(
+      items: [item],
+      detailLevel: 'detailed',
+    );
+    expect(detailed, contains('- Source: `AppContainer` (`lib/src/core/widgets/primitives/app_container.dart:226`)'));
+    expect(detailed, contains('↳ in `ActivityMetricStrip` (`lib/src/features/activity_metric_strip.dart:48`)'));
+    // Should NOT print full forensic call chain
+    expect(detailed, isNot(contains('- Call Chain:')));
+    expect(detailed, isNot(contains('`DetoxSection`')));
+
+    // 2. Forensic tier: full call chain
+    final forensic = AnnotterExporter.toMarkdown(
+      items: [item],
+      detailLevel: 'forensic',
+    );
+    expect(forensic, contains('- Call Chain:'));
+    expect(forensic, contains('1. `AppContainer` (`lib/src/core/widgets/primitives/app_container.dart:226`)'));
+    expect(forensic, contains('2. `ActivityMetricStrip` (`lib/src/features/activity_metric_strip.dart:48`)'));
+    expect(forensic, contains('3. `DetoxSection` (`lib/src/features/detox_section.dart:102`)'));
+    expect(forensic, contains('4. `AppKeepAlivePage` (`lib/src/features/app_keep_alive_page.dart:34`)'));
+
+    // 3. Standard tier: target location with caller in parentheses
+    final standard = AnnotterExporter.toMarkdown(
+      items: [item],
+      detailLevel: 'standard',
+    );
+    expect(standard, contains('- Source: `lib/src/core/widgets/primitives/app_container.dart:226` (in `ActivityMetricStrip`)'));
+  });
+
   test('AnnotterSnapshotHelper clears snapshots correctly', () async {
     final tempDir = Directory.systemTemp.createTempSync('annotter_test_snapshots_');
     try {

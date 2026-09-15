@@ -189,4 +189,61 @@ void main() {
     expect(find.text('lib/widgets/app_button.dart:42'), findsOneWidget);
     expect(find.byIcon(Icons.code_rounded), findsOneWidget);
   });
+
+  testWidgets('AnnotationSheet and AnnotationListSheet display caller hierarchy when callStack is provided', (tester) async {
+    final item = AnnotterItem(
+      id: 1,
+      number: 1,
+      rect: const Rect.fromLTWH(0, 0, 100, 50),
+      widgetName: 'AppContainer',
+      note: 'Primitive used in activity strip',
+      sourceLocation: 'lib/src/core/widgets/primitives/app_container.dart:226',
+      callStack: const [
+        SourceCallSite(
+          widgetName: 'AppContainer',
+          location: 'lib/src/core/widgets/primitives/app_container.dart:226',
+        ),
+        SourceCallSite(
+          widgetName: 'ActivityMetricStrip',
+          location: 'lib/src/features/activity_metric_strip.dart:48',
+        ),
+      ],
+    );
+
+    // Test AnnotationSheet displays caller
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: AnnotationSheet(
+            item: item,
+            onCancel: () {},
+            onDelete: () {},
+            onSave: (_, __, ___) {},
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('lib/src/core/widgets/primitives/app_container.dart:226'), findsOneWidget);
+    expect(find.text('↳ in ActivityMetricStrip (lib/src/features/activity_metric_strip.dart:48)'), findsOneWidget);
+
+    // Test AnnotationListSheet displays caller
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: AnnotationListSheet(
+            items: [item],
+            onClose: () {},
+            onEdit: (_) {},
+            onDelete: (_) {},
+            onClearAll: () {},
+            onReorder: (_) {},
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('lib/src/core/widgets/primitives/app_container.dart:226'), findsOneWidget);
+    expect(find.text('↳ in ActivityMetricStrip'), findsOneWidget);
+  });
 }

@@ -59,6 +59,7 @@ class AnnotterSyncClient {
       'widgetName': item.widgetName,
       'selectedText': item.selectedText,
       'sourceLocation': item.sourceLocation,
+      'callStack': item.callStack.map((c) => c.toJson()).toList(),
       'properties': item.properties,
       'hierarchy': item.hierarchy,
       'note': item.note,
