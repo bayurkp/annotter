@@ -142,4 +142,51 @@ void main() {
     // Verify onSave was called with trimmed text
     expect(savedNote, equals('Initial text'));
   });
+
+  testWidgets('AnnotationSheet and AnnotationListSheet display sourceLocation', (tester) async {
+    final item = AnnotterItem(
+      id: 1,
+      number: 1,
+      rect: const Rect.fromLTWH(0, 0, 100, 50),
+      widgetName: 'AppButton',
+      note: 'Needs bigger padding',
+      sourceLocation: 'lib/widgets/app_button.dart:42',
+    );
+
+    // Test AnnotationSheet
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: AnnotationSheet(
+            item: item,
+            onCancel: () {},
+            onDelete: () {},
+            onSave: (_, __, ___) {},
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('lib/widgets/app_button.dart:42'), findsOneWidget);
+    expect(find.byIcon(Icons.code_rounded), findsOneWidget);
+
+    // Test AnnotationListSheet
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: AnnotationListSheet(
+            items: [item],
+            onClose: () {},
+            onEdit: (_) {},
+            onDelete: (_) {},
+            onClearAll: () {},
+            onReorder: (_) {},
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('lib/widgets/app_button.dart:42'), findsOneWidget);
+    expect(find.byIcon(Icons.code_rounded), findsOneWidget);
+  });
 }

@@ -210,6 +210,31 @@ class _AnnotationSheetState extends State<AnnotationSheet> {
                                   ),
                                 ],
                               ),
+                              if (widget.item.sourceLocation != null &&
+                                  widget.item.sourceLocation!.isNotEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 2),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(Icons.code_rounded,
+                                          size: 12, color: AnnotterColors.primary),
+                                      const SizedBox(width: 4),
+                                      Flexible(
+                                        child: Text(
+                                          widget.item.sourceLocation!,
+                                          style: const TextStyle(
+                                            fontSize: 11,
+                                            fontFamily: 'monospace',
+                                            color: AnnotterColors.mutedForeground,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
                               if (widget.item.screenName.isNotEmpty)
                                 Text(
                                   widget.item.screenName,

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -298,15 +299,53 @@ class WidgetInspectorHelper {
       // Helper to extract Flutter source location (file and line) from Diagnostics
       String? extractSource(Element el) {
         if (fastPreview || detectedSourceLocation != null) return detectedSourceLocation;
+        // 1. Try WidgetInspectorService
         try {
-          final info = el.toDiagnosticsNode();
-          final desc = info.toString();
-          final match = RegExp(r'(package:[^\s)]+|lib/[^\s)]+):(\d+)(?::(\d+))?')
-              .firstMatch(desc);
-          if (match != null) {
-            return match.group(0);
+          if (WidgetInspectorService.instance.isWidgetCreationTracked()) {
+            WidgetInspectorService.instance.selection.currentElement = el;
+            final jsonStr = WidgetInspectorService.instance
+                .getSelectedSummaryWidget(null, 'annotter_inspect');
+            if (jsonStr.isNotEmpty && jsonStr != 'null') {
+              final dynamic data = json.decode(jsonStr);
+              if (data is Map) {
+                final creationLoc = data['creationLocation'];
+                if (creationLoc is Map) {
+                  final file = creationLoc['file']?.toString();
+                  final line = creationLoc['line']?.toString();
+                  if (file != null && line != null) {
+                    return _formatSourceLocation(file, line);
+                  }
+                }
+              }
+            }
           }
         } catch (_) {}
+
+        // 2. Try CreatorChain from Element
+        try {
+          final chain = el.debugGetCreatorChain(15);
+          final match = RegExp(r'(package:[^\s)]+|lib/[^\s)]+|file:///[^\s)]+):(\d+)(?::(\d+))?')
+              .firstMatch(chain);
+          if (match != null) {
+            final path = match.group(1)!;
+            final line = match.group(2)!;
+            return _formatSourceLocation(path, line);
+          }
+        } catch (_) {}
+
+        // 3. Fallback: Search diagnostics description
+        try {
+          final info = el.toDiagnosticsNode();
+          final desc = info.toStringDeep();
+          final match = RegExp(r'(package:[^\s)]+|lib/[^\s)]+|file:///[^\s)]+):(\d+)(?::(\d+))?')
+              .firstMatch(desc);
+          if (match != null) {
+            final path = match.group(1)!;
+            final line = match.group(2)!;
+            return _formatSourceLocation(path, line);
+          }
+        } catch (_) {}
+
         return null;
       }
 
@@ -470,5 +509,32 @@ class WidgetInspectorHelper {
     } catch (_) {}
 
     return activeScreen;
+  }
+
+  /// Formats raw source location file URI and line into clean relative project path.
+  static String _formatSourceLocation(String rawPath, String line) {
+    String path = rawPath;
+    if (path.startsWith('file://')) {
+      final uri = Uri.tryParse(path);
+      if (uri != null) {
+        path = uri.path;
+      }
+    }
+    if (path.startsWith('package:')) {
+      final parts = path.split('/');
+      if (parts.length > 1) {
+        path = 'lib/${parts.sublist(1).join('/')}';
+      }
+    }
+    final libIndex = path.indexOf('/lib/');
+    if (libIndex != -1) {
+      path = path.substring(libIndex + 1);
+    } else {
+      final libIndexBackslash = path.indexOf(r'\lib\');
+      if (libIndexBackslash != -1) {
+        path = path.substring(libIndexBackslash + 1).replaceAll(r'\', '/');
+      }
+    }
+    return '$path:$line';
   }
 }

@@ -293,6 +293,30 @@ class _AnnotationListSheetState extends State<AnnotationListSheet> {
                                             ),
                                           ],
                                         ),
+                                        if (item.sourceLocation != null &&
+                                            item.sourceLocation!.isNotEmpty) ...[
+                                          const SizedBox(height: 2),
+                                          Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              const Icon(Icons.code_rounded,
+                                                  size: 11, color: AnnotterColors.primary),
+                                              const SizedBox(width: 3),
+                                              Flexible(
+                                                child: Text(
+                                                  item.sourceLocation!,
+                                                  style: const TextStyle(
+                                                    color: AnnotterColors.subtleForeground,
+                                                    fontSize: 10.5,
+                                                    fontFamily: 'monospace',
+                                                  ),
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
                                         const SizedBox(height: 2),
                                         Text(
                                           item.note.isEmpty

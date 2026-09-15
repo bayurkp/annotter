@@ -247,8 +247,12 @@ class _AnnotterPainter extends CustomPainter {
       canvas.drawRRect(rrect, hoverBorder);
 
       // Floating DevTools Tag Banner
+      final source = (hoveredWidget!.sourceLocation != null &&
+              hoveredWidget!.sourceLocation!.isNotEmpty)
+          ? ' • ${hoveredWidget!.sourceLocation}'
+          : '';
       final labelText =
-          '${hoveredWidget!.widgetName} ${rect.width.toInt()}×${rect.height.toInt()}';
+          '${hoveredWidget!.widgetName}$source ${rect.width.toInt()}×${rect.height.toInt()}';
       final textPainter = TextPainter(
         text: TextSpan(
           text: labelText,
